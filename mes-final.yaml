@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mes-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mes-web
+  template:
+    metadata:
+      labels:
+        app: mes-web
+    spec:
+      containers:
+      - name: mes-app
+        image: python:3.9-slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - pip install flask psycopg2-binary && python /app/main.py
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: code-volume
+          mountPath: /app/main.py
+          subPath: main.py
+      volumes:
+      - name: code-volume
+        configMap:
+          name: mes-code
