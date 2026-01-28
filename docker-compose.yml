@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  mes-db:
+    image: postgres:latest
+    container_name: mes-postgres
+    ports:
+      - "5433:5432"  # 팀원들도 포트 충돌을 피할 수 있게 5433으로 설정
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: mes_db
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql # 중요: 실행 시 테이블 자동 생성
+    restart: always
