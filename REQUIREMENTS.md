@@ -6,7 +6,7 @@
 * **프로젝트명**: K8s 기반 스마트 팩토리 MES (Kyungpook National Univ.)
 * **인프라**: Kubernetes (v1.30+), Cilium (eBPF 기반 네트워크)
 * **데이터베이스**: PostgreSQL
-* **백엔드/프론트엔드**: Python Flask
+* **백엔드/프론트엔드**: Python Flask (API Only) & React (Frontend)
 
 ## 2. 시스템 아키텍처 (Infrastructure)
 * **Containerization**: 모든 서비스는 Docker 컨테이너로 추상화됨.

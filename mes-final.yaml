@@ -17,7 +17,7 @@ spec:
         image: python:3.9-slim
         command: ["/bin/sh", "-c"]
         args:
-          - pip install flask psycopg2-binary && python /app/main.py
+          - pip install fastapi uvicorn psycopg2-binary && python /app/main.py
         ports:
         - containerPort: 80
         volumeMounts:
