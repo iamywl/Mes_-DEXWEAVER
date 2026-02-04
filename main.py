@@ -40,6 +40,12 @@ class Equipment(Base):
     name = Column(String)
     status = Column(String, default="IDLE") # RUN, IDLE
 
+class BOM(Base):
+    __tablename__ = "bom"
+    product_item_code = Column(String, ForeignKey("items.item_code"), primary_key=True)
+    component_item_code = Column(String, ForeignKey("items.item_code"), primary_key=True)
+    quantity = Column(Integer)
+
 # Pydantic Models for request/response
 class ItemCreate(BaseModel):
     item_code: str
@@ -65,6 +71,14 @@ class EquipmentResponse(BaseModel):
     equipment_id: str
     name: str
     status: str
+
+class BOMCreate(BaseModel):
+    product_item_code: str
+    component_item_code: str
+    quantity: int
+
+class BOMResponse(BOMCreate):
+    pass
 
 # FastAPI app initialization
 app = FastAPI()
@@ -120,3 +134,19 @@ def update_equipment_status(equipment_id: str, equipment: EquipmentUpdate, db: S
     db.commit()
     db.refresh(db_equipment)
     return db_equipment
+
+# BOM Management
+@app.post("/bom/", response_model=BOMResponse)
+def create_bom_entry(bom: BOMCreate, db: Session = Depends(get_db)):
+    db_bom = BOM(**bom.dict())
+    db.add(db_bom)
+    db.commit()
+    db.refresh(db_bom)
+    return db_bom
+
+@app.get("/bom/{product_item_code}", response_model=list[BOMResponse])
+def get_bom_for_product(product_item_code: str, db: Session = Depends(get_db)):
+    bom_entries = db.query(BOM).filter(BOM.product_item_code == product_item_code).all()
+    if not bom_entries:
+        raise HTTPException(status_code=404, detail="BOM for product not found")
+    return bom_entries

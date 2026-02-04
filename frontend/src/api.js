@@ -23,3 +23,8 @@ export const equipmentService = {
   getAllEquipments: () => api.get('/equipments/'),
   updateEquipmentStatus: (equipmentId, statusData) => api.put(`/equipments/${equipmentId}`, statusData),
 };
+
+export const bomService = {
+  createBom: (bomData) => api.post('/bom/', bomData),
+  getBomByProduct: (productItemCode) => api.get(`/bom/${productItemCode}`),
+};

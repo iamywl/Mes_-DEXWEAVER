@@ -3,9 +3,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    host: '0.0.0.0',
-    port: 5173,
-    strictPort: true
+  base: './',
+  build: {
+    assetsDir: '', // assets 폴더를 만들지 않고 루트에 바로 파일을 생성합니다.
   }
 })
