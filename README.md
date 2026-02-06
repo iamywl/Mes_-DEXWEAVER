@@ -1,4 +1,3 @@
-Markdown
 ## 🛠 기술 스택
 * **Infrastructure**: Kubernetes (v1.30+), Cilium (eBPF/Hubble)
 * **Database**: PostgreSQL (mes_db)
