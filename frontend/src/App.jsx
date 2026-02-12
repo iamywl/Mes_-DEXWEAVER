@@ -8,6 +8,7 @@ const App = () => {
   const [db, setDb] = useState({ items: [], bom: [], plans: [], flows: [], pods: [], logs: '', infra: {} });
   const [newPlan, setNewPlan] = useState({ item_code: '', plan_qty: 0, plan_date: '' });
   const [selPod, setSelPod] = useState('');
+  const [showPodOnly, setShowPodOnly] = useState(true);
 
   const fetchData = async () => {
     try {
@@ -15,12 +16,26 @@ const App = () => {
         axios.get('/api/mes/data'), axios.get('/api/network/flows'),
         axios.get('/api/infra/status'), axios.get('/api/k8s/pods')
       ]);
-      setDb(prev => ({ ...prev, ...m.data, flows: f.data, infra: n.data, pods: p.data }));
+
+      // Normalize flows data: backend may return either { flows: [...] } or an array
+      let flowsData = [];
+      if (f && f.data) {
+        if (Array.isArray(f.data)) {
+          flowsData = f.data;
+        } else if (Array.isArray(f.data.flows)) {
+          flowsData = f.data.flows;
+        }
+      }
+
+      setDb(prev => ({ ...prev, ...m.data, flows: flowsData, infra: n.data, pods: p.data }));
+
       if (selPod) {
         const l = await axios.get(`/api/k8s/logs/${selPod}`);
         setDb(prev => ({ ...prev, logs: l.data }));
       }
-    } catch (e) { console.error("Sync Error"); }
+    } catch (e) {
+      console.error('Sync Error', e);
+    }
   };
 
   useEffect(() => { fetchData(); const t = setInterval(fetchData, 4000); return () => clearInterval(t); }, [selPod]);
@@ -82,7 +97,42 @@ const App = () => {
         )}
 
         {menu === 'NETWORK_FLOW' && (
-          <div className="space-y-4">{db.flows.map((f, k) => (<div key={k} className="flex justify-between items-center p-4 bg-[#1e293b]/20 rounded-2xl border border-slate-800 font-mono"><span className="text-blue-400">{f.source?.pod_name || 'external'}</span><span className="text-slate-700">── {f.IP?.protocol || 'TCP'} ──▶</span><span className="text-purple-400">{f.destination?.pod_name || 'external'}</span><span className="text-emerald-500 font-bold">{f.verdict}</span></div>))}</div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 mb-2">
+              <label className="text-sm text-slate-400">Show only pod-to-pod flows</label>
+              <input type="checkbox" checked={showPodOnly} onChange={() => setShowPodOnly(v => !v)} />
+            </div>
+
+            {(() => {
+              const flows = db.flows || [];
+              const podNames = new Set((db.pods || []).map(p => p.name));
+              const filtered = flows.filter(f => {
+                const src = f.source?.pod_name;
+                const dst = f.destination?.pod_name;
+                if (showPodOnly) return src && dst && podNames.has(src) && podNames.has(dst);
+                return true;
+              });
+
+              if (filtered.length === 0) return <div className="text-slate-500">No network flows found.</div>;
+
+              return filtered.map((f, k) => {
+                const src = f.source?.pod_name || f.source?.labels || 'external';
+                const dst = f.destination?.pod_name || f.destination?.labels || 'external';
+                const proto = f.IP?.protocol || f.l4?.protocol || 'TCP';
+                const verdict = f.verdict || f.summary || 'N/A';
+                const ts = f.time || f.timestamp || '';
+                return (
+                  <div key={k} className="flex justify-between items-center p-4 bg-[#1e293b]/20 rounded-2xl border border-slate-800 font-mono">
+                    <div className="flex-1 text-blue-400 truncate">{src}</div>
+                    <div className="text-slate-700 px-4">── {proto} ──▶</div>
+                    <div className="flex-1 text-purple-400 truncate text-right">{dst}</div>
+                    <div className="ml-4 text-emerald-500 font-bold">{verdict}</div>
+                    <div className="ml-4 text-slate-500 text-xs">{ts}</div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
         )}
 
         {menu === 'INFRA_MONITOR' && (

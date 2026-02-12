@@ -8,10 +8,13 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 @app.get("/api/mes/data")
 async def get_mes_data(): return await mes_dashboard.get_production_dashboard_data()
+
 @app.get("/api/network/flows")
 async def get_flows(): return {"status": "success", "flows": []}
+
 @app.get("/api/infra/status")
 async def get_infra(): return {"cpu_load": 15, "memory_usage": 40}
+
 @app.get("/api/k8s/pods")
 async def get_pods(): return sys_logic.get_pods()
 

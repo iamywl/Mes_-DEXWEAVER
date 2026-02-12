@@ -15,6 +15,27 @@ pipeline {
                 sh 'rm -rf /root/.gemini/tmp/667d357ee42cffd7150c85b61417bee9093e201dfd6f0f7d1b97f10eb3141d4c/frontend/dist'
             }
         }
+        stage('Lint & Format Check') {
+            steps {
+                script {
+                    // Python linting and formatting checks
+                    sh '''
+                      python3 -m pip install --user black flake8 isort || true
+                      ~/.local/bin/black --check . || true
+                      ~/.local/bin/flake8 . --max-line-length=99 || true
+                    '''
+
+                    // Frontend linting
+                    dir('frontend') {
+                        sh '''
+                          npm install --silent
+                          npx eslint --version || true
+                          npx eslint src --ext .js,.jsx || true
+                        '''
+                    }
+                }
+            }
+        }
         stage('Build Backend Docker Image') {
             steps {
                 sh "docker build -t ${DOCKER_REGISTRY}/mes-backend:${BUILD_NUMBER} -f backend.Dockerfile ."
