@@ -1,4 +1,4 @@
-from api_modules.database import get_db
+from api_modules.database import get_db, release_conn
 import psycopg2.extras
 
 async def move_inventory(
@@ -35,11 +35,11 @@ async def move_inventory(
 
         conn.commit()
         cursor.close()
-        conn.close()
+        release_conn(conn)
         return {"message": f"Inventory of {item_code} (Lot: {lot_no}) moved from {from_location} to {to_location}."}
 
     except Exception as e:
         if conn:
             conn.rollback()
-            conn.close()
+            release_conn(conn)
         return {"error": str(e)}

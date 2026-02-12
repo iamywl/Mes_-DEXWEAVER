@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-axios.defaults.baseURL = `http://192.168.64.5:30461`;
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
 
 const App = () => {
   const [menu, setMenu] = useState('DASHBOARD');

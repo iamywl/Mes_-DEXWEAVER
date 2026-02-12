@@ -1,4 +1,4 @@
-from .db_core import query_db
+from .database import query_db
 
 def register_incoming(d): # [REQ-025] 입고등록
     sql = "INSERT INTO inventory (item_code, lot_no, qty, warehouse, location) VALUES (%s, %s, %s, %s, %s)"

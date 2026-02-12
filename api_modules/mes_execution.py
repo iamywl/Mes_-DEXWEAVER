@@ -1,5 +1,5 @@
 from datetime import datetime
-from api_modules.database import get_db
+from api_modules.database import get_db, release_conn
 
 async def register_work_performance(
     wo_id: str,
@@ -35,11 +35,11 @@ async def register_work_performance(
 
         conn.commit()
         cursor.close()
-        conn.close()
+        release_conn(conn)
         return {"result_id": result_id, "message": "Work performance registered and work order updated successfully."}
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
-            conn.close()
+            release_conn(conn)
         return {"error": str(e)}

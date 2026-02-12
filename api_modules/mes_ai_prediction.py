@@ -1,53 +1,87 @@
-from api_modules.database import get_db
+"""REQ-015: Demand prediction using linear regression on shipment history."""
 
-async def predict_demand(item_code: str, history_months: int = 12, prediction_months: int = 3):
+from api_modules.database import get_db, release_conn
+
+
+async def predict_demand(
+    item_code: str,
+    history_months: int = 12,
+    prediction_months: int = 3,
+):
+    """Predict future demand based on historical shipment data.
+
+    Args:
+        item_code: Target item code.
+        history_months: Number of past months to use.
+        prediction_months: Number of future months to predict.
+
+    Returns:
+        Dict with item_code, data_points_used, and predictions list.
     """
-    REQ-015: 과거 출하 데이터를 기반으로 단순 선형 회귀를 이용한 수요 예측.
-    """
+    conn = None
     try:
         conn = get_db()
+        if not conn:
+            return {"error": "Database connection failed."}
+
         cursor = conn.cursor()
 
-        # 더미 데이터 또는 실제 데이터 로딩 (여기서는 더미 데이터)
-        # 실제 구현에서는 history_months에 해당하는 과거 출하 데이터를 DB에서 조회해야 합니다.
-        # 예시: SELECT date_trunc('month', ship_date), SUM(qty) FROM shipments WHERE item_code = %s GROUP BY 1 ORDER BY 1 DESC LIMIT %s
-        # 여기서는 단순화를 위해 고정된 과거 데이터를 사용합니다.
-        past_data = [
-            (1, 100), (2, 110), (3, 105), (4, 120), (5, 115), (6, 130),
-            (7, 125), (8, 140), (9, 135), (10, 150), (11, 145), (12, 160)
-        ] # (month_offset, demand_qty)
+        query = """
+            SELECT
+                EXTRACT(EPOCH FROM date_trunc('month', ship_date))
+                    AS month_epoch,
+                SUM(qty) AS monthly_qty
+            FROM shipments
+            WHERE item_code = %s
+            GROUP BY date_trunc('month', ship_date)
+            ORDER BY date_trunc('month', ship_date) DESC
+            LIMIT %s;
+        """
+        cursor.execute(query, (item_code, history_months))
+        rows = cursor.fetchall()
+        cursor.close()
 
-        if len(past_data) < history_months:
-            return {"error": "Not enough historical data for prediction."}
+        if len(rows) < 3:
+            return {
+                "error": "Not enough historical data for prediction.",
+                "rows_found": len(rows),
+            }
 
-        # 단순 선형 회귀 (y = mx + b)
-        # x = 월 오프셋 (1, 2, ... history_months)
-        # y = 수요량
-        n = history_months
-        sum_x = sum(m for m, _ in past_data[:n])
-        sum_y = sum(q for _, q in past_data[:n])
-        sum_xy = sum(m * q for m, q in past_data[:n])
-        sum_x2 = sum(m**2 for m, _ in past_data[:n])
+        # Reverse to chronological order and assign month offsets
+        rows.reverse()
+        past_data = [(i + 1, row[1]) for i, row in enumerate(rows)]
+        n = len(past_data)
 
-        # 분모가 0이 되는 경우 방지
-        denominator = (n * sum_x2 - sum_x**2)
+        # Simple linear regression (y = mx + b)
+        sum_x = sum(m for m, _ in past_data)
+        sum_y = sum(q for _, q in past_data)
+        sum_xy = sum(m * q for m, q in past_data)
+        sum_x2 = sum(m ** 2 for m, _ in past_data)
+
+        denominator = n * sum_x2 - sum_x ** 2
         if denominator == 0:
-            return {"error": "Insufficient variance in historical data for linear regression."}
+            return {"error": "Insufficient variance in historical data."}
 
-        m = (n * sum_xy - sum_x * sum_y) / denominator # 기울기
-        b = (sum_y - m * sum_x) / n # y 절편
+        slope = (n * sum_xy - sum_x * sum_y) / denominator
+        intercept = (sum_y - slope * sum_x) / n
 
         predictions = []
         for i in range(1, prediction_months + 1):
-            predicted_month = history_months + i
-            predicted_demand = m * predicted_month + b
-            predictions.append({"month_offset": predicted_month, "predicted_qty": max(0, int(predicted_demand))})
+            predicted_month = n + i
+            predicted_demand = slope * predicted_month + intercept
+            predictions.append({
+                "month_offset": predicted_month,
+                "predicted_qty": max(0, int(predicted_demand)),
+            })
 
-        cursor.close()
-        conn.close()
-        return {"item_code": item_code, "predictions": predictions}
+        return {
+            "item_code": item_code,
+            "data_points_used": n,
+            "predictions": predictions,
+        }
 
     except Exception as e:
-        if 'conn' in locals() and conn:
-            conn.close()
         return {"error": str(e)}
+    finally:
+        if conn:
+            release_conn(conn)

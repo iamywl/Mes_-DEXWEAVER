@@ -1,5 +1,5 @@
 from datetime import date
-from api_modules.database import get_db
+from api_modules.database import get_db, release_conn
 import psycopg2.extras
 
 async def create_work_order(
@@ -38,11 +38,11 @@ async def create_work_order(
 
         conn.commit()
         cursor.close()
-        conn.close()
+        release_conn(conn)
         return {"wo_id": created_wo_id, "message": "Work order created successfully."}
 
     except Exception as e:
         if conn:
             conn.rollback()
-            conn.close()
+            release_conn(conn)
         return {"error": str(e)}

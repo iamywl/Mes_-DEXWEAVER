@@ -1,5 +1,5 @@
 from datetime import date
-from api_modules.database import get_db
+from api_modules.database import get_db, release_conn
 import psycopg2.extras
 
 async def get_production_dashboard_data():
@@ -39,10 +39,10 @@ async def get_production_dashboard_data():
         cursor.execute(query, (today,))
         results = cursor.fetchall()
         cursor.close()
-        conn.close()
+        release_conn(conn)
         return results
     except Exception as e:
         print(f"Database error in get_production_dashboard_data: {e}")
         if conn:
-            conn.close()
+            release_conn(conn)
         return []

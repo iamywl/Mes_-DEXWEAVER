@@ -1,4 +1,4 @@
-from .db_core import query_db
+from .database import query_db
 
 def add_plan(d): # [REQ-013] 생산계획 등록
     sql = "INSERT INTO production_plans (item_code, plan_qty, due_date, status) VALUES (%s, %s, %s, 'WAIT')"

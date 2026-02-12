@@ -1,4 +1,4 @@
-from api_modules.database import get_db
+from api_modules.database import get_db, release_conn
 import psycopg2.extras
 
 async def get_inventory_status(item_code: str = None):
@@ -28,10 +28,10 @@ async def get_inventory_status(item_code: str = None):
         cursor.execute(query, tuple(params))
         results = cursor.fetchall()
         cursor.close()
-        conn.close()
+        release_conn(conn)
         return results
     except Exception as e:
         print(f"Database error in get_inventory_status: {e}")
         if conn:
-            conn.close()
+            release_conn(conn)
         return []

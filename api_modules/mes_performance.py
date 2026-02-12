@@ -1,5 +1,5 @@
 from datetime import datetime
-from api_modules.database import get_db
+from api_modules.database import get_db, release_conn
 import psycopg2.extras
 
 async def register_work_performance_and_update_inventory(
@@ -38,4 +38,4 @@ async def register_work_performance_and_update_inventory(
         print(f"Error in mes_performance.py: {e}")
         return {"error": str(e)}
     finally:
-        if conn: conn.close()
+        if conn: release_conn(conn)

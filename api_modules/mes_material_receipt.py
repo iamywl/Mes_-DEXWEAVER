@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from api_modules.database import get_db
+from api_modules.database import get_db, release_conn
 import psycopg2.extras
 
 async def register_material_receipt(
@@ -29,11 +29,11 @@ async def register_material_receipt(
 
         conn.commit()
         cursor.close()
-        conn.close()
+        release_conn(conn)
         return {"lot_no": result['lot_no'], "message": "Material receipt registered successfully."}
 
     except Exception as e:
         if conn:
             conn.rollback()
-            conn.close()
+            release_conn(conn)
         return {"error": str(e)}

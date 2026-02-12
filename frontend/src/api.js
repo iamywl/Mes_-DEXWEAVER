@@ -17,7 +17,9 @@ import axios from 'axios';
  * @type {string}
  */
 const API_BASE_URL =
-  process.env.REACT_APP_API_URL || 'http://192.168.64.5:30461/api';
+  import.meta.env.VITE_API_URL
+    ? `${import.meta.env.VITE_API_URL}/api`
+    : '/api';
 
 /**
  * Create axios instance with default configuration.
