@@ -17,6 +17,7 @@ spec:
       containers:
       - name: frontend
         image: your-docker-repo/mes-frontend:latest # Replace with your Docker image name
+        imagePullPolicy: Never
         ports:
         - containerPort: 80
         # Add resource limits/requests as appropriate for production

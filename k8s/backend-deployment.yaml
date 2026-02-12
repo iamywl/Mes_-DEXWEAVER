@@ -17,6 +17,7 @@ spec:
       containers:
       - name: backend
         image: your-docker-repo/mes-backend:latest # Replace with your Docker image name
+        imagePullPolicy: Never
         ports:
         - containerPort: 8000
         env:

@@ -1,7 +1,6 @@
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Boolean, Float, create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from fastapi import FastAPI, HTTPException, Depends
-from sqlalchemy import create_engine, Column, Integer, String, Boolean
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
 
 # Database setup (assuming PostgreSQL)
