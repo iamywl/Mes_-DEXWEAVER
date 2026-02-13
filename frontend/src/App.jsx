@@ -585,29 +585,39 @@ const App = () => {
             return true;
           });
 
-          /* service map layout — force-directed-like positions */
+          /* ── Hierarchical left-to-right layout (like Hubble UI) ── */
+          const W=960, H=400;
+          const tierMap = { 'world':0, 'mes-frontend':1, 'mes-api-service':2, 'postgres':3, 'kube-dns':3, 'hubble-relay':3, 'cilium-agent':3 };
+          const tierLabels = ['External','Ingress','Application','Backend / Infra'];
+          const tierColors = ['#f59e0b','#3b82f6','#06b6d4','#a855f7'];
+          const tierX = [80, 290, 510, 760];
+
+          /* group services into tiers */
+          const tiers = [{},{},{},{}];
+          filteredSvcs.forEach(s => {
+            const t = tierMap[s.id] ?? 3;
+            if (!tiers[t][s.id]) tiers[t][s.id] = s;
+          });
+
+          /* position nodes: evenly spaced vertically within each tier column */
           const svcPositions = {};
-          const W=880, H=380, CX=W/2, CY=H/2;
-          const nsByNs = {};
-          filteredSvcs.forEach(s => { if(!nsByNs[s.namespace]) nsByNs[s.namespace]=[]; nsByNs[s.namespace].push(s); });
-          const nsKeys = Object.keys(nsByNs);
-          nsKeys.forEach((ns, ni) => {
-            const nsAngle = nsKeys.length===1 ? 0 : (ni/nsKeys.length)*Math.PI*2 - Math.PI/2;
-            const nsOffX = nsKeys.length===1 ? 0 : Math.cos(nsAngle)*100;
-            const nsOffY = nsKeys.length===1 ? 0 : Math.sin(nsAngle)*60;
-            const svcs = nsByNs[ns];
+          const nodeW = 140, nodeH = 52;
+          tiers.forEach((tier, ti) => {
+            const svcs = Object.values(tier);
+            const totalH = svcs.length * (nodeH + 20) - 20;
+            const startY = (H - totalH) / 2;
             svcs.forEach((s, si) => {
-              const a = (si/svcs.length)*Math.PI*2 - Math.PI/2;
-              const r = Math.min(120, 60+svcs.length*15);
               svcPositions[s.id] = {
-                x: CX + nsOffX + r*Math.cos(a),
-                y: CY + nsOffY + r*Math.sin(a),
+                x: tierX[ti],
+                y: startY + si * (nodeH + 20) + nodeH / 2,
+                tier: ti,
               };
             });
           });
 
           const verdictColor = v => v==='FORWARDED' ? '#22c55e' : v==='DROPPED' ? '#ef4444' : '#f59e0b';
           const protoColor = p => p==='HTTP' ? '#3b82f6' : p==='TCP' ? '#06b6d4' : p==='UDP' ? '#a855f7' : p==='gRPC' ? '#f97316' : '#64748b';
+          const typeIcon = t => t==='StatefulSet' ? 'DB' : t==='DaemonSet' ? 'DS' : t==='Pod' ? 'EXT' : 'SVC';
 
           return (
             <div className="flex flex-col" style={{height:'calc(100vh - 120px)'}}>
@@ -656,7 +666,6 @@ const App = () => {
                     className={`px-3 py-1 text-[10px] font-bold ${hubbleView==='table' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}>
                     Flows Only</button>
                 </div>
-                {/* live indicator */}
                 <div className="flex items-center gap-1.5">
                   <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
                   <span className="text-[10px] text-emerald-400 font-bold">LIVE</span>
@@ -672,99 +681,131 @@ const App = () => {
                 <span className="text-[10px] text-red-400">Dropped: <span className="font-bold">{filteredFlows.filter(f=>f.verdict==='DROPPED').length}</span></span>
               </div>
 
-              {/* ── Service Map ── */}
+              {/* ── Service Map (hierarchical left→right) ── */}
               {hubbleView==='map' && (
-                <div className="flex-1 min-h-0 bg-[#0a0f1e] rounded-xl border border-slate-800 overflow-hidden relative mb-3" style={{minHeight:'340px'}}>
+                <div className="flex-1 min-h-0 bg-[#060a14] rounded-xl border border-slate-800 overflow-hidden relative mb-3" style={{minHeight:'360px'}}>
                   {filteredSvcs.length===0 ? (
                     <div className="flex items-center justify-center h-full text-slate-600">Loading service map...</div>
                   ) : (
                     <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} className="select-none">
                       <defs>
-                        <marker id="arrow-fwd" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                          <polygon points="0 0, 10 3.5, 0 7" fill="#22c55e" opacity="0.7"/>
+                        <marker id="arrow-fwd" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                          <polygon points="0 0, 8 3, 0 6" fill="#22c55e" opacity="0.8"/>
                         </marker>
-                        <marker id="arrow-drop" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                          <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444" opacity="0.7"/>
+                        <marker id="arrow-drop" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                          <polygon points="0 0, 8 3, 0 6" fill="#ef4444" opacity="0.8"/>
                         </marker>
-                        <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                        <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                        <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.4"/></filter>
                       </defs>
 
-                      {/* namespace backgrounds */}
-                      {nsKeys.map((ns, ni) => {
-                        const svcs = nsByNs[ns];
-                        const positions = svcs.map(s=>svcPositions[s.id]).filter(Boolean);
-                        if(!positions.length) return null;
-                        const minX = Math.min(...positions.map(p=>p.x))-50;
-                        const minY = Math.min(...positions.map(p=>p.y))-40;
-                        const maxX = Math.max(...positions.map(p=>p.x))+50;
-                        const maxY = Math.max(...positions.map(p=>p.y))+40;
-                        return (
-                          <g key={ns}>
-                            <rect x={minX} y={minY} width={maxX-minX} height={maxY-minY} rx="12"
-                              fill={ni===0 ? 'rgba(59,130,246,0.04)' : 'rgba(168,85,247,0.04)'}
-                              stroke={ni===0 ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)'} strokeWidth="1" strokeDasharray="4 2"/>
-                            <text x={minX+8} y={minY+14} fill={ni===0 ? '#3b82f6' : '#a855f7'} fontSize="9" fontWeight="700" opacity="0.6">{ns}</text>
-                          </g>
-                        );
-                      })}
+                      {/* subtle grid */}
+                      {Array.from({length:20},(_,i)=><line key={`gx${i}`} x1={i*50} y1="0" x2={i*50} y2={H} stroke="#1e293b" strokeWidth="0.3" opacity="0.3"/>)}
+                      {Array.from({length:10},(_,i)=><line key={`gy${i}`} x1="0" y1={i*50} x2={W} y2={i*50} stroke="#1e293b" strokeWidth="0.3" opacity="0.3"/>)}
 
-                      {/* connections */}
+                      {/* tier column headers */}
+                      {tierLabels.map((label, i) => (
+                        <g key={`tier-${i}`}>
+                          <rect x={tierX[i]-10} y={8} width={nodeW+20} height={18} rx="4"
+                            fill={`${tierColors[i]}10`} stroke={`${tierColors[i]}30`} strokeWidth="0.5"/>
+                          <text x={tierX[i]+nodeW/2} y={20} fill={tierColors[i]} fontSize="8" fontWeight="700"
+                            textAnchor="middle" opacity="0.8">{label}</text>
+                        </g>
+                      ))}
+
+                      {/* tier column lines */}
+                      {tierX.map((x, i) => (
+                        <line key={`tl-${i}`} x1={x+nodeW/2} y1={30} x2={x+nodeW/2} y2={H-10}
+                          stroke={tierColors[i]} strokeWidth="0.5" opacity="0.06" strokeDasharray="4 4"/>
+                      ))}
+
+                      {/* connections (smooth horizontal bezier curves) */}
                       {filteredConns.map((c, i) => {
                         const sp = svcPositions[c.source]; const tp = svcPositions[c.target];
                         if(!sp||!tp) return null;
                         const hasDropped = c.dropped_count > 0;
-                        const strokeW = Math.min(4, 1 + Math.log1p(c.total_count)*0.8);
-                        const dx=tp.x-sp.x, dy=tp.y-sp.y;
-                        const len=Math.sqrt(dx*dx+dy*dy)||1;
-                        const nx=dx/len, ny=dy/len;
-                        const sx2=sp.x+nx*28, sy2=sp.y+ny*28;
-                        const tx2=tp.x-nx*28, ty2=tp.y-ny*28;
-                        const mx=(sx2+tx2)/2+ny*20, my=(sy2+ty2)/2-nx*20;
+                        const strokeW = Math.min(3.5, 1 + Math.log1p(c.total_count)*0.6);
+                        const clr = hasDropped ? '#ef4444' : '#22c55e';
+                        /* horizontal bezier: source right edge → target left edge */
+                        const sx = sp.x + nodeW + 2, sy = sp.y;
+                        const tx = tp.x - 2, ty = tp.y;
+                        const cpOffset = Math.abs(tx-sx)*0.4;
+                        const path = `M${sx},${sy} C${sx+cpOffset},${sy} ${tx-cpOffset},${ty} ${tx},${ty}`;
+                        const midX = (sx+tx)/2, midY = (sy+ty)/2;
                         return (
-                          <g key={i}>
-                            <path d={`M${sx2},${sy2} Q${mx},${my} ${tx2},${ty2}`}
-                              fill="none" stroke={hasDropped ? '#ef4444' : '#22c55e'}
-                              strokeWidth={strokeW} opacity="0.5"
+                          <g key={`conn-${i}`}>
+                            {/* glow underline */}
+                            <path d={path} fill="none" stroke={clr} strokeWidth={strokeW+3} opacity="0.06"/>
+                            {/* main line */}
+                            <path d={path} fill="none" stroke={clr} strokeWidth={strokeW} opacity="0.6"
                               markerEnd={hasDropped ? 'url(#arrow-drop)' : 'url(#arrow-fwd)'}
-                              strokeDasharray={hasDropped ? '4 3' : 'none'}>
-                              <animate attributeName="stroke-dashoffset" values="14;0" dur="1s" repeatCount="indefinite"/>
+                              strokeDasharray={hasDropped ? '6 4' : 'none'}>
+                              {!hasDropped && <animate attributeName="stroke-dashoffset" values="20;0" dur="1.5s" repeatCount="indefinite"/>}
                             </path>
-                            <text x={mx} y={my-6} fill="#64748b" fontSize="8" textAnchor="middle" fontWeight="600">
-                              {c.protocol}:{c.port}
-                            </text>
-                            <text x={mx} y={my+5} fill={hasDropped ? '#f87171' : '#4ade80'} fontSize="7" textAnchor="middle">
-                              {c.total_count} flows
+                            {/* label pill */}
+                            <rect x={midX-28} y={midY-8} width="56" height="16" rx="8"
+                              fill="#0f172a" stroke={`${clr}40`} strokeWidth="0.5" opacity="0.9"/>
+                            <text x={midX} y={midY+3} fill={clr} fontSize="7" fontWeight="600" textAnchor="middle" opacity="0.9">
+                              {c.protocol}:{c.port} ({c.total_count})
                             </text>
                           </g>
                         );
                       })}
 
-                      {/* service nodes */}
+                      {/* service nodes (rounded rectangles) */}
                       {filteredSvcs.map(s => {
                         const pos = svcPositions[s.id]; if(!pos) return null;
                         const isSelected = selectedSvc===s.id;
                         const hasDropped = s.dropped > 0;
-                        const nodeColor = hasDropped ? '#ef4444' : s.namespace==='kube-system' ? '#a855f7' : '#3b82f6';
+                        const tc = tierColors[pos.tier] || '#64748b';
+                        const nodeColor = hasDropped ? '#ef4444' : tc;
+                        const nx = pos.x, ny = pos.y - nodeH/2;
                         return (
                           <g key={s.id} onClick={()=>setSelectedSvc(isSelected?null:s.id)} style={{cursor:'pointer'}}>
-                            {/* outer ring pulse */}
-                            <circle cx={pos.x} cy={pos.y} r={isSelected?30:26} fill="none"
-                              stroke={nodeColor} strokeWidth={isSelected?2:1} opacity={isSelected?0.8:0.2}>
-                              <animate attributeName="r" values={isSelected?"28;34;28":"24;28;24"} dur="2s" repeatCount="indefinite"/>
-                              <animate attributeName="opacity" values={isSelected?"0.8;0.3;0.8":"0.2;0.1;0.2"} dur="2s" repeatCount="indefinite"/>
-                            </circle>
-                            {/* main circle */}
-                            <circle cx={pos.x} cy={pos.y} r={22} fill={`${nodeColor}20`}
-                              stroke={nodeColor} strokeWidth={isSelected?2.5:1.5}
-                              filter={isSelected?"url(#glow)":"none"}/>
-                            {/* icon */}
-                            <text x={pos.x} y={pos.y-4} fill={nodeColor} fontSize="14" textAnchor="middle" dominantBaseline="central">
-                              {s.type==='StatefulSet' ? '◆' : s.type==='DaemonSet' ? '◈' : '●'}
+                            {/* selection highlight */}
+                            {isSelected && (
+                              <rect x={nx-4} y={ny-4} width={nodeW+8} height={nodeH+8} rx="14"
+                                fill="none" stroke={nodeColor} strokeWidth="2" opacity="0.4">
+                                <animate attributeName="opacity" values="0.4;0.15;0.4" dur="2s" repeatCount="indefinite"/>
+                              </rect>
+                            )}
+                            {/* card shadow */}
+                            <rect x={nx} y={ny} width={nodeW} height={nodeH} rx="10"
+                              fill="#0c1222" filter="url(#shadow)"/>
+                            {/* card body */}
+                            <rect x={nx} y={ny} width={nodeW} height={nodeH} rx="10"
+                              fill={isSelected ? `${nodeColor}15` : '#0f172a'}
+                              stroke={isSelected ? nodeColor : '#1e293b'} strokeWidth={isSelected ? 1.5 : 1}/>
+                            {/* left color bar */}
+                            <rect x={nx} y={ny} width="4" height={nodeH} rx="2"
+                              fill={nodeColor} opacity={isSelected ? 1 : 0.6}/>
+                            {/* type badge */}
+                            <rect x={nx+12} y={ny+8} width="26" height="14" rx="4"
+                              fill={`${nodeColor}20`} stroke={`${nodeColor}40`} strokeWidth="0.5"/>
+                            <text x={nx+25} y={ny+18} fill={nodeColor} fontSize="7" fontWeight="800" textAnchor="middle">
+                              {typeIcon(s.type)}
                             </text>
-                            {/* name */}
-                            <text x={pos.x} y={pos.y+10} fill="#e2e8f0" fontSize="8" fontWeight="700" textAnchor="middle">{s.name.length>14?s.name.slice(0,12)+'..':s.name}</text>
-                            {/* traffic badges */}
-                            <text x={pos.x} y={pos.y+34} fill="#64748b" fontSize="7" textAnchor="middle">
+                            {/* service name */}
+                            <text x={nx+44} y={ny+18} fill="#e2e8f0" fontSize="9" fontWeight="700">
+                              {s.name.length > 16 ? s.name.slice(0,14)+'..' : s.name}
+                            </text>
+                            {/* namespace + protocol */}
+                            <text x={nx+12} y={ny+33} fill="#475569" fontSize="7">
+                              {s.namespace}
+                            </text>
+                            <text x={nx+12} y={ny+43} fill="#64748b" fontSize="7">
+                              {s.protocol}:{s.port}
+                            </text>
+                            {/* traffic counters on right side */}
+                            <text x={nx+nodeW-8} y={ny+18} fill="#4ade80" fontSize="7" fontWeight="600" textAnchor="end">
+                              {s.forwarded > 0 ? `${s.forwarded}` : ''}
+                            </text>
+                            {s.dropped > 0 && (
+                              <text x={nx+nodeW-8} y={ny+29} fill="#f87171" fontSize="7" fontWeight="600" textAnchor="end">
+                                {s.dropped}
+                              </text>
+                            )}
+                            <text x={nx+nodeW-8} y={ny+43} fill="#334155" fontSize="6" textAnchor="end">
                               ↓{s.traffic_in} ↑{s.traffic_out}
                             </text>
                           </g>
@@ -779,31 +820,31 @@ const App = () => {
                     if(!s) return null;
                     const relatedConns = serviceMap.connections.filter(c=>c.source===s.id||c.target===s.id);
                     return (
-                      <div className="absolute top-3 right-3 w-56 bg-[#0f172a]/95 border border-slate-700 rounded-xl p-3 backdrop-blur-sm">
-                        <div className="flex justify-between items-start mb-2">
+                      <div className="absolute top-3 right-3 w-60 bg-[#0c1222]/95 border border-slate-700/50 rounded-xl p-4 backdrop-blur-md shadow-2xl">
+                        <div className="flex justify-between items-start mb-3">
                           <div>
                             <div className="text-white font-bold text-xs">{s.name}</div>
-                            <div className="text-slate-500 text-[9px]">{s.namespace} / {s.type}</div>
+                            <div className="text-slate-500 text-[9px] mt-0.5">{s.namespace} / {s.type}</div>
                           </div>
-                          <button onClick={()=>setSelectedSvc(null)} className="text-slate-500 hover:text-white text-xs">✕</button>
+                          <button onClick={()=>setSelectedSvc(null)} className="text-slate-600 hover:text-white text-xs w-5 h-5 flex items-center justify-center rounded hover:bg-slate-800">✕</button>
                         </div>
-                        <div className="space-y-1 text-[10px]">
-                          <div className="flex justify-between"><span className="text-slate-500">IP</span><span className="text-blue-400 font-mono">{s.ip}</span></div>
-                          <div className="flex justify-between"><span className="text-slate-500">Protocol</span><span style={{color:protoColor(s.protocol)}}>{s.protocol}:{s.port}</span></div>
-                          <div className="flex justify-between"><span className="text-slate-500">Traffic In</span><span className="text-emerald-400">{s.traffic_in}</span></div>
-                          <div className="flex justify-between"><span className="text-slate-500">Traffic Out</span><span className="text-blue-400">{s.traffic_out}</span></div>
-                          <div className="flex justify-between"><span className="text-slate-500">Forwarded</span><span className="text-emerald-400">{s.forwarded}</span></div>
-                          <div className="flex justify-between"><span className="text-slate-500">Dropped</span><span className="text-red-400">{s.dropped}</span></div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10px]">
+                          <span className="text-slate-500">IP</span><span className="text-blue-400 font-mono text-right">{s.ip}</span>
+                          <span className="text-slate-500">Protocol</span><span className="text-right" style={{color:protoColor(s.protocol)}}>{s.protocol}:{s.port}</span>
+                          <span className="text-slate-500">Traffic In</span><span className="text-emerald-400 text-right font-bold">{s.traffic_in}</span>
+                          <span className="text-slate-500">Traffic Out</span><span className="text-blue-400 text-right font-bold">{s.traffic_out}</span>
+                          <span className="text-slate-500">Forwarded</span><span className="text-emerald-400 text-right">{s.forwarded}</span>
+                          <span className="text-slate-500">Dropped</span><span className="text-red-400 text-right">{s.dropped}</span>
                         </div>
                         {relatedConns.length>0 && (
-                          <div className="mt-2 pt-2 border-t border-slate-800">
-                            <div className="text-[9px] text-slate-500 uppercase font-bold mb-1">Connections</div>
-                            {relatedConns.slice(0,5).map((c,i)=>(
-                              <div key={i} className="flex items-center gap-1 text-[9px] mb-0.5">
-                                <span className="text-blue-400">{c.source}</span>
-                                <span className="text-slate-600">→</span>
-                                <span className="text-purple-400">{c.target}</span>
-                                <span className="ml-auto" style={{color: c.dropped_count>0?'#ef4444':'#22c55e'}}>{c.total_count}</span>
+                          <div className="mt-3 pt-3 border-t border-slate-800/50">
+                            <div className="text-[9px] text-slate-500 uppercase font-bold mb-1.5">Connections</div>
+                            {relatedConns.slice(0,6).map((c,i)=>(
+                              <div key={i} className="flex items-center gap-1 text-[9px] mb-1 py-0.5">
+                                <span className="text-blue-400 truncate max-w-[70px]">{c.source}</span>
+                                <span className="text-slate-700 flex-shrink-0">→</span>
+                                <span className="text-purple-400 truncate max-w-[70px]">{c.target}</span>
+                                <span className="ml-auto flex-shrink-0 font-bold" style={{color: c.dropped_count>0?'#ef4444':'#22c55e'}}>{c.total_count}</span>
                               </div>
                             ))}
                           </div>
