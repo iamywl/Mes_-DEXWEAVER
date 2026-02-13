@@ -332,6 +332,24 @@ async def get_topology():
     }
 
 
+@app.get("/api/network/hubble-flows")
+async def get_hubble_flows(last: int = 50):
+    try:
+        flows = k8s_service.get_hubble_flows(min(last, 200))
+        return {"status": "success", "flows": flows, "total": len(flows)}
+    except Exception:
+        return {"status": "success", "flows": [], "total": 0}
+
+
+@app.get("/api/network/service-map")
+async def get_service_map():
+    try:
+        smap = k8s_service.get_service_map()
+        return {"status": "success", **smap}
+    except Exception:
+        return {"status": "success", "services": [], "connections": []}
+
+
 @app.get("/api/infra/status")
 async def get_infra():
     try:
