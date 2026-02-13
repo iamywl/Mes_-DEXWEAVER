@@ -1,6 +1,6 @@
 # KNU MES 시스템 사용자 매뉴얼
 
-**버전**: 4.0
+**버전**: 5.0
 **최종 수정일**: 2026-02-13
 **시스템 URL**: `http://<서버IP>:30173`
 
@@ -118,7 +118,13 @@ KNU MES(Manufacturing Execution System)는 제조 현장의 생산 활동을 실
 1. **Items** 메뉴 클릭
 2. 전체 품목 목록이 테이블로 표시됨
    - 품목코드, 품목명, 카테고리(RAW/SEMI/PRODUCT), 단위, 규격, 안전재고, 현재고
-3. 검색어/카테고리 필터로 조건 검색 가능
+
+### 필터 기능
+테이블 상단의 필터 바를 사용하여 데이터를 조건별로 검색할 수 있습니다:
+- **Category 드롭다운**: RAW / SEMI / PRODUCT 카테고리별 필터링
+- **Status 드롭다운**: NORMAL / LOW / OUT 재고 상태별 필터링
+- **검색**: 품목코드, 품목명, 규격 텍스트 검색
+- 우측에 `필터링 건수 / 전체 건수` 표시
 
 ### 품목 카테고리
 | 코드 | 의미 | 예시 |
@@ -207,6 +213,11 @@ BOM(Bill of Materials, 자재명세서)은 완제품/반제품을 만들기 위�
 2. 전체 설비 목록이 카드 형태로 표시됨
 3. 각 카드에는 설비명, 공정코드, 시간당 생산능력, 상태 뱃지가 표시
 
+### 필터 기능
+- **Status 드롭다운**: RUNNING / STOP / DOWN 상태별 필터링
+- **Process 드롭다운**: 공정코드별 필터링
+- **검색**: 설비명, 설비코드 텍스트 검색
+
 ### 설비 상태
 | 상태 | 색상 | 의미 |
 |------|------|------|
@@ -244,6 +255,11 @@ BOM(Bill of Materials, 자재명세서)은 완제품/반제품을 만들기 위�
 2. 전체 생산계획 목록이 테이블로 표시됨
 3. 각 계획의 품목, 수량, 납기, 우선순위, 상태, 진척률 확인 가능
 
+### 필터 기능
+- **Status 드롭다운**: WAIT / PROGRESS / DONE 상태별 필터링
+- **Priority 드롭다운**: HIGH / MID / LOW 우선순위별 필터링
+- **검색**: 계획 ID, 품목명 텍스트 검색
+
 ### 생산계획 상태
 | 상태 | 의미 |
 |------|------|
@@ -273,6 +289,10 @@ BOM(Bill of Materials, 자재명세서)은 완제품/반제품을 만들기 위�
 1. **Work Order** 메뉴 클릭
 2. 전체 작업지시 목록이 표시됨
 3. 작업일자, 설비, 품목, 지시수량, 상태 확인 가능
+
+### 필터 기능
+- **Status 드롭다운**: WAIT / WORKING / DONE 상태별 필터링
+- **검색**: 작업지시 ID, 품목명, 설비코드 텍스트 검색
 
 ### 작업지시 ID 규칙
 ```
@@ -304,6 +324,9 @@ WO-YYYYMMDD-SEQ
 ### 조회
 1. **Quality** 메뉴 클릭
 2. 불량 현황 요약과 추이 데이터가 표시됨
+
+### 필터 기능
+- **검색**: 불량 유형명 텍스트 검색
 
 ### 검사 유형
 | 유형 | 시점 | 설명 |
@@ -340,6 +363,10 @@ WO-YYYYMMDD-SEQ
 1. **Inventory** 메뉴 클릭
 2. 전체 재고 현황이 테이블로 표시됨
 3. 품목코드, LOT번호, 수량, 창고, 위치, 안전재고 상태 확인
+
+### 필터 기능
+- **Status 드롭다운**: NORMAL / LOW / OUT 재고 상태별 필터링
+- **검색**: 품목코드, 품목명 텍스트 검색
 
 ### 재고 상태 표시
 | 상태 | 색상 | 의미 |
@@ -486,19 +513,36 @@ AI 기반의 예측 분석 기능을 제공합니다. 3가지 예측 모델을 �
 
 ## 14. 네트워크 모니터링 (Network)
 
-시스템 내부 서비스 간의 네트워크 트래픽을 모니터링합니다.
+Cilium Hubble 스타일의 서비스 의존성 맵과 네트워크 플로우 모니터링을 제공합니다.
 
 ### 조회
 1. **Network** 메뉴 클릭
-2. 네트워크 플로우 테이블이 표시됨
-3. 토폴로지 뷰에서 서비스 간 연결 관계 확인
+2. 서비스 맵(Service Map)과 플로우 이벤트 테이블이 표시됨
+3. 5초 간격으로 자동 갱신 (LIVE 표시)
 
-### 표시 정보
-- 소스/대상 서비스
-- 프로토콜 (TCP/HTTP)
-- 요청 수
-- 패킷 크기
-- 토폴로지 그래프 (List/Graph 뷰 전환)
+### 서비스 맵 (Service Map)
+- **4-tier 계층 구조**: External → Ingress → Application → Backend/Infra
+- 서비스 노드를 카드 형태로 표시 (타입 뱃지, 이름, 네임스페이스, 프로토콜)
+- 서비스 간 연결선은 트래픽 흐름을 나타냄 (녹색=정상, 적색=차단)
+- 노드 클릭 시 상세 정보 패널 표시 (IP, 트래픽 통계, 관련 연결)
+
+### 필터 기능
+- **Namespace 드롭다운**: default / kube-system 등 네임스페이스별 필터링
+- **Verdict 버튼**: All / Forwarded / Dropped 판정별 필터링
+- **Protocol 버튼**: All / HTTP / TCP / UDP / gRPC 프로토콜별 필터링
+- **검색**: 파드명, 엔드포인트 텍스트 검색
+- **뷰 전환**: Service Map / Flows Only 뷰 전환
+
+### 플로우 이벤트 테이블
+| 컬럼 | 설명 |
+|------|------|
+| Timestamp | 이벤트 발생 시간 |
+| Source | 출발 서비스 (네임스페이스/파드명/IP:포트) |
+| Destination | 도착 서비스 (네임스페이스/파드명/IP:포트) |
+| Verdict | 판정 (FWD=정상전달, DROP=차단) |
+| Protocol | HTTP, TCP, UDP, gRPC |
+| Port | 목적지 포트 |
+| L7 Info | L7 계층 정보 (API 경로, DNS 쿼리 등) |
 
 ---
 
@@ -527,6 +571,10 @@ Kubernetes 클러스터의 파드 상태를 실시간 모니터링합니다.
 1. **K8s** 메뉴 클릭
 2. 전체 파드 목록이 표시됨
 3. 특정 파드 클릭 시 로그 확인 가능
+
+### 필터 기능
+- **Status 드롭다운**: Running / Pending / Error 등 상태별 필터링
+- **검색**: 파드명 텍스트 검색
 
 ### 표시 정보
 | 항목 | 설명 |
@@ -644,6 +692,42 @@ Kubernetes 클러스터의 파드 상태를 실시간 모니터링합니다.
 | MES | GET | /api/mes/data | MES 통합 데이터 |
 | 네트워크 | GET | /api/network/flows | 네트워크 플로우 |
 | 네트워크 | GET | /api/network/topology | 토폴로지 |
+| 네트워크 | GET | /api/network/hubble-flows | Hubble 플로우 이벤트 |
+| 네트워크 | GET | /api/network/service-map | 서비스 의존성 맵 |
 | 인프라 | GET | /api/infra/status | 인프라 상태 |
 | K8s | GET | /api/k8s/pods | 파드 목록 |
 | K8s | GET | /api/k8s/logs/{pod} | 파드 로그 |
+
+---
+
+## 변경 이력 (Changelog)
+
+### v5.0 (2026-02-13)
+**테이블 필터 기능 추가**
+- 모든 데이터 테이블에 필터 바(Filter Bar) 추가
+- 공통 컴포넌트: `FilterBar`, `FilterSelect`, `FilterSearch`, `FilterCount`
+- 필터 적용 페이지 (7개):
+  | 메뉴 | 필터 | 검색 |
+  |------|------|------|
+  | Items | Category, Status | 코드/이름/규격 |
+  | Equipment | Status, Process | 설비명/코드 |
+  | Plans | Status, Priority | ID/품목명 |
+  | Work Order | Status | WO ID/품목/설비 |
+  | Quality | - | 불량유형 |
+  | Inventory | Status | 코드/이름 |
+  | K8s | Status | 파드명 |
+- Network 페이지는 기존 Hubble 필터 유지 (Namespace, Verdict, Protocol, Search)
+
+**Hubble 네트워크 모니터링 UI**
+- Cilium Hubble 스타일 서비스 의존성 맵 추가
+- 4-tier 계층 레이아웃 (External → Ingress → Application → Backend)
+- 시뮬레이션 기반 Hubble 플로우 데이터 생성
+- 실시간 자동 갱신 (5초 간격)
+- 서비스 노드 클릭 시 상세 정보 패널
+
+### v4.0 (2026-02-13)
+- 14개 메뉴 프론트엔드 재설계
+- FN-001~037 전체 기능 구현
+- DB 시드 데이터 확장 (20개 품목, 25개 생산계획, 15대 설비 등)
+- AI 예측 모듈 DB 연동 (수요예측/불량예측/고장예측)
+- 사용자 매뉴얼 작성

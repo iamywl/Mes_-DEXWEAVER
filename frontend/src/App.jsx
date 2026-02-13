@@ -28,6 +28,30 @@ const Badge = ({v}) => {
 };
 const Input = (props) => <input {...props} className={`bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs ${props.className||''}`} />;
 const Btn = ({children,...p}) => <button {...p} className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-xs ${p.className||''}`}>{children}</button>;
+const FilterBar = ({children}) => (
+  <div className="flex items-center gap-3 mb-3 flex-wrap bg-[#0f172a]/60 px-3 py-2 rounded-xl border border-slate-800/50">
+    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mr-1">Filter</span>
+    {children}
+  </div>
+);
+const FilterSelect = ({label, value, onChange, options}) => (
+  <div className="flex items-center gap-1.5">
+    <span className="text-[10px] text-slate-500">{label}</span>
+    <select value={value} onChange={e=>onChange(e.target.value)}
+      className="bg-[#0f172a] border border-slate-700 px-2 py-1 rounded text-white text-[11px]">
+      {options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  </div>
+);
+const FilterSearch = ({value, onChange, placeholder='Search...'}) => (
+  <input placeholder={placeholder} value={value} onChange={e=>onChange(e.target.value)}
+    className="bg-[#0f172a] border border-slate-700 px-3 py-1 rounded text-white text-[11px] w-48 ml-auto" />
+);
+const FilterCount = ({total, filtered}) => (
+  <span className="text-[10px] text-slate-600 ml-2">
+    {filtered < total ? <>{filtered} / {total}</> : total} rows
+  </span>
+);
 
 /* ── main app ──────────────────────────────────────────── */
 const App = () => {
@@ -37,6 +61,18 @@ const App = () => {
   const [selPod, setSelPod] = useState('');
   const [topology, setTopology] = useState({ nodes:[], edges:[] });
   const [topologyView, setTopologyView] = useState('list');
+
+  /* ── table filter state ─────────────────────────────── */
+  const [tf, setTf] = useState({
+    items: { search:'', category:'ALL', status:'ALL' },
+    equips: { search:'', status:'ALL', process:'ALL' },
+    plans: { search:'', status:'ALL', priority:'ALL' },
+    wo: { search:'', status:'ALL' },
+    quality: { search:'' },
+    inv: { search:'', status:'ALL' },
+    k8s: { search:'', status:'ALL' },
+  });
+  const setFilter = (table, field, val) => setTf(prev=>({...prev,[table]:{...prev[table],[field]:val}}));
 
   /* ── Hubble network state ─────────────────────────── */
   const [hubbleFlows, setHubbleFlows] = useState([]);
@@ -191,24 +227,48 @@ const App = () => {
         )}
 
         {/* ── ITEMS (FN-004~007) ───────────────────────── */}
-        {menu==='ITEMS' && (
-          <div className="space-y-4">
-            <Table cols={['Code','Name','Category','Unit','Spec','Stock','Safety','Status']}
-              rows={extra.itemList||[]}
-              renderRow={(i,k)=>(
-                <tr key={k}>
-                  <td className="p-3 font-mono text-blue-400">{i.item_code}</td>
-                  <td className="p-3 text-white font-bold">{i.name}</td>
-                  <td className="p-3"><Badge v={i.category}/></td>
-                  <td className="p-3">{i.unit}</td>
-                  <td className="p-3 text-slate-500">{i.spec}</td>
-                  <td className="p-3 text-blue-400 font-bold">{i.stock}</td>
-                  <td className="p-3">{i.safety_stock}</td>
-                  <td className="p-3"><Badge v={i.stock<=0?'OUT':i.stock<i.safety_stock?'LOW':'NORMAL'}/></td>
-                </tr>
-              )} />
-          </div>
-        )}
+        {menu==='ITEMS' && (() => {
+          const allItems = extra.itemList||[];
+          const categories = [...new Set(allItems.map(i=>i.category).filter(Boolean))];
+          const filtered = allItems.filter(i => {
+            if (tf.items.search) {
+              const s = tf.items.search.toLowerCase();
+              if (!(i.item_code||'').toLowerCase().includes(s) && !(i.name||'').toLowerCase().includes(s) && !(i.spec||'').toLowerCase().includes(s)) return false;
+            }
+            if (tf.items.category!=='ALL' && i.category!==tf.items.category) return false;
+            if (tf.items.status!=='ALL') {
+              const st = i.stock<=0?'OUT':i.stock<i.safety_stock?'LOW':'NORMAL';
+              if (st!==tf.items.status) return false;
+            }
+            return true;
+          });
+          return (
+            <div className="space-y-4">
+              <FilterBar>
+                <FilterSelect label="Category" value={tf.items.category} onChange={v=>setFilter('items','category',v)}
+                  options={[{value:'ALL',label:'All'}, ...categories.map(c=>({value:c,label:c}))]} />
+                <FilterSelect label="Status" value={tf.items.status} onChange={v=>setFilter('items','status',v)}
+                  options={[{value:'ALL',label:'All'},{value:'NORMAL',label:'Normal'},{value:'LOW',label:'Low Stock'},{value:'OUT',label:'Out'}]} />
+                <FilterSearch value={tf.items.search} onChange={v=>setFilter('items','search',v)} placeholder="Search code, name, spec..." />
+                <FilterCount total={allItems.length} filtered={filtered.length} />
+              </FilterBar>
+              <Table cols={['Code','Name','Category','Unit','Spec','Stock','Safety','Status']}
+                rows={filtered}
+                renderRow={(i,k)=>(
+                  <tr key={k}>
+                    <td className="p-3 font-mono text-blue-400">{i.item_code}</td>
+                    <td className="p-3 text-white font-bold">{i.name}</td>
+                    <td className="p-3"><Badge v={i.category}/></td>
+                    <td className="p-3">{i.unit}</td>
+                    <td className="p-3 text-slate-500">{i.spec}</td>
+                    <td className="p-3 text-blue-400 font-bold">{i.stock}</td>
+                    <td className="p-3">{i.safety_stock}</td>
+                    <td className="p-3"><Badge v={i.stock<=0?'OUT':i.stock<i.safety_stock?'LOW':'NORMAL'}/></td>
+                  </tr>
+                )} />
+            </div>
+          );
+        })()}
 
         {/* ── BOM (FN-008~009) ─────────────────────────── */}
         {menu==='BOM' && (
@@ -282,78 +342,153 @@ const App = () => {
         )}
 
         {/* ── EQUIPMENT (FN-013~014, 032~034) ──────────── */}
-        {menu==='EQUIPMENT' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-5 gap-3">
-              {(extra.equips||[]).map(e=>(
-                <div key={e.equip_code} className="bg-[#1e293b]/30 p-4 rounded-2xl border border-slate-800">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-white font-bold text-xs">{e.name}</span>
-                    <Badge v={e.status}/>
+        {menu==='EQUIPMENT' && (() => {
+          const allEquips = extra.equips||[];
+          const statuses = [...new Set(allEquips.map(e=>e.status).filter(Boolean))];
+          const processes = [...new Set(allEquips.map(e=>e.process_code).filter(Boolean))];
+          const filtered = allEquips.filter(e => {
+            if (tf.equips.search) {
+              const s = tf.equips.search.toLowerCase();
+              if (!(e.name||'').toLowerCase().includes(s) && !(e.equip_code||'').toLowerCase().includes(s)) return false;
+            }
+            if (tf.equips.status!=='ALL' && e.status!==tf.equips.status) return false;
+            if (tf.equips.process!=='ALL' && e.process_code!==tf.equips.process) return false;
+            return true;
+          });
+          return (
+            <div className="space-y-4">
+              <FilterBar>
+                <FilterSelect label="Status" value={tf.equips.status} onChange={v=>setFilter('equips','status',v)}
+                  options={[{value:'ALL',label:'All'}, ...statuses.map(s=>({value:s,label:s}))]} />
+                <FilterSelect label="Process" value={tf.equips.process} onChange={v=>setFilter('equips','process',v)}
+                  options={[{value:'ALL',label:'All'}, ...processes.map(p=>({value:p,label:p}))]} />
+                <FilterSearch value={tf.equips.search} onChange={v=>setFilter('equips','search',v)} placeholder="Search name, code..." />
+                <FilterCount total={allEquips.length} filtered={filtered.length} />
+              </FilterBar>
+              <div className="grid grid-cols-5 gap-3">
+                {filtered.map(e=>(
+                  <div key={e.equip_code} className="bg-[#1e293b]/30 p-4 rounded-2xl border border-slate-800">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-white font-bold text-xs">{e.name}</span>
+                      <Badge v={e.status}/>
+                    </div>
+                    <div className="text-[10px] text-slate-500 space-y-0.5">
+                      <div>Code: {e.equip_code}</div>
+                      <div>Process: {e.process_code}</div>
+                      <div>Capacity: {e.capacity_per_hour}/hr</div>
+                    </div>
                   </div>
-                  <div className="text-[10px] text-slate-500 space-y-0.5">
-                    <div>Code: {e.equip_code}</div>
-                    <div>Process: {e.process_code}</div>
-                    <div>Capacity: {e.capacity_per_hour}/hr</div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── PLANS (FN-015~017) ───────────────────────── */}
-        {menu==='PLANS' && (
-          <div className="space-y-4">
-            <Table cols={['ID','Item','Qty','Due Date','Priority','Status','Progress']}
-              rows={extra.planList||[]}
-              renderRow={(p,k)=>(
-                <tr key={k}>
-                  <td className="p-3 text-blue-400 font-mono">{p.plan_id}</td>
-                  <td className="p-3 text-white">{p.item_name}</td>
-                  <td className="p-3">{p.qty}</td>
-                  <td className="p-3">{p.due_date}</td>
-                  <td className="p-3"><Badge v={p.priority}/></td>
-                  <td className="p-3"><Badge v={p.status}/></td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full" style={{width:`${p.progress}%`}}/>
+        {menu==='PLANS' && (() => {
+          const allPlans = extra.planList||[];
+          const statuses = [...new Set(allPlans.map(p=>p.status).filter(Boolean))];
+          const priorities = [...new Set(allPlans.map(p=>p.priority).filter(Boolean))];
+          const filtered = allPlans.filter(p => {
+            if (tf.plans.search) {
+              const s = tf.plans.search.toLowerCase();
+              if (!String(p.plan_id).includes(s) && !(p.item_name||'').toLowerCase().includes(s)) return false;
+            }
+            if (tf.plans.status!=='ALL' && p.status!==tf.plans.status) return false;
+            if (tf.plans.priority!=='ALL' && p.priority!==tf.plans.priority) return false;
+            return true;
+          });
+          return (
+            <div className="space-y-4">
+              <FilterBar>
+                <FilterSelect label="Status" value={tf.plans.status} onChange={v=>setFilter('plans','status',v)}
+                  options={[{value:'ALL',label:'All'}, ...statuses.map(s=>({value:s,label:s}))]} />
+                <FilterSelect label="Priority" value={tf.plans.priority} onChange={v=>setFilter('plans','priority',v)}
+                  options={[{value:'ALL',label:'All'}, ...priorities.map(p=>({value:p,label:p}))]} />
+                <FilterSearch value={tf.plans.search} onChange={v=>setFilter('plans','search',v)} placeholder="Search ID, item..." />
+                <FilterCount total={allPlans.length} filtered={filtered.length} />
+              </FilterBar>
+              <Table cols={['ID','Item','Qty','Due Date','Priority','Status','Progress']}
+                rows={filtered}
+                renderRow={(p,k)=>(
+                  <tr key={k}>
+                    <td className="p-3 text-blue-400 font-mono">{p.plan_id}</td>
+                    <td className="p-3 text-white">{p.item_name}</td>
+                    <td className="p-3">{p.qty}</td>
+                    <td className="p-3">{p.due_date}</td>
+                    <td className="p-3"><Badge v={p.priority}/></td>
+                    <td className="p-3"><Badge v={p.status}/></td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-500 rounded-full" style={{width:`${p.progress}%`}}/>
+                        </div>
+                        <span className="text-[10px] text-blue-400">{p.progress}%</span>
                       </div>
-                      <span className="text-[10px] text-blue-400">{p.progress}%</span>
-                    </div>
-                  </td>
-                </tr>
-              )} />
-          </div>
-        )}
+                    </td>
+                  </tr>
+                )} />
+            </div>
+          );
+        })()}
 
         {/* ── WORK ORDER (FN-020~024) ──────────────────── */}
-        {menu==='WORK_ORDER' && (
-          <div className="space-y-4">
-            <Table cols={['WO ID','Item','Qty','Date','Equipment','Status']}
-              rows={extra.woList||[]}
-              renderRow={(w,k)=>(
-                <tr key={k}>
-                  <td className="p-3 font-mono text-blue-400">{w.wo_id}</td>
-                  <td className="p-3 text-white">{w.item_name}</td>
-                  <td className="p-3">{w.plan_qty}</td>
-                  <td className="p-3">{w.work_date}</td>
-                  <td className="p-3 text-purple-400">{w.equip_code}</td>
-                  <td className="p-3"><Badge v={w.status}/></td>
-                </tr>
-              )} />
-          </div>
-        )}
+        {menu==='WORK_ORDER' && (() => {
+          const allWo = extra.woList||[];
+          const statuses = [...new Set(allWo.map(w=>w.status).filter(Boolean))];
+          const filtered = allWo.filter(w => {
+            if (tf.wo.search) {
+              const s = tf.wo.search.toLowerCase();
+              if (!(w.wo_id||'').toLowerCase().includes(s) && !(w.item_name||'').toLowerCase().includes(s) && !(w.equip_code||'').toLowerCase().includes(s)) return false;
+            }
+            if (tf.wo.status!=='ALL' && w.status!==tf.wo.status) return false;
+            return true;
+          });
+          return (
+            <div className="space-y-4">
+              <FilterBar>
+                <FilterSelect label="Status" value={tf.wo.status} onChange={v=>setFilter('wo','status',v)}
+                  options={[{value:'ALL',label:'All'}, ...statuses.map(s=>({value:s,label:s}))]} />
+                <FilterSearch value={tf.wo.search} onChange={v=>setFilter('wo','search',v)} placeholder="Search WO ID, item, equipment..." />
+                <FilterCount total={allWo.length} filtered={filtered.length} />
+              </FilterBar>
+              <Table cols={['WO ID','Item','Qty','Date','Equipment','Status']}
+                rows={filtered}
+                renderRow={(w,k)=>(
+                  <tr key={k}>
+                    <td className="p-3 font-mono text-blue-400">{w.wo_id}</td>
+                    <td className="p-3 text-white">{w.item_name}</td>
+                    <td className="p-3">{w.plan_qty}</td>
+                    <td className="p-3">{w.work_date}</td>
+                    <td className="p-3 text-purple-400">{w.equip_code}</td>
+                    <td className="p-3"><Badge v={w.status}/></td>
+                  </tr>
+                )} />
+            </div>
+          );
+        })()}
 
         {/* ── QUALITY (FN-025~028) ─────────────────────── */}
-        {menu==='QUALITY' && (
+        {menu==='QUALITY' && (() => {
+          const allDefects = extra.defects?.summary||[];
+          const filtered = allDefects.filter(d => {
+            if (tf.quality.search) {
+              const s = tf.quality.search.toLowerCase();
+              if (!(d.defect_type||'').toLowerCase().includes(s)) return false;
+            }
+            return true;
+          });
+          return (
           <div className="space-y-6">
             <h3 className="text-white font-bold">Defect Summary</h3>
+            <FilterBar>
+              <FilterSearch value={tf.quality.search} onChange={v=>setFilter('quality','search',v)} placeholder="Search defect type..." />
+              <FilterCount total={allDefects.length} filtered={filtered.length} />
+            </FilterBar>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Table cols={['Defect Type','Count','Rate']}
-                  rows={extra.defects?.summary||[]}
+                  rows={filtered}
                   renderRow={(d,k)=>(
                     <tr key={k}>
                       <td className="p-3 text-red-400 font-bold">{d.defect_type}</td>
@@ -378,23 +513,44 @@ const App = () => {
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* ── INVENTORY (FN-029~031) ───────────────────── */}
-        {menu==='INVENTORY' && (
-          <Table cols={['Code','Name','Stock','Available','Safety','Status']}
-            rows={extra.invItems||[]}
-            renderRow={(i,k)=>(
-              <tr key={k}>
-                <td className="p-3 font-mono text-blue-400">{i.item_code}</td>
-                <td className="p-3 text-white">{i.name}</td>
-                <td className="p-3 text-blue-400 font-bold">{i.stock}</td>
-                <td className="p-3">{i.available}</td>
-                <td className="p-3 text-amber-400">{i.safety}</td>
-                <td className="p-3"><Badge v={i.status}/></td>
-              </tr>
-            )} />
-        )}
+        {menu==='INVENTORY' && (() => {
+          const allInv = extra.invItems||[];
+          const statuses = [...new Set(allInv.map(i=>i.status).filter(Boolean))];
+          const filtered = allInv.filter(i => {
+            if (tf.inv.search) {
+              const s = tf.inv.search.toLowerCase();
+              if (!(i.item_code||'').toLowerCase().includes(s) && !(i.name||'').toLowerCase().includes(s)) return false;
+            }
+            if (tf.inv.status!=='ALL' && i.status!==tf.inv.status) return false;
+            return true;
+          });
+          return (
+            <div className="space-y-4">
+              <FilterBar>
+                <FilterSelect label="Status" value={tf.inv.status} onChange={v=>setFilter('inv','status',v)}
+                  options={[{value:'ALL',label:'All'}, ...statuses.map(s=>({value:s,label:s}))]} />
+                <FilterSearch value={tf.inv.search} onChange={v=>setFilter('inv','search',v)} placeholder="Search code, name..." />
+                <FilterCount total={allInv.length} filtered={filtered.length} />
+              </FilterBar>
+              <Table cols={['Code','Name','Stock','Available','Safety','Status']}
+                rows={filtered}
+                renderRow={(i,k)=>(
+                  <tr key={k}>
+                    <td className="p-3 font-mono text-blue-400">{i.item_code}</td>
+                    <td className="p-3 text-white">{i.name}</td>
+                    <td className="p-3 text-blue-400 font-bold">{i.stock}</td>
+                    <td className="p-3">{i.available}</td>
+                    <td className="p-3 text-amber-400">{i.safety}</td>
+                    <td className="p-3"><Badge v={i.status}/></td>
+                  </tr>
+                )} />
+            </div>
+          );
+        })()}
 
         {/* ── AI CENTER (FN-018,028,034) ───────────────── */}
         {menu==='AI_CENTER' && (
@@ -977,22 +1133,39 @@ const App = () => {
         )}
 
         {/* ── K8S MANAGER (existing) ───────────────────── */}
-        {menu==='K8S_MANAGER' && (
-          <div className="grid grid-cols-2 gap-6 h-[500px]">
-            <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800 overflow-auto space-y-2">
-              <h3 className="text-white font-bold mb-3">Pod Status</h3>
-              {(db.pods||[]).map(p=>(
-                <div key={p.name} onClick={()=>setSelPod(p.name)} className={`p-2 rounded-xl border cursor-pointer text-xs ${selPod===p.name?'border-blue-500 bg-blue-500/10':'border-slate-800'}`}>
-                  <div className="flex justify-between"><span>{p.name}</span><Badge v={p.status}/></div>
-                </div>
-              ))}
-            </div>
+        {menu==='K8S_MANAGER' && (() => {
+          const allPods = db.pods||[];
+          const statuses = [...new Set(allPods.map(p=>p.status).filter(Boolean))];
+          const filtered = allPods.filter(p => {
+            if (tf.k8s.search && !(p.name||'').toLowerCase().includes(tf.k8s.search.toLowerCase())) return false;
+            if (tf.k8s.status!=='ALL' && p.status!==tf.k8s.status) return false;
+            return true;
+          });
+          return (
+          <div className="space-y-4">
+            <FilterBar>
+              <FilterSelect label="Status" value={tf.k8s.status} onChange={v=>setFilter('k8s','status',v)}
+                options={[{value:'ALL',label:'All'}, ...statuses.map(s=>({value:s,label:s}))]} />
+              <FilterSearch value={tf.k8s.search} onChange={v=>setFilter('k8s','search',v)} placeholder="Search pod name..." />
+              <FilterCount total={allPods.length} filtered={filtered.length} />
+            </FilterBar>
+            <div className="grid grid-cols-2 gap-6 h-[500px]">
+              <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800 overflow-auto space-y-2">
+                <h3 className="text-white font-bold mb-3">Pod Status</h3>
+                {filtered.map(p=>(
+                  <div key={p.name} onClick={()=>setSelPod(p.name)} className={`p-2 rounded-xl border cursor-pointer text-xs ${selPod===p.name?'border-blue-500 bg-blue-500/10':'border-slate-800'}`}>
+                    <div className="flex justify-between"><span>{p.name}</span><Badge v={p.status}/></div>
+                  </div>
+                ))}
+              </div>
             <div className="bg-black/80 p-4 rounded-2xl border border-slate-800 flex flex-col">
               <h3 className="text-blue-400 font-bold mb-2 font-mono text-xs"># {selPod||'select a pod'}</h3>
               <pre className="text-emerald-500 font-mono text-[9px] flex-1 overflow-auto whitespace-pre-wrap leading-tight">{db.logs}</pre>
             </div>
           </div>
-        )}
+          </div>
+          );
+        })()}
 
       </main>
     </div>
