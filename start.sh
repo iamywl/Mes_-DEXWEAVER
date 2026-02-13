@@ -1,0 +1,260 @@
+#!/bin/bash
+# =========================================================
+# KNU MES 시스템 원클릭 시작 스크립트
+# VM 부팅 후 이 스크립트 하나만 실행하면 전체 시스템이 올라갑니다.
+# 사용법: sudo bash /root/MES_PROJECT/start.sh
+# =========================================================
+set +e
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+PROJECT_DIR="/root/MES_PROJECT"
+cd "$PROJECT_DIR"
+
+echo -e "${CYAN}=================================================${NC}"
+echo -e "${CYAN}   KNU MES v5.0 — 시스템 시작 스크립트${NC}"
+echo -e "${CYAN}=================================================${NC}"
+echo ""
+
+# ── [1/8] 시스템 기본 설정 ─────────────────────────────
+echo -e "${YELLOW}[1/8] 시스템 기본 설정...${NC}"
+swapoff -a 2>/dev/null
+mkdir -p /mnt/data && chmod 777 /mnt/data
+systemctl restart containerd 2>/dev/null
+systemctl restart kubelet 2>/dev/null
+echo -e "${GREEN}  ✓ swap 비활성화, containerd/kubelet 재시작${NC}"
+
+# ── [2/8] Kubernetes API 대기 ──────────────────────────
+echo -e "${YELLOW}[2/8] Kubernetes API 서버 대기 중...${NC}"
+for i in $(seq 1 60); do
+  if kubectl get nodes &>/dev/null; then
+    echo -e "${GREEN}  ✓ K8s API 서버 준비 완료 (${i}초)${NC}"
+    break
+  fi
+  [ "$i" -eq 60 ] && echo -e "${RED}  ✗ K8s API 60초 타임아웃. kubelet 로그를 확인하세요.${NC}" && exit 1
+  sleep 1
+done
+
+# ── [3/8] Cilium 네트워크 복구 ─────────────────────────
+echo -e "${YELLOW}[3/8] Cilium 네트워크 복구...${NC}"
+CILIUM_POD=$(kubectl get pods -n kube-system -l k8s-app=cilium -o name 2>/dev/null | head -1)
+if [ -n "$CILIUM_POD" ]; then
+  kubectl delete "$CILIUM_POD" -n kube-system --force --grace-period=0 &>/dev/null
+  sleep 5
+  for i in $(seq 1 30); do
+    if kubectl get pods -n kube-system -l k8s-app=cilium 2>/dev/null | grep -q Running; then
+      echo -e "${GREEN}  ✓ Cilium 네트워크 정상${NC}"
+      break
+    fi
+    sleep 2
+  done
+else
+  echo -e "${GREEN}  ✓ Cilium 확인 (이미 정상 또는 미설치)${NC}"
+fi
+
+# ── [4/8] 기존 불량 Pod 정리 ──────────────────────────
+echo -e "${YELLOW}[4/8] 불량 Pod 정리...${NC}"
+kubectl delete pods --field-selector=status.phase=Failed --all-namespaces --ignore-not-found &>/dev/null
+kubectl get pods 2>/dev/null | grep -E "Unknown|Error|CrashLoopBackOff" | awk '{print $1}' | \
+  xargs -r kubectl delete pod --force --grace-period=0 &>/dev/null
+echo -e "${GREEN}  ✓ 불량 Pod 정리 완료${NC}"
+
+# ── [5/8] PostgreSQL DB 배포 ──────────────────────────
+echo -e "${YELLOW}[5/8] PostgreSQL DB 확인/배포...${NC}"
+REAL_IP=$(hostname -I | awk '{print $1}')
+
+# PV 생성
+kubectl apply -f - <<EOF &>/dev/null
+apiVersion: v1
+kind: PersistentVolume
+metadata: { name: postgres-pv }
+spec:
+  storageClassName: manual
+  capacity: { storage: 1Gi }
+  accessModes: [ReadWriteOnce]
+  hostPath: { path: "/mnt/data" }
+EOF
+
+# PVC 생성 (이미 있으면 무시)
+kubectl apply -f - <<EOF 2>/dev/null
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: postgres-pvc }
+spec:
+  storageClassName: manual
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
+  volumeName: postgres-pv
+EOF
+
+# Postgres Deployment
+kubectl apply -f "$PROJECT_DIR/postgres.yaml" &>/dev/null
+
+# DB Secret
+kubectl get secret db-credentials &>/dev/null || \
+  kubectl create secret generic db-credentials \
+    --from-literal=DATABASE_URL="postgresql://postgres:mes1234@postgres:5432/mes_db" &>/dev/null
+
+echo -e "${YELLOW}  → DB Pod 대기 중...${NC}"
+kubectl wait --for=condition=ready pod -l app=postgres --timeout=90s &>/dev/null
+echo -e "${GREEN}  ✓ PostgreSQL 준비 완료${NC}"
+
+# ── [6/8] 백엔드 API 배포 ────────────────────────────
+echo -e "${YELLOW}[6/8] 백엔드 API 배포...${NC}"
+kubectl delete configmap api-code --ignore-not-found &>/dev/null
+kubectl create configmap api-code --from-file=app.py=./app.py --from-file=./api_modules/ &>/dev/null
+
+kubectl apply -f - <<EOF &>/dev/null
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: mes-api }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: mes-api } }
+  template:
+    metadata: { labels: { app: mes-api } }
+    spec:
+      containers:
+      - name: mes-api
+        image: python:3.9-slim
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          mkdir -p /app/api_modules &&
+          cp /mnt/*.py /app/api_modules/ &&
+          mv /app/api_modules/app.py /app/app.py &&
+          touch /app/api_modules/__init__.py &&
+          pip install --no-cache-dir fastapi uvicorn psycopg2-binary kubernetes pydantic psutil &&
+          python /app/app.py
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: DATABASE_URL
+        - name: CORS_ORIGINS
+          value: "http://${REAL_IP}:30173,http://localhost:30173,http://localhost:3000"
+        volumeMounts: [{ name: code-volume, mountPath: /mnt }]
+      volumes:
+      - name: code-volume
+        configMap: { name: api-code }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: mes-api-service }
+spec:
+  type: NodePort
+  selector: { app: mes-api }
+  ports:
+  - { port: 80, targetPort: 80, nodePort: 30461 }
+EOF
+echo -e "${GREEN}  ✓ 백엔드 배포 완료 (pip install 진행 중, 약 1~2분 소요)${NC}"
+
+# ── [7/8] 프론트엔드 빌드 & 배포 ─────────────────────
+echo -e "${YELLOW}[7/8] 프론트엔드 빌드 & 배포...${NC}"
+cd "$PROJECT_DIR/frontend"
+npm install --silent 2>/dev/null
+npm run build 2>&1 | tail -3
+
+kubectl delete configmap frontend-build --ignore-not-found &>/dev/null
+kubectl create configmap frontend-build --from-file=dist/ &>/dev/null
+
+# Nginx 설정
+kubectl apply -f - <<EOF &>/dev/null
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: nginx-config }
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+        location / {
+            root   /usr/share/nginx/html;
+            index  index.html index.htm;
+            try_files \$uri \$uri/ /index.html;
+        }
+        location /api/ {
+            proxy_pass http://mes-api-service:80;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: mes-frontend }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: mes-frontend } }
+  template:
+    metadata: { labels: { app: mes-frontend } }
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports: [{ containerPort: 80 }]
+        volumeMounts:
+        - { name: html-volume, mountPath: /usr/share/nginx/html }
+        - { name: nginx-conf, mountPath: /etc/nginx/conf.d, readOnly: true }
+      volumes:
+      - name: html-volume
+        configMap: { name: frontend-build }
+      - name: nginx-conf
+        configMap: { name: nginx-config }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: mes-frontend-service }
+spec:
+  type: NodePort
+  selector: { app: mes-frontend }
+  ports:
+  - { port: 80, targetPort: 80, nodePort: 30173 }
+EOF
+echo -e "${GREEN}  ✓ 프론트엔드 배포 완료${NC}"
+
+# ── [8/8] 최종 검증 ──────────────────────────────────
+echo -e "${YELLOW}[8/8] 시스템 검증 중...${NC}"
+cd "$PROJECT_DIR"
+
+# 방화벽 개방
+ufw allow 30000:32767/tcp &>/dev/null
+
+# Pod 재시작 (ConfigMap 갱신 반영)
+kubectl rollout restart deployment mes-frontend &>/dev/null
+kubectl rollout restart deployment mes-api &>/dev/null
+
+echo -e "${YELLOW}  → 서비스 기동 대기 (최대 90초)...${NC}"
+for i in $(seq 1 90); do
+  FE=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:30173 2>/dev/null)
+  if [ "$FE" = "200" ]; then
+    echo -e "${GREEN}  ✓ 프론트엔드 응답 OK (${i}초)${NC}"
+    break
+  fi
+  sleep 1
+done
+
+# API는 pip install 때문에 더 걸림
+echo -e "${YELLOW}  → API 서버 기동 대기 (pip install 포함, 최대 180초)...${NC}"
+for i in $(seq 1 180); do
+  API=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:30461/api/infra/status 2>/dev/null)
+  if [ "$API" = "200" ]; then
+    echo -e "${GREEN}  ✓ API 서버 응답 OK (${i}초)${NC}"
+    break
+  fi
+  [ "$i" -eq 180 ] && echo -e "${RED}  ✗ API 타임아웃 — kubectl logs deployment/mes-api 로 확인하세요${NC}"
+  sleep 1
+done
+
+echo ""
+echo -e "${CYAN}=================================================${NC}"
+echo -e "${GREEN}  ✅ KNU MES 시스템 시작 완료!${NC}"
+echo -e "${CYAN}=================================================${NC}"
+echo ""
+echo -e "  🌐 웹 접속:  ${CYAN}http://${REAL_IP}:30173${NC}"
+echo -e "  📡 API 문서: ${CYAN}http://${REAL_IP}:30461/docs${NC}"
+echo ""
+echo -e "  Pod 상태:"
+kubectl get pods -o wide 2>/dev/null | sed 's/^/    /'
+echo ""

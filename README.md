@@ -1,228 +1,215 @@
-# 🏭 스마트 팩토리 MES (Manufacturing Execution System)
+# KNU MES v5.0 — 스마트 팩토리 Manufacturing Execution System
 
-> **K8s 기반 모듈화 MES 시스템** - 경북대학교 스마트 팩토리 운영 시스템
-
-## 📋 프로젝트 개요
-
-**MES (Manufacturing Execution System)**는 제조 현장의 생산 계획, 실행, 품질 관리 등을 종합적으로 관리하는 엔터프라이즈 시스템입니다. 본 프로젝트는 Kubernetes 기반의 클라우드 네이티브 아키텍처로 구축되며, 실시간 모니터링 및 확장성을 제공합니다.
+> Kubernetes 기반 클라우드 네이티브 MES 시스템 — 경북대학교 스마트 팩토리
 
 ---
 
-## 🛠 기술 스택
+## VM 부팅 후 서버 시작 방법
+
+### 1단계: VM 접속
+
+```bash
+# SSH 접속 (외부에서)
+ssh c1_master1@192.168.64.5
+
+# root 전환
+sudo -s
+# 비밀번호 입력
+```
+
+### 2단계: 서버 시작 (원클릭)
+
+```bash
+bash /root/MES_PROJECT/start.sh
+```
+
+이 스크립트 하나로 아래 작업이 자동으로 수행됩니다:
+
+| 단계 | 작업 | 설명 |
+|------|------|------|
+| 1/8 | 시스템 설정 | swap 비활성화, containerd/kubelet 재시작 |
+| 2/8 | K8s API 대기 | Kubernetes API 서버 응답 대기 (최대 60초) |
+| 3/8 | 네트워크 복구 | Cilium CNI Pod 재시작 |
+| 4/8 | Pod 정리 | Unknown/Error 상태 Pod 삭제 |
+| 5/8 | DB 배포 | PostgreSQL + PV/PVC + Secret 생성 |
+| 6/8 | 백엔드 배포 | FastAPI ConfigMap 생성 + Deployment 배포 |
+| 7/8 | 프론트엔드 배포 | React 빌드 + nginx 배포 |
+| 8/8 | 검증 | 프론트엔드/API 응답 확인, Pod 상태 출력 |
+
+### 3단계: 접속 확인
+
+스크립트 완료 후 브라우저에서 접속:
+
+- **웹 UI**: `http://192.168.64.5:30173`
+- **API 문서**: `http://192.168.64.5:30461/docs`
+
+> API 서버는 pip install 때문에 최초 기동 시 1~2분 소요될 수 있습니다.
+
+### 상태 확인 명령어
+
+```bash
+# Pod 상태 확인
+kubectl get pods
+
+# API 로그 확인
+kubectl logs deployment/mes-api --tail=20
+
+# 프론트엔드 로그
+kubectl logs deployment/mes-frontend --tail=20
+```
+
+---
+
+## 시스템 개요
+
+14개 메뉴로 구성된 통합 제조 실행 시스템입니다.
+
+| 영역 | 메뉴 | 주요 기능 |
+|------|------|-----------|
+| 기준정보 | Items, BOM, Process, Equipment | 품목/BOM/공정/설비 관리 |
+| 생산관리 | Plans, Work Order | 생산계획, 작업지시 |
+| 품질/재고 | Quality, Inventory | 불량 분석, 재고 현황 |
+| AI 분석 | AI Center | 수요예측, 불량예측, 고장예측 |
+| 리포트 | Reports | 생산/품질 리포트, AI 인사이트 |
+| 모니터링 | Network, Infra, K8s | Hubble 서비스맵, 인프라, Pod 관리 |
+
+### 공통 기능: 테이블 필터
+
+모든 데이터 테이블에 필터 바가 제공됩니다:
+- **드롭다운 필터**: 상태, 카테고리, 우선순위 등
+- **텍스트 검색**: 코드, 이름, 규격 등 자유 검색
+- **결과 카운트**: 필터링 건수 / 전체 건수 실시간 표시
+
+---
+
+## 기술 스택
 
 | 계층 | 기술 | 버전 |
 |------|------|------|
-| **인프라** | Kubernetes (K8s) | v1.30+ |
-| **네트워크** | Cilium eBPF | Hubble 포함 |
-| **데이터베이스** | PostgreSQL | 최신 |
-| **백엔드 API** | Python FastAPI | 0.109.0+ |
-| **웹 애플리케이션** | React18 + Vite | 최신 |
-| **컨테이너** | Docker | 최신 |
-| **배포 자동화** | Jenkins CI/CD | Jenkinsfile 기반 |
+| 인프라 | Kubernetes (kubeadm) | v1.30+ |
+| 네트워크 | Cilium eBPF + Hubble | 최신 |
+| DB | PostgreSQL | 15 |
+| 백엔드 | Python FastAPI | 0.109+ |
+| 프론트엔드 | React 19 + Vite + Tailwind CSS 4 | 최신 |
+| 프론트엔드 서빙 | nginx:alpine | 최신 |
+| 배포 방식 | ConfigMap 기반 (Docker 빌드 불필요) | - |
 
 ---
 
-## 📂 프로젝트 구조
+## 프로젝트 구조
 
 ```
 MES_PROJECT/
-├── app.py                          # FastAPI 메인 애플리케이션
-├── database.py                     # PostgreSQL 연결 설정
-├── requirements.txt                # Python 의존성
-├── docker-compose.yml              # 로컬 개발 환경 설정
-├── Dockerfile                      # 백엔드 이미지 빌드 설정
-├── Jenkinsfile                     # CI/CD 파이프라인
-│
-├── api_modules/                    # 📦 핵심 비즈니스 로직 (모듈화)
-│   ├── database.py                 # ORM 모델 정의
-│   ├── db_core.py                  # DB 코어 유틸리티
-│   ├── sys_logic.py                # 시스템 로직 (K8s 모니터링)
-│   ├── mes_dashboard.py            # 대시보드 데이터
-│   ├── mes_master.py               # 기초 정보 관리
-│   ├── mes_production.py           # 생산 관리
-│   ├── mes_inventory_status.py     # 재고 상태
-│   ├── mes_inventory_movement.py   # 재고 이동
-│   ├── mes_material_receipt.py     # 자재 수입
-│   ├── mes_work_order.py           # 작업 지시
-│   ├── mes_execution.py            # 생산 실행
-│   ├── mes_logistics.py            # 물류 관리
-│   ├── mes_performance.py          # 성능 지표
-│   ├── mes_service.py              # 서비스 로직
-│   ├── mes_ai_prediction.py        # AI 수요 예측
-│   ├── mes_defect_predict.py       # AI 불량 예측
-│   └── k8s_service.py              # Kubernetes API
-│
-├── frontend/                       # 🎨 React 프론트엔드
-│   ├── src/
-│   │   ├── App.jsx                 # 메인 컴포넌트
-│   │   ├── api.js                  # API 호출
-│   │   ├── main.jsx                # 진입점
-│   │   ├── BOMManager.jsx          # BOM 관리
-│   │   ├── BomList.jsx             # BOM 리스트
-│   │   ├── BomRegistrationForm.jsx # BOM 등록
-│   │   └── PlanForm.jsx            # 생산 계획 양식
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   └── Dockerfile
-│
-├── k8s/                            # ☸️ Kubernetes 배포
-│   ├── backend-deployment.yaml     # 백엔드 배포
-│   ├── backend-service.yaml        # 백엔드 서비스
-│   ├── frontend-deployment.yaml    # 프론트엔드 배포
-│   └── frontend-service.yaml       # 프론트엔드 서비스
-│
-├── db/
-│   └── init.sql                    # DB 초기 스키마
-│
-├── doc/                            # 📚 문서
-│   ├── STATUS_*.md
-│   ├── 주간보고_*.md
-│   └── REQ/
-│       ├── Requirements_Specification.md
-│       ├── Functional_Specification.md
-│       └── DatabaseSchema.md
-│
-├── 배포 스크립트/
-│   ├── build-image.sh              # Docker 이미지 빌드
-│   ├── deploy-k8s.sh               # K8s 배포
-│   └── mes-all-in-one.sh           # 통합 배포 및 복구
-│
-├── 주요 문서/
-│   ├── README.md                   # 이 파일
-│   ├── REQUIREMENTS.md             # 요구사항 정의서
-│   ├── GUIDE.md                    # 운영 가이드
-│   └── CICD_GUIDE.md               # CI/CD 파이프라인 가이드
-│
-└── test_app.py                     # 백엔드 테스트
+├── start.sh                    ← VM 부팅 후 실행할 시작 스크립트
+├── app.py                      # FastAPI 메인 라우터
+├── api_modules/                # 백엔드 비즈니스 로직
+│   ├── database.py             # DB 모델 정의
+│   ├── db_core.py              # DB 유틸리티
+│   ├── sys_logic.py            # 시스템 로직
+│   ├── mes_dashboard.py        # 대시보드
+│   ├── mes_master.py           # 기준정보 관리
+│   ├── mes_production.py       # 생산 관리
+│   ├── mes_work_order.py       # 작업지시
+│   ├── mes_execution.py        # 생산 실행
+│   ├── mes_inventory_status.py # 재고 상태
+│   ├── mes_inventory_movement.py # 재고 이동
+│   ├── mes_service.py          # 서비스 로직
+│   ├── mes_ai_prediction.py    # AI 수요예측
+│   ├── mes_defect_predict.py   # AI 불량예측
+│   └── k8s_service.py          # K8s/Hubble API
+├── frontend/
+│   └── src/App.jsx             # React 단일 페이지 (14개 메뉴)
+├── doc/
+│   └── USER_MANUAL.md          # 사용자 매뉴얼 (v5.0)
+├── postgres.yaml               # PostgreSQL K8s 배포
+├── mes-all-in-one.sh           # 레거시 배포 스크립트
+└── README.md                   # 이 파일
 ```
 
 ---
 
-## 🚀 빠른 시작
+## API 엔드포인트
 
-### 1️⃣ 로컬 개발 환경 (Docker Compose)
+| 영역 | Method | URL | 설명 |
+|------|--------|-----|------|
+| 품목 | GET | /api/items | 품목 목록 |
+| BOM | GET | /api/bom/explode/{code} | BOM 전개 |
+| 공정 | GET | /api/routings/{code} | 라우팅 조회 |
+| 설비 | GET | /api/equipments | 설비 목록 |
+| 계획 | GET | /api/plans | 생산계획 목록 |
+| 작업 | GET | /api/work-orders | 작업지시 목록 |
+| 품질 | GET | /api/quality/defects | 불량 현황 |
+| 재고 | GET | /api/inventory | 재고 현황 |
+| AI | POST | /api/ai/demand-prediction/{code} | 수요 예측 |
+| AI | POST | /api/ai/defect-prediction | 불량 예측 |
+| AI | POST | /api/ai/failure-predict | 고장 예측 |
+| 리포트 | GET | /api/reports/production | 생산 리포트 |
+| 리포트 | GET | /api/reports/quality | 품질 리포트 |
+| 네트워크 | GET | /api/network/hubble-flows | Hubble 플로우 |
+| 네트워크 | GET | /api/network/service-map | 서비스 의존성 맵 |
+| 인프라 | GET | /api/infra/status | CPU/메모리 상태 |
+| K8s | GET | /api/k8s/pods | Pod 목록 |
 
-```bash
-# 환경 설정
-cd /root/MES_PROJECT
-
-# Docker Compose로 PostgreSQL + FastAPI 실행
-docker-compose -f docker-compose.yml up -d
-
-# 백엔드 서버 실행
-pip install -r requirements.txt
-python app.py
-
-# 프론트엔드 서버 실행
-cd frontend
-npm install
-npm run dev
-```
-
-**접속 정보:**
-- 프론트엔드: http://localhost:5173
-- 백엔드 API: http://localhost:8000/docs
-- PostgreSQL: localhost:5433 (user: postgres, password: 1234)
+Swagger UI: `http://<IP>:30461/docs`
 
 ---
 
-### 2️⃣ Kubernetes 배포 (클라우드 환경)
+## 문제 해결 (Troubleshooting)
 
-#### **A) 전체 자동 배포** (권장)
+### K8s API 서버 연결 실패
+
 ```bash
-# 인프라 초기화 + 배포 완료
-bash mes-all-in-one.sh
+# kubelet 상태 확인
+systemctl status kubelet
 
-# 배포 상태 확인
-kubectl get pods -o wide
+# swap 비활성화 후 재시작
+swapoff -a
+systemctl restart kubelet
+
+# 30초 후 확인
+kubectl get nodes
 ```
 
-#### **B) 단계별 배포**
+### Pod가 ContainerCreating에서 멈춤
+
 ```bash
-# 1단계: Docker 이미지 빌드
-bash build-image.sh
-
-# 2단계: K8s 클러스터에 배포
-bash deploy-k8s.sh
-
-# 3단계: 서비스 접속 정보 확인
-kubectl get svc
-```
-
----
-
-## 📚 API 엔드포인트
-
-| 엔드포인트 | 메서드 | 설명 |
-|-----------|--------|------|
-| `/api/mes/data` | GET | MES 대시보드 데이터 |
-| `/api/k8s/pods` | GET | K8s 파드 상태 |
-| `/api/infra/status` | GET | 인프라 상태 |
-| `/api/network/flows` | GET | 네트워크 플로우 |
-
-자세한 API 문서는 Swagger UI에서 확인합니다 (`/docs`).
-
----
-
-## 🔧 시스템 관리
-
-### 배포 상태 확인
-```bash
+# Cilium 네트워크 문제 — Pod 재시작
+kubectl delete pod -n kube-system -l k8s-app=cilium --force
+sleep 10
 kubectl get pods
-kubectl logs -f deployment/backend-deployment
-kubectl top pods
 ```
 
-### 서비스 재시작
+### API 서버 응답 없음 (502/Connection Refused)
+
 ```bash
-# 백엔드 재시작
-kubectl rollout restart deployment/backend-deployment
+# API Pod 로그 확인 — pip install 진행 중일 수 있음
+kubectl logs deployment/mes-api --tail=30
 
-# 전체 초기화
-bash mes-all-in-one.sh
+# 강제 재배포
+kubectl rollout restart deployment mes-api
 ```
 
----
+### 프론트엔드 빈 화면
 
-## 📋 구현 현황
-
-### ✅ 완료된 기능
-- [x] 데이터베이스 (REQ-001): PostgreSQL 배포 및 자동 스키마 생성
-- [x] 품목 관리 (REQ-004, 005): 품목 등록 및 리스트 조회
-- [x] BOM 관리 (REQ-007, 008): 제품 계층 구조 및 소요량
-- [x] 생산 계획 (REQ-013, 014): 생산계획 수립 및 필터링
-- [x] 설비 & 인프라 (REQ-012): eBPF 기반 네트워크 모니터링
-- [x] K8s 관리: 파드 상태 모니터링 및 실시간 로그
-- [x] 모듈화 아키텍처 (v21.0): 유지보수성 향상
-
-### 🔄 개발 중인 기능
-- [ ] 생산 실행 (REQ-017, 019): 작업지시 생성 및 작업 실적 등록
-- [ ] AI 지능화 (REQ-015, 024): 수요예측 & 불량예측 모듈
-
----
-
-## 📖 추가 문서
-
-- **[REQUIREMENTS.md](REQUIREMENTS.md)** - 요구사항 정의서
-- **[GUIDE.md](GUIDE.md)** - 운영 가이드
-- **[CICD_GUIDE.md](CICD_GUIDE.md)** - CI/CD 파이프라인
-- **[doc/REQ/](doc/REQ/)** - 기술 사양서
-
----
-
-## 👥 팀 협업
-
-### API 모듈 추가
 ```bash
-# 1. api_modules/mes_newmodule.py 생성
-# 2. app.py에 라우트 추가
-# 3. 배포
-bash build-image.sh && bash deploy-k8s.sh
+# ConfigMap 재생성
+cd /root/MES_PROJECT/frontend && npm run build
+kubectl delete configmap frontend-build
+kubectl create configmap frontend-build --from-file=dist/
+kubectl rollout restart deployment mes-frontend
 ```
 
 ---
 
-**최종 업데이트**: 2026년 2월  
-**프로젝트**: K8s 기반 스마트 팩토리 MES  
-**지원**: 경북대학교 스마트 팩토리 개발팀
+## 변경 이력
+
+| 버전 | 날짜 | 주요 변경 |
+|------|------|-----------|
+| v5.0 | 2026-02-13 | 전 테이블 필터 기능, Hubble 네트워크 UI, 원클릭 시작 스크립트 |
+| v4.0 | 2026-02-13 | 14개 메뉴 프론트엔드, FN-001~037 전체 구현, 시드 데이터 확장 |
+| v3.0 | 2026-02-10 | 모듈화 아키텍처, ConfigMap 배포 방식 전환 |
+
+---
+
+**프로젝트**: 경북대학교 스마트 팩토리 MES
+**최종 업데이트**: 2026-02-13
