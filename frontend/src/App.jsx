@@ -585,35 +585,58 @@ const App = () => {
             return true;
           });
 
-          /* ── Hierarchical left-to-right layout (like Hubble UI) ── */
-          const W=960, H=400;
-          const tierMap = { 'world':0, 'mes-frontend':1, 'mes-api-service':2, 'postgres':3, 'kube-dns':3, 'hubble-relay':3, 'cilium-agent':3 };
+          /* ── Hierarchical left-to-right layout — hand-tuned positions ── */
+          const W=960, H=430;
           const tierLabels = ['External','Ingress','Application','Backend / Infra'];
           const tierColors = ['#f59e0b','#3b82f6','#06b6d4','#a855f7'];
-          const tierX = [80, 290, 510, 760];
-
-          /* group services into tiers */
-          const tiers = [{},{},{},{}];
-          filteredSvcs.forEach(s => {
-            const t = tierMap[s.id] ?? 3;
-            if (!tiers[t][s.id]) tiers[t][s.id] = s;
-          });
-
-          /* position nodes: evenly spaced vertically within each tier column */
-          const svcPositions = {};
+          const tierX = [60, 270, 490, 730];
           const nodeW = 140, nodeH = 52;
-          tiers.forEach((tier, ti) => {
-            const svcs = Object.values(tier);
-            const totalH = svcs.length * (nodeH + 20) - 20;
-            const startY = (H - totalH) / 2;
-            svcs.forEach((s, si) => {
-              svcPositions[s.id] = {
-                x: tierX[ti],
-                y: startY + si * (nodeH + 20) + nodeH / 2,
-                tier: ti,
-              };
-            });
+
+          /* Fixed Y positions per service — tuned to minimize crossings:
+             - world centered, frontend slightly above center
+             - api-service at center so tier3 fans out symmetrically
+             - tier3 ordered: postgres(top), kube-dns, hubble-relay, cilium-agent(bottom)
+             - dropped connections (world→postgres, world→cilium) route top/bottom cleanly */
+          const fixedY = {
+            'world': 215,
+            'mes-frontend': 170,
+            'mes-api-service': 200,
+            'postgres': 85,
+            'kube-dns': 175,
+            'hubble-relay': 265,
+            'cilium-agent': 370,
+          };
+          const tierOf = { 'world':0, 'mes-frontend':1, 'mes-api-service':2, 'postgres':3, 'kube-dns':3, 'hubble-relay':3, 'cilium-agent':3 };
+
+          const svcPositions = {};
+          filteredSvcs.forEach(s => {
+            const t = tierOf[s.id] ?? 3;
+            svcPositions[s.id] = {
+              x: tierX[t],
+              y: fixedY[s.id] ?? (200 + Object.keys(svcPositions).length * 72),
+              tier: t,
+            };
           });
+
+          /* ── Build per-node port lists (sorted by target/source Y) for offset distribution ── */
+          const outPorts = {}, inPorts = {};
+          filteredConns.forEach((c, ci) => {
+            if (!outPorts[c.source]) outPorts[c.source] = [];
+            if (!inPorts[c.target]) inPorts[c.target] = [];
+            outPorts[c.source].push({ ci, peer: c.target });
+            inPorts[c.target].push({ ci, peer: c.source });
+          });
+          Object.values(outPorts).forEach(arr => arr.sort((a,b) => (svcPositions[a.peer]?.y||0)-(svcPositions[b.peer]?.y||0)));
+          Object.values(inPorts).forEach(arr => arr.sort((a,b) => (svcPositions[a.peer]?.y||0)-(svcPositions[b.peer]?.y||0)));
+
+          const portOffset = (ports, ci, nodeHalf) => {
+            if (!ports) return 0;
+            const idx = ports.findIndex(p => p.ci === ci);
+            if (idx === -1) return 0;
+            const n = ports.length;
+            const spacing = Math.min(10, (nodeHalf * 2 - 8) / Math.max(n, 1));
+            return (idx - (n - 1) / 2) * spacing;
+          };
 
           const verdictColor = v => v==='FORWARDED' ? '#22c55e' : v==='DROPPED' ? '#ef4444' : '#f59e0b';
           const protoColor = p => p==='HTTP' ? '#3b82f6' : p==='TCP' ? '#06b6d4' : p==='UDP' ? '#a855f7' : p==='gRPC' ? '#f97316' : '#64748b';
@@ -719,33 +742,49 @@ const App = () => {
                           stroke={tierColors[i]} strokeWidth="0.5" opacity="0.06" strokeDasharray="4 4"/>
                       ))}
 
-                      {/* connections (smooth horizontal bezier curves) */}
+                      {/* connections — smart routing to avoid crossings */}
                       {filteredConns.map((c, i) => {
                         const sp = svcPositions[c.source]; const tp = svcPositions[c.target];
                         if(!sp||!tp) return null;
                         const hasDropped = c.dropped_count > 0;
-                        const strokeW = Math.min(3.5, 1 + Math.log1p(c.total_count)*0.6);
+                        const strokeW = Math.min(3, 1 + Math.log1p(c.total_count)*0.5);
                         const clr = hasDropped ? '#ef4444' : '#22c55e';
-                        /* horizontal bezier: source right edge → target left edge */
-                        const sx = sp.x + nodeW + 2, sy = sp.y;
-                        const tx = tp.x - 2, ty = tp.y;
-                        const cpOffset = Math.abs(tx-sx)*0.4;
-                        const path = `M${sx},${sy} C${sx+cpOffset},${sy} ${tx-cpOffset},${ty} ${tx},${ty}`;
-                        const midX = (sx+tx)/2, midY = (sy+ty)/2;
+                        const tierDist = Math.abs(sp.tier - tp.tier);
+
+                        /* port offsets: distribute connection points along node edge */
+                        const srcOff = portOffset(outPorts[c.source], i, nodeH/2);
+                        const dstOff = portOffset(inPorts[c.target], i, nodeH/2);
+                        const sx = sp.x + nodeW + 2, sy = sp.y + srcOff;
+                        const tx = tp.x - 2, ty = tp.y + dstOff;
+
+                        let path, midX, midY;
+                        if (tierDist <= 1) {
+                          /* adjacent tier: simple horizontal bezier */
+                          const cpOff = Math.abs(tx-sx) * 0.4;
+                          path = `M${sx},${sy} C${sx+cpOff},${sy} ${tx-cpOff},${ty} ${tx},${ty}`;
+                          midX = (sx+tx)/2; midY = (sy+ty)/2;
+                        } else {
+                          /* skip-tier: route above (if target above center) or below (if below) to avoid intermediate nodes */
+                          const goUp = ty < H/2;
+                          const detourY = goUp ? Math.min(sy, ty) - 35 - (i % 3) * 18 : Math.max(sy, ty) + 35 + (i % 3) * 18;
+                          const clampedY = Math.max(20, Math.min(H - 20, detourY));
+                          /* 4-point cubic: exit → curve up/down → horizontal cruise → curve to target */
+                          const q1x = sx + 50, q2x = tx - 50;
+                          path = `M${sx},${sy} C${sx+35},${sy} ${q1x},${clampedY} ${(sx+tx)/2},${clampedY} S${q2x},${ty} ${tx},${ty}`;
+                          midX = (sx+tx)/2; midY = clampedY;
+                        }
+
                         return (
                           <g key={`conn-${i}`}>
-                            {/* glow underline */}
-                            <path d={path} fill="none" stroke={clr} strokeWidth={strokeW+3} opacity="0.06"/>
-                            {/* main line */}
-                            <path d={path} fill="none" stroke={clr} strokeWidth={strokeW} opacity="0.6"
+                            <path d={path} fill="none" stroke={clr} strokeWidth={strokeW+2} opacity="0.04"/>
+                            <path d={path} fill="none" stroke={clr} strokeWidth={strokeW} opacity="0.55"
                               markerEnd={hasDropped ? 'url(#arrow-drop)' : 'url(#arrow-fwd)'}
                               strokeDasharray={hasDropped ? '6 4' : 'none'}>
                               {!hasDropped && <animate attributeName="stroke-dashoffset" values="20;0" dur="1.5s" repeatCount="indefinite"/>}
                             </path>
-                            {/* label pill */}
-                            <rect x={midX-28} y={midY-8} width="56" height="16" rx="8"
-                              fill="#0f172a" stroke={`${clr}40`} strokeWidth="0.5" opacity="0.9"/>
-                            <text x={midX} y={midY+3} fill={clr} fontSize="7" fontWeight="600" textAnchor="middle" opacity="0.9">
+                            <rect x={midX-30} y={midY-8} width="60" height="15" rx="7"
+                              fill="#060a14" stroke={`${clr}30`} strokeWidth="0.5"/>
+                            <text x={midX} y={midY+3} fill={clr} fontSize="6.5" fontWeight="600" textAnchor="middle" opacity="0.85">
                               {c.protocol}:{c.port} ({c.total_count})
                             </text>
                           </g>
