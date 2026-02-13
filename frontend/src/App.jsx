@@ -65,6 +65,9 @@ const App = () => {
   /* ── table filter state ─────────────────────────────── */
   const [tf, setTf] = useState({
     items: { search:'', category:'ALL', status:'ALL' },
+    bom: { search:'', parent:'ALL' },
+    proc: { search:'' },
+    routing: { search:'' },
     equips: { search:'', status:'ALL', process:'ALL' },
     plans: { search:'', status:'ALL', priority:'ALL' },
     wo: { search:'', status:'ALL' },
@@ -73,6 +76,10 @@ const App = () => {
     k8s: { search:'', status:'ALL' },
   });
   const setFilter = (table, field, val) => setTf(prev=>({...prev,[table]:{...prev[table],[field]:val}}));
+
+  /* ── BOM/Process page sub-tab state ──────────────────── */
+  const [bomTab, setBomTab] = useState('list');
+  const [procTab, setProcTab] = useState('master');
 
   /* ── Hubble network state ─────────────────────────── */
   const [hubbleFlows, setHubbleFlows] = useState([]);
@@ -110,12 +117,30 @@ const App = () => {
           setExtra(prev=>({...prev, itemList: r.data.items||[]}));
         }
         if (menu==='BOM') {
-          const r = await axios.get('/api/items?size=100');
-          setExtra(prev=>({...prev, itemList: r.data.items||[], bomTree:null}));
+          const [items, bomList, bomSummary] = await Promise.all([
+            axios.get('/api/items?size=100'),
+            axios.get('/api/bom'),
+            axios.get('/api/bom/summary'),
+          ]);
+          setExtra(prev=>({...prev,
+            itemList: items.data.items||[],
+            bomEntries: bomList.data.entries||[],
+            bomSummary: bomSummary.data||{},
+            bomTree: null, whereUsed: null,
+          }));
         }
         if (menu==='PROCESS') {
-          const r = await axios.get('/api/items?size=100');
-          setExtra(prev=>({...prev, itemList: r.data.items||[], routingData:null}));
+          const [items, procs, routingSummary] = await Promise.all([
+            axios.get('/api/items?size=100'),
+            axios.get('/api/processes'),
+            axios.get('/api/routings'),
+          ]);
+          setExtra(prev=>({...prev,
+            itemList: items.data.items||[],
+            processList: procs.data.processes||[],
+            routingSummary: routingSummary.data.routings||[],
+            routingData: null,
+          }));
         }
         if (menu==='EQUIPMENT') {
           const r = await axios.get('/api/equipments');
@@ -270,76 +295,336 @@ const App = () => {
           );
         })()}
 
-        {/* ── BOM (FN-008~009) ─────────────────────────── */}
-        {menu==='BOM' && (
+        {/* ── BOM (FN-008~009) — Enhanced with tabs ────── */}
+        {menu==='BOM' && (() => {
+          const summary = extra.bomSummary||{};
+          const allEntries = extra.bomEntries||[];
+          const parents = [...new Set(allEntries.map(e=>e.parent_item))];
+          const filteredBom = allEntries.filter(e => {
+            if (tf.bom.search) {
+              const s = tf.bom.search.toLowerCase();
+              if (!(e.parent_item||'').toLowerCase().includes(s) && !(e.parent_name||'').toLowerCase().includes(s)
+                && !(e.child_item||'').toLowerCase().includes(s) && !(e.child_name||'').toLowerCase().includes(s)) return false;
+            }
+            if (tf.bom.parent!=='ALL' && e.parent_item!==tf.bom.parent) return false;
+            return true;
+          });
+          return (
           <div className="space-y-4">
-            <div className="flex gap-2 items-center">
-              <select className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs"
-                onChange={async e => {
-                  if(!e.target.value) return;
-                  const r = await axios.get(`/api/bom/explode/${e.target.value}`);
-                  setExtra(prev=>({...prev, bomTree:r.data}));
-                }}>
-                <option value="">Select item to explode BOM</option>
-                {(extra.itemList||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
-              </select>
+            {/* Summary cards */}
+            <div className="grid grid-cols-4 gap-3">
+              <Card title="BOM Entries" value={summary.total_entries||0} />
+              <Card title="Parent Items" value={summary.parent_count||0} color="text-purple-400" />
+              <Card title="Components" value={summary.child_count||0} color="text-amber-400" />
+              <Card title="Avg Depth" value={summary.parent_count ? Math.ceil((summary.total_entries||0)/(summary.parent_count||1)) : 0} color="text-emerald-400" />
             </div>
-            {extra.bomTree && (
-              <div className="bg-[#0f172a] p-4 rounded-xl border border-slate-800 space-y-2">
-                <h3 className="text-white font-bold mb-2">BOM Tree: {extra.bomTree.item_code}</h3>
-                {(function renderTree(nodes, depth=0) {
-                  return nodes.map((n,i)=>(
-                    <div key={i}>
-                      <div className="flex items-center gap-2" style={{paddingLeft:depth*24}}>
-                        <span className="text-slate-600">{'└─'}</span>
-                        <span className="text-blue-400 font-mono">{n.item_code}</span>
-                        <span className="text-white">{n.item_name}</span>
-                        <span className="text-amber-400">x{n.required_qty}</span>
-                        <span className="text-slate-600 text-[9px]">loss:{n.loss_rate}%</span>
+
+            {/* Tab bar */}
+            <div className="flex items-center gap-1 border-b border-slate-800 pb-1">
+              {[{id:'list',label:'BOM List'},{id:'explode',label:'BOM Explode'},{id:'where',label:'Where-Used'}].map(t=>(
+                <button key={t.id} onClick={()=>setBomTab(t.id)}
+                  className={`px-4 py-1.5 rounded-t-lg text-xs font-bold transition-all
+                    ${bomTab===t.id ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-white hover:bg-slate-800'}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* BOM List tab */}
+            {bomTab==='list' && (
+              <div className="space-y-3">
+                <FilterBar>
+                  <FilterSelect label="Parent" value={tf.bom.parent} onChange={v=>setFilter('bom','parent',v)}
+                    options={[{value:'ALL',label:'All Parents'}, ...parents.map(p=>({value:p,label:p}))]} />
+                  <FilterSearch value={tf.bom.search} onChange={v=>setFilter('bom','search',v)} placeholder="Search parent, child..." />
+                  <FilterCount total={allEntries.length} filtered={filteredBom.length} />
+                </FilterBar>
+                <Table cols={['Parent Code','Parent Name','Child Code','Child Name','Category','Qty/Unit','Loss Rate']}
+                  rows={filteredBom}
+                  renderRow={(e,k)=>(
+                    <tr key={k}>
+                      <td className="p-3 font-mono text-purple-400">{e.parent_item}</td>
+                      <td className="p-3 text-white font-bold">{e.parent_name}</td>
+                      <td className="p-3 font-mono text-blue-400">{e.child_item}</td>
+                      <td className="p-3 text-white">{e.child_name}</td>
+                      <td className="p-3"><Badge v={e.child_category}/></td>
+                      <td className="p-3 text-amber-400 font-bold">{e.qty_per_unit}</td>
+                      <td className="p-3 text-slate-500">{e.loss_rate}%</td>
+                    </tr>
+                  )} />
+                {/* Top parents chart */}
+                {(summary.top_parents||[]).length > 0 && (
+                  <div className="bg-[#0f172a] p-4 rounded-xl border border-slate-800">
+                    <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-3">Top Parent Items by Component Count</h4>
+                    {(summary.top_parents||[]).map((p,i)=>(
+                      <div key={i} className="flex items-center gap-3 mb-2">
+                        <span className="text-xs w-28 text-purple-400 font-mono truncate">{p.item_code}</span>
+                        <span className="text-xs w-32 text-white truncate">{p.name}</span>
+                        <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-purple-500 rounded-full" style={{width:`${(p.component_count/Math.max(...(summary.top_parents||[]).map(x=>x.component_count),1))*100}%`}}/>
+                        </div>
+                        <span className="text-purple-400 text-[10px] font-bold w-8 text-right">{p.component_count}</span>
                       </div>
-                      {n.children && renderTree(n.children, depth+1)}
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* BOM Explode tab */}
+            {bomTab==='explode' && (
+              <div className="space-y-4">
+                <div className="flex gap-2 items-center">
+                  <select className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs"
+                    onChange={async e => {
+                      if(!e.target.value) { setExtra(prev=>({...prev, bomTree:null})); return; }
+                      const r = await axios.get(`/api/bom/explode/${e.target.value}`);
+                      setExtra(prev=>({...prev, bomTree:r.data}));
+                    }}>
+                    <option value="">Select item to explode BOM</option>
+                    {(extra.itemList||[]).filter(i=>parents.includes(i.item_code)).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
+                  </select>
+                </div>
+                {extra.bomTree && (
+                  <div className="bg-[#0f172a] p-4 rounded-xl border border-slate-800 space-y-2">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-white font-bold">BOM Tree: {extra.bomTree.item_code}</h3>
+                      <span className="text-[10px] text-slate-500">
+                        {(function countNodes(nodes) { return nodes.reduce((s,n) => s + 1 + countNodes(n.children||[]), 0); })(extra.bomTree.tree||[])} components
+                      </span>
                     </div>
-                  ));
-                })(extra.bomTree.tree||[])}
+                    {(function renderTree(nodes, depth=0) {
+                      return nodes.map((n,i)=>(
+                        <div key={i}>
+                          <div className="flex items-center gap-2 py-0.5 hover:bg-slate-800/30 rounded px-1" style={{paddingLeft:depth*24}}>
+                            <span className="text-slate-600">{'└─'}</span>
+                            <span className="text-blue-400 font-mono text-[11px]">{n.item_code}</span>
+                            <span className="text-white text-xs">{n.item_name}</span>
+                            <span className="text-amber-400 font-bold">x{n.required_qty}</span>
+                            {n.loss_rate > 0 && <span className="text-red-400/60 text-[9px]">loss:{n.loss_rate}%</span>}
+                            <span className="text-slate-700 text-[9px]">L{n.level}</span>
+                          </div>
+                          {n.children && renderTree(n.children, depth+1)}
+                        </div>
+                      ));
+                    })(extra.bomTree.tree||[])}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Where-Used tab */}
+            {bomTab==='where' && (
+              <div className="space-y-4">
+                <div className="flex gap-2 items-center">
+                  <select className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs"
+                    onChange={async e => {
+                      if(!e.target.value) { setExtra(prev=>({...prev, whereUsed:null})); return; }
+                      const r = await axios.get(`/api/bom/where-used/${e.target.value}`);
+                      setExtra(prev=>({...prev, whereUsed:r.data}));
+                    }}>
+                    <option value="">Select component to find parents</option>
+                    {(extra.itemList||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
+                  </select>
+                </div>
+                {extra.whereUsed && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-4">
+                      <span className="text-white font-bold text-xs">Component: <span className="text-blue-400">{extra.whereUsed.item_code}</span></span>
+                      <span className="text-slate-500 text-xs">Used in <span className="text-amber-400 font-bold">{extra.whereUsed.count}</span> parent items</span>
+                    </div>
+                    {extra.whereUsed.count > 0 ? (
+                      <Table cols={['Parent Code','Parent Name','Category','Qty/Unit','Loss Rate']}
+                        rows={extra.whereUsed.used_in}
+                        renderRow={(p,k)=>(
+                          <tr key={k}>
+                            <td className="p-3 font-mono text-purple-400">{p.parent_item}</td>
+                            <td className="p-3 text-white font-bold">{p.parent_name}</td>
+                            <td className="p-3"><Badge v={p.parent_category}/></td>
+                            <td className="p-3 text-amber-400 font-bold">{p.qty_per_unit}</td>
+                            <td className="p-3 text-slate-500">{p.loss_rate}%</td>
+                          </tr>
+                        )} />
+                    ) : (
+                      <div className="bg-[#0f172a] p-6 rounded-xl border border-slate-800 text-center text-slate-500">
+                        This item is not used as a component in any BOM.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
+          );
+        })()}
 
-        {/* ── PROCESS / ROUTING (FN-010~012) ───────────── */}
-        {menu==='PROCESS' && (
+        {/* ── PROCESS / ROUTING (FN-010~012) — Enhanced ── */}
+        {menu==='PROCESS' && (() => {
+          const allProcs = extra.processList||[];
+          const allRoutingSummary = extra.routingSummary||[];
+          const filteredProcs = allProcs.filter(p => {
+            if (tf.proc.search) {
+              const s = tf.proc.search.toLowerCase();
+              if (!(p.process_code||'').toLowerCase().includes(s) && !(p.name||'').toLowerCase().includes(s)
+                && !(p.equip_name||'').toLowerCase().includes(s) && !(p.description||'').toLowerCase().includes(s)) return false;
+            }
+            return true;
+          });
+          const filteredRoutings = allRoutingSummary.filter(r => {
+            if (tf.routing.search) {
+              const s = tf.routing.search.toLowerCase();
+              if (!(r.item_code||'').toLowerCase().includes(s) && !(r.item_name||'').toLowerCase().includes(s)) return false;
+            }
+            return true;
+          });
+          const totalStdTime = allProcs.reduce((s,p) => s + (p.std_time_min||0), 0);
+          const runningEquip = allProcs.filter(p => p.equip_status==='RUNNING').length;
+          return (
           <div className="space-y-4">
-            <div className="flex gap-2 items-center">
-              <select className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs"
-                onChange={async e => {
-                  if(!e.target.value) return;
-                  const r = await axios.get(`/api/routings/${e.target.value}`);
-                  setExtra(prev=>({...prev, routingData:r.data}));
-                }}>
-                <option value="">Select item for routing</option>
-                {(extra.itemList||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
-              </select>
+            {/* Summary cards */}
+            <div className="grid grid-cols-4 gap-3">
+              <Card title="Processes" value={allProcs.length} />
+              <Card title="Routed Items" value={allRoutingSummary.length} color="text-purple-400" />
+              <Card title="Avg Std Time" value={allProcs.length ? `${Math.round(totalStdTime/allProcs.length)}m` : '0m'} color="text-amber-400" />
+              <Card title="Equip Online" value={`${runningEquip}/${allProcs.filter(p=>p.equip_code).length}`} color="text-emerald-400" />
             </div>
-            {extra.routingData && (
+
+            {/* Tab bar */}
+            <div className="flex items-center gap-1 border-b border-slate-800 pb-1">
+              {[{id:'master',label:'Process Master'},{id:'routing',label:'Routing Viewer'},{id:'summary',label:'Routing Summary'}].map(t=>(
+                <button key={t.id} onClick={()=>setProcTab(t.id)}
+                  className={`px-4 py-1.5 rounded-t-lg text-xs font-bold transition-all
+                    ${procTab===t.id ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-white hover:bg-slate-800'}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Process Master tab */}
+            {procTab==='master' && (
               <div className="space-y-3">
-                <div className="text-white font-bold">Routing: {extra.routingData.item_code} (Total: {extra.routingData.total_time} min)</div>
-                <div className="flex gap-2 items-center flex-wrap">
-                  {(extra.routingData.routes||[]).map((r,i)=>(
-                    <React.Fragment key={i}>
-                      <div className="bg-[#1e293b] p-3 rounded-xl border border-slate-700 text-center min-w-[120px]">
-                        <div className="text-blue-400 font-bold">{r.process_name}</div>
-                        <div className="text-[10px] text-slate-500">{r.process_code}</div>
-                        <div className="text-amber-400 mt-1">{r.cycle_time} min</div>
-                        <div className="text-[9px] text-slate-600">{r.equip_name}</div>
+                <FilterBar>
+                  <FilterSearch value={tf.proc.search} onChange={v=>setFilter('proc','search',v)} placeholder="Search code, name, equipment..." />
+                  <FilterCount total={allProcs.length} filtered={filteredProcs.length} />
+                </FilterBar>
+                <Table cols={['Process Code','Name','Std Time','Description','Equipment','Equip Status']}
+                  rows={filteredProcs}
+                  renderRow={(p,k)=>(
+                    <tr key={k}>
+                      <td className="p-3 font-mono text-blue-400">{p.process_code}</td>
+                      <td className="p-3 text-white font-bold">{p.name}</td>
+                      <td className="p-3 text-amber-400 font-bold">{p.std_time_min} min</td>
+                      <td className="p-3 text-slate-500 max-w-[200px] truncate">{p.description||'-'}</td>
+                      <td className="p-3 text-purple-400">{p.equip_name||'-'} <span className="text-slate-600 text-[9px]">{p.equip_code||''}</span></td>
+                      <td className="p-3">{p.equip_status ? <Badge v={p.equip_status}/> : <span className="text-slate-600">-</span>}</td>
+                    </tr>
+                  )} />
+                {/* Process time chart */}
+                <div className="bg-[#0f172a] p-4 rounded-xl border border-slate-800">
+                  <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-3">Standard Time Comparison</h4>
+                  {allProcs.map((p,i)=>(
+                    <div key={i} className="flex items-center gap-3 mb-2">
+                      <span className="text-xs w-20 text-blue-400 font-mono">{p.process_code}</span>
+                      <span className="text-xs w-32 text-white truncate">{p.name}</span>
+                      <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-amber-500 rounded-full" style={{width:`${(p.std_time_min/Math.max(...allProcs.map(x=>x.std_time_min),1))*100}%`}}/>
                       </div>
-                      {i < extra.routingData.routes.length-1 && <span className="text-slate-600 text-lg">→</span>}
-                    </React.Fragment>
+                      <span className="text-amber-400 text-[10px] font-bold w-12 text-right">{p.std_time_min}m</span>
+                    </div>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Routing Viewer tab */}
+            {procTab==='routing' && (
+              <div className="space-y-4">
+                <div className="flex gap-2 items-center">
+                  <select className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs"
+                    onChange={async e => {
+                      if(!e.target.value) { setExtra(prev=>({...prev, routingData:null})); return; }
+                      const r = await axios.get(`/api/routings/${e.target.value}`);
+                      setExtra(prev=>({...prev, routingData:r.data}));
+                    }}>
+                    <option value="">Select item for routing</option>
+                    {(extra.itemList||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
+                  </select>
+                </div>
+                {extra.routingData && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-4">
+                      <span className="text-white font-bold">Routing: {extra.routingData.item_code}</span>
+                      <span className="text-slate-500 text-xs">{extra.routingData.routes?.length||0} steps</span>
+                      <span className="text-amber-400 text-xs font-bold">Total: {extra.routingData.total_time} min</span>
+                    </div>
+                    {/* Visual flow */}
+                    <div className="flex gap-2 items-center flex-wrap">
+                      {(extra.routingData.routes||[]).map((r,i)=>(
+                        <React.Fragment key={i}>
+                          <div className="bg-[#1e293b] p-3 rounded-xl border border-slate-700 text-center min-w-[130px] hover:border-blue-500/50 transition-all">
+                            <div className="text-[9px] text-slate-600 mb-1">Step {r.seq}</div>
+                            <div className="text-blue-400 font-bold">{r.process_name}</div>
+                            <div className="text-[10px] text-slate-500">{r.process_code}</div>
+                            <div className="text-amber-400 mt-1 font-bold">{r.cycle_time} min</div>
+                            <div className="text-[9px] text-purple-400 mt-0.5">{r.equip_name||'N/A'}</div>
+                          </div>
+                          {i < extra.routingData.routes.length-1 && <span className="text-slate-600 text-lg">→</span>}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                    {/* Routing table */}
+                    <Table cols={['Seq','Process Code','Process Name','Cycle Time','Equipment','% of Total']}
+                      rows={extra.routingData.routes||[]}
+                      renderRow={(r,k)=>(
+                        <tr key={k}>
+                          <td className="p-3 text-white font-bold">{r.seq}</td>
+                          <td className="p-3 font-mono text-blue-400">{r.process_code}</td>
+                          <td className="p-3 text-white">{r.process_name}</td>
+                          <td className="p-3 text-amber-400 font-bold">{r.cycle_time} min</td>
+                          <td className="p-3 text-purple-400">{r.equip_name||'-'}</td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-blue-500 rounded-full" style={{width:`${extra.routingData.total_time>0 ? (r.cycle_time/extra.routingData.total_time*100) : 0}%`}}/>
+                              </div>
+                              <span className="text-[10px] text-blue-400 w-10 text-right">{extra.routingData.total_time>0 ? (r.cycle_time/extra.routingData.total_time*100).toFixed(0) : 0}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Routing Summary tab */}
+            {procTab==='summary' && (
+              <div className="space-y-3">
+                <FilterBar>
+                  <FilterSearch value={tf.routing.search} onChange={v=>setFilter('routing','search',v)} placeholder="Search item code, name..." />
+                  <FilterCount total={allRoutingSummary.length} filtered={filteredRoutings.length} />
+                </FilterBar>
+                <Table cols={['Item Code','Item Name','Category','Steps','Total Time','Avg Time/Step']}
+                  rows={filteredRoutings}
+                  renderRow={(r,k)=>(
+                    <tr key={k} className="cursor-pointer hover:bg-slate-800/30" onClick={async()=>{
+                      setProcTab('routing');
+                      const res = await axios.get(`/api/routings/${r.item_code}`);
+                      setExtra(prev=>({...prev, routingData:res.data}));
+                    }}>
+                      <td className="p-3 font-mono text-blue-400">{r.item_code}</td>
+                      <td className="p-3 text-white font-bold">{r.item_name}</td>
+                      <td className="p-3"><Badge v={r.category}/></td>
+                      <td className="p-3 text-purple-400 font-bold">{r.step_count}</td>
+                      <td className="p-3 text-amber-400 font-bold">{r.total_time} min</td>
+                      <td className="p-3 text-slate-400">{r.step_count>0 ? (r.total_time/r.step_count).toFixed(1) : 0} min</td>
+                    </tr>
+                  )} />
+              </div>
+            )}
           </div>
-        )}
+          );
+        })()}
 
         {/* ── EQUIPMENT (FN-013~014, 032~034) ──────────── */}
         {menu==='EQUIPMENT' && (() => {

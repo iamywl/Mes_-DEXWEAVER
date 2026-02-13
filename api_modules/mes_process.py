@@ -3,6 +3,73 @@
 from api_modules.database import get_conn, release_conn
 
 
+async def list_processes() -> dict:
+    """List all registered processes with equipment info."""
+    conn = None
+    try:
+        conn = get_conn()
+        if not conn:
+            return {"error": "Database connection failed."}
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT p.process_code, p.name, p.std_time_min, p.description, "
+            "p.equip_code, e.name AS equip_name, e.status AS equip_status "
+            "FROM processes p "
+            "LEFT JOIN equipments e ON p.equip_code = e.equip_code "
+            "ORDER BY p.process_code"
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+        processes = [
+            {
+                "process_code": r[0], "name": r[1],
+                "std_time_min": r[2], "description": r[3],
+                "equip_code": r[4], "equip_name": r[5],
+                "equip_status": r[6],
+            }
+            for r in rows
+        ]
+        return {"processes": processes, "total": len(processes)}
+    except Exception as e:
+        return {"error": str(e), "processes": [], "total": 0}
+    finally:
+        if conn:
+            release_conn(conn)
+
+
+async def list_routings_summary() -> dict:
+    """Summary of all item routings with step count and total time."""
+    conn = None
+    try:
+        conn = get_conn()
+        if not conn:
+            return {"error": "Database connection failed."}
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT r.item_code, i.name AS item_name, i.category, "
+            "COUNT(r.seq) AS step_count, SUM(r.cycle_time) AS total_time "
+            "FROM routings r "
+            "JOIN items i ON r.item_code = i.item_code "
+            "GROUP BY r.item_code, i.name, i.category "
+            "ORDER BY r.item_code"
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+        summaries = [
+            {
+                "item_code": r[0], "item_name": r[1], "category": r[2],
+                "step_count": r[3], "total_time": r[4],
+            }
+            for r in rows
+        ]
+        return {"routings": summaries, "total": len(summaries)}
+    except Exception as e:
+        return {"error": str(e), "routings": [], "total": 0}
+    finally:
+        if conn:
+            release_conn(conn)
+
+
 async def create_process(data: dict) -> dict:
     """FN-010: Register a new process."""
     conn = None

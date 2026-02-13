@@ -96,6 +96,21 @@ async def create_bom(request: Request):
     return await mes_bom.create_bom(await request.json())
 
 
+@app.get("/api/bom")
+async def list_bom():
+    return await mes_bom.list_bom()
+
+
+@app.get("/api/bom/summary")
+async def bom_summary():
+    return await mes_bom.bom_summary()
+
+
+@app.get("/api/bom/where-used/{item_code}")
+async def bom_where_used(item_code: str):
+    return await mes_bom.where_used(item_code)
+
+
 @app.get("/api/bom/explode/{item_code}")
 async def explode_bom(item_code: str, qty: float = 1):
     return await mes_bom.explode_bom(item_code, qty)
@@ -103,9 +118,19 @@ async def explode_bom(item_code: str, qty: float = 1):
 
 # ── FN-010~012: Process & Routing ────────────────────────
 
+@app.get("/api/processes")
+async def list_processes():
+    return await mes_process.list_processes()
+
+
 @app.post("/api/processes")
 async def create_process(request: Request):
     return await mes_process.create_process(await request.json())
+
+
+@app.get("/api/routings")
+async def list_routings_summary():
+    return await mes_process.list_routings_summary()
 
 
 @app.post("/api/routings")

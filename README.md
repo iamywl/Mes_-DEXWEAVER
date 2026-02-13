@@ -66,7 +66,7 @@ kubectl logs deployment/mes-frontend --tail=20
 
 | 영역 | 메뉴 | 주요 기능 |
 |------|------|-----------|
-| 기준정보 | Items, BOM, Process, Equipment | 품목/BOM/공정/설비 관리 |
+| 기준정보 | Items, BOM, Process, Equipment | 품목/BOM(목록·전개·역전개)/공정(마스터·라우팅·요약)/설비 관리 |
 | 생산관리 | Plans, Work Order | 생산계획, 작업지시 |
 | 품질/재고 | Quality, Inventory | 불량 분석, 재고 현황 |
 | AI 분석 | AI Center | 수요예측, 불량예측, 고장예측 |
@@ -133,7 +133,12 @@ MES_PROJECT/
 | 영역 | Method | URL | 설명 |
 |------|--------|-----|------|
 | 품목 | GET | /api/items | 품목 목록 |
+| BOM | GET | /api/bom | BOM 전체 목록 |
 | BOM | GET | /api/bom/explode/{code} | BOM 전개 |
+| BOM | GET | /api/bom/where-used/{code} | 역전개 (사용처) |
+| BOM | GET | /api/bom/summary | BOM 통계 요약 |
+| 공정 | GET | /api/processes | 공정 마스터 목록 |
+| 공정 | GET | /api/routings | 라우팅 요약 (전체) |
 | 공정 | GET | /api/routings/{code} | 라우팅 조회 |
 | 설비 | GET | /api/equipments | 설비 목록 |
 | 계획 | GET | /api/plans | 생산계획 목록 |
@@ -205,6 +210,7 @@ kubectl rollout restart deployment mes-frontend
 
 | 버전 | 날짜 | 주요 변경 |
 |------|------|-----------|
+| v5.1 | 2026-02-13 | BOM 강화(목록/전개/역전개/통계), Process 강화(마스터/라우팅뷰어/요약), 5개 API 추가 |
 | v5.0 | 2026-02-13 | 전 테이블 필터 기능, Hubble 네트워크 UI, 원클릭 시작 스크립트 |
 | v4.0 | 2026-02-13 | 14개 메뉴 프론트엔드, FN-001~037 전체 구현, 시드 데이터 확장 |
 | v3.0 | 2026-02-10 | 모듈화 아키텍처, ConfigMap 배포 방식 전환 |
