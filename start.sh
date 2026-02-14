@@ -3,14 +3,25 @@
 # KNU MES 시스템 원클릭 시작 스크립트
 # VM 부팅 후 이 스크립트 하나만 실행하면 전체 시스템이 올라갑니다.
 # 사용법: sudo bash /root/MES_PROJECT/start.sh
+#
+# K8s 리소스 정의: infra/ 디렉터리
+#   infra/postgres-pv.yaml    — PV, PVC
+#   infra/db-secret.yaml      — DB 접속 Secret
+#   infra/postgres.yaml       — PostgreSQL Deployment + Service
+#   infra/mes-api.yaml        — FastAPI Deployment + Service
+#   infra/nginx-config.yaml   — nginx ConfigMap
+#   infra/mes-frontend.yaml   — Frontend Deployment + Service
 # =========================================================
 set +e
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 PROJECT_DIR="/root/MES_PROJECT"
+INFRA_DIR="$PROJECT_DIR/infra"
 cd "$PROJECT_DIR"
 
+REAL_IP=$(hostname -I | awk '{print $1}')
+
 echo -e "${CYAN}=================================================${NC}"
-echo -e "${CYAN}   KNU MES v5.0 — 시스템 시작 스크립트${NC}"
+echo -e "${CYAN}   KNU MES v5.1 — 시스템 시작 스크립트${NC}"
 echo -e "${CYAN}=================================================${NC}"
 echo ""
 
@@ -58,40 +69,10 @@ kubectl get pods 2>/dev/null | grep -E "Unknown|Error|CrashLoopBackOff" | awk '{
 echo -e "${GREEN}  ✓ 불량 Pod 정리 완료${NC}"
 
 # ── [5/8] PostgreSQL DB 배포 ──────────────────────────
-echo -e "${YELLOW}[5/8] PostgreSQL DB 확인/배포...${NC}"
-REAL_IP=$(hostname -I | awk '{print $1}')
-
-# PV 생성
-kubectl apply -f - <<EOF &>/dev/null
-apiVersion: v1
-kind: PersistentVolume
-metadata: { name: postgres-pv }
-spec:
-  storageClassName: manual
-  capacity: { storage: 1Gi }
-  accessModes: [ReadWriteOnce]
-  hostPath: { path: "/mnt/data" }
-EOF
-
-# PVC 생성 (이미 있으면 무시)
-kubectl apply -f - <<EOF 2>/dev/null
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata: { name: postgres-pvc }
-spec:
-  storageClassName: manual
-  accessModes: [ReadWriteOnce]
-  resources: { requests: { storage: 1Gi } }
-  volumeName: postgres-pv
-EOF
-
-# Postgres Deployment
-kubectl apply -f "$PROJECT_DIR/postgres.yaml" &>/dev/null
-
-# DB Secret
-kubectl get secret db-credentials &>/dev/null || \
-  kubectl create secret generic db-credentials \
-    --from-literal=DATABASE_URL="postgresql://postgres:mes1234@postgres:5432/mes_db" &>/dev/null
+echo -e "${YELLOW}[5/8] PostgreSQL DB 배포...${NC}"
+kubectl apply -f "$INFRA_DIR/postgres-pv.yaml" &>/dev/null
+kubectl apply -f "$INFRA_DIR/db-secret.yaml" &>/dev/null
+kubectl apply -f "$INFRA_DIR/postgres.yaml" &>/dev/null
 
 echo -e "${YELLOW}  → DB Pod 대기 중...${NC}"
 kubectl wait --for=condition=ready pod -l app=postgres --timeout=90s &>/dev/null
@@ -102,50 +83,10 @@ echo -e "${YELLOW}[6/8] 백엔드 API 배포...${NC}"
 kubectl delete configmap api-code --ignore-not-found &>/dev/null
 kubectl create configmap api-code --from-file=app.py=./app.py --from-file=./api_modules/ &>/dev/null
 
-kubectl apply -f - <<EOF &>/dev/null
-apiVersion: apps/v1
-kind: Deployment
-metadata: { name: mes-api }
-spec:
-  replicas: 1
-  selector: { matchLabels: { app: mes-api } }
-  template:
-    metadata: { labels: { app: mes-api } }
-    spec:
-      containers:
-      - name: mes-api
-        image: python:3.9-slim
-        command: ["/bin/sh", "-c"]
-        args:
-        - |
-          mkdir -p /app/api_modules &&
-          cp /mnt/*.py /app/api_modules/ &&
-          mv /app/api_modules/app.py /app/app.py &&
-          touch /app/api_modules/__init__.py &&
-          pip install --no-cache-dir fastapi uvicorn psycopg2-binary kubernetes pydantic psutil &&
-          python /app/app.py
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: DATABASE_URL
-        - name: CORS_ORIGINS
-          value: "http://${REAL_IP}:30173,http://localhost:30173,http://localhost:3000"
-        volumeMounts: [{ name: code-volume, mountPath: /mnt }]
-      volumes:
-      - name: code-volume
-        configMap: { name: api-code }
----
-apiVersion: v1
-kind: Service
-metadata: { name: mes-api-service }
-spec:
-  type: NodePort
-  selector: { app: mes-api }
-  ports:
-  - { port: 80, targetPort: 80, nodePort: 30461 }
-EOF
+# CORS_ORIGINS에 실제 IP 주입 후 적용
+sed "s|__CORS_ORIGINS__|http://${REAL_IP}:30173,http://localhost:30173,http://localhost:3000|" \
+  "$INFRA_DIR/mes-api.yaml" | kubectl apply -f - &>/dev/null
+
 echo -e "${GREEN}  ✓ 백엔드 배포 완료 (pip install 진행 중, 약 1~2분 소요)${NC}"
 
 # ── [7/8] 프론트엔드 빌드 & 배포 ─────────────────────
@@ -157,61 +98,9 @@ npm run build 2>&1 | tail -3
 kubectl delete configmap frontend-build --ignore-not-found &>/dev/null
 kubectl create configmap frontend-build --from-file=dist/ &>/dev/null
 
-# Nginx 설정
-kubectl apply -f - <<EOF &>/dev/null
-apiVersion: v1
-kind: ConfigMap
-metadata: { name: nginx-config }
-data:
-  default.conf: |
-    server {
-        listen 80;
-        server_name localhost;
-        location / {
-            root   /usr/share/nginx/html;
-            index  index.html index.htm;
-            try_files \$uri \$uri/ /index.html;
-        }
-        location /api/ {
-            proxy_pass http://mes-api-service:80;
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-        }
-    }
----
-apiVersion: apps/v1
-kind: Deployment
-metadata: { name: mes-frontend }
-spec:
-  replicas: 1
-  selector: { matchLabels: { app: mes-frontend } }
-  template:
-    metadata: { labels: { app: mes-frontend } }
-    spec:
-      containers:
-      - name: nginx
-        image: nginx:alpine
-        ports: [{ containerPort: 80 }]
-        volumeMounts:
-        - { name: html-volume, mountPath: /usr/share/nginx/html }
-        - { name: nginx-conf, mountPath: /etc/nginx/conf.d, readOnly: true }
-      volumes:
-      - name: html-volume
-        configMap: { name: frontend-build }
-      - name: nginx-conf
-        configMap: { name: nginx-config }
----
-apiVersion: v1
-kind: Service
-metadata: { name: mes-frontend-service }
-spec:
-  type: NodePort
-  selector: { app: mes-frontend }
-  ports:
-  - { port: 80, targetPort: 80, nodePort: 30173 }
-EOF
+kubectl apply -f "$INFRA_DIR/nginx-config.yaml" &>/dev/null
+kubectl apply -f "$INFRA_DIR/mes-frontend.yaml" &>/dev/null
+
 echo -e "${GREEN}  ✓ 프론트엔드 배포 완료${NC}"
 
 # ── [8/8] 최종 검증 ──────────────────────────────────

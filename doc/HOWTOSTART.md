@@ -166,7 +166,10 @@ start.sh를 사용하지 않고 개별 컴포넌트를 수동으로 배포하는
 ### DB만 배포
 
 ```bash
-kubectl apply -f /root/MES_PROJECT/postgres.yaml
+cd /root/MES_PROJECT
+kubectl apply -f infra/postgres-pv.yaml
+kubectl apply -f infra/db-secret.yaml
+kubectl apply -f infra/postgres.yaml
 kubectl wait --for=condition=ready pod -l app=postgres --timeout=90s
 ```
 
@@ -176,6 +179,7 @@ kubectl wait --for=condition=ready pod -l app=postgres --timeout=90s
 cd /root/MES_PROJECT
 kubectl delete configmap api-code --ignore-not-found
 kubectl create configmap api-code --from-file=app.py=./app.py --from-file=./api_modules/
+kubectl apply -f infra/mes-api.yaml
 kubectl rollout restart deployment mes-api
 ```
 
@@ -186,7 +190,15 @@ cd /root/MES_PROJECT/frontend
 npm run build
 kubectl delete configmap frontend-build --ignore-not-found
 kubectl create configmap frontend-build --from-file=dist/
+kubectl apply -f ../infra/nginx-config.yaml
+kubectl apply -f ../infra/mes-frontend.yaml
 kubectl rollout restart deployment mes-frontend
+```
+
+### K8s 리소스 전체 한 번에 적용
+
+```bash
+kubectl apply -f /root/MES_PROJECT/infra/
 ```
 
 ---

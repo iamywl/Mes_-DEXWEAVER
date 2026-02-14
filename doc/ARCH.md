@@ -477,7 +477,15 @@ MES_PROJECT/
 ├── db/
 │   └── init.sql                  # DB 스키마 + 시드 데이터 (19테이블, 500+건)
 │
-├── k8s/                          # Kubernetes 매니페스트
+├── infra/                        # Kubernetes 매니페스트 (start.sh에서 참조)
+│   ├── postgres-pv.yaml          #   PV + PVC
+│   ├── db-secret.yaml            #   DB 접속 Secret
+│   ├── postgres.yaml             #   PostgreSQL Deployment + Service
+│   ├── mes-api.yaml              #   FastAPI Deployment + Service
+│   ├── nginx-config.yaml         #   nginx ConfigMap
+│   └── mes-frontend.yaml         #   Frontend Deployment + Service
+│
+├── k8s/                          # 레거시 Kubernetes 매니페스트 (참고용)
 │   ├── backend-deployment.yaml
 │   ├── backend-service.yaml
 │   ├── frontend-deployment.yaml
