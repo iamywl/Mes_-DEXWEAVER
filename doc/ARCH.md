@@ -441,7 +441,7 @@ MES_PROJECT/
 ├── requirements.txt              # Python 의존성
 ├── Dockerfile                    # 백엔드 Docker 이미지
 ├── docker-compose.yml            # 로컬 개발용 (PostgreSQL)
-├── start.sh                      # VM 부팅 후 원클릭 시작
+├── init.sh                      # VM 부팅 후 원클릭 시작
 ├── mes-all-in-one.sh             # 레거시 배포 스크립트
 ├── postgres.yaml                 # PostgreSQL K8s Deployment
 ├── postgres-pv.yaml              # PV 정의
@@ -477,7 +477,7 @@ MES_PROJECT/
 ├── db/
 │   └── init.sql                  # DB 스키마 + 시드 데이터 (19테이블, 500+건)
 │
-├── infra/                        # Kubernetes 매니페스트 (start.sh에서 참조)
+├── infra/                        # Kubernetes 매니페스트 (init.sh에서 참조)
 │   ├── postgres-pv.yaml          #   PV + PVC
 │   ├── db-secret.yaml            #   DB 접속 Secret
 │   ├── postgres.yaml             #   PostgreSQL Deployment + Service

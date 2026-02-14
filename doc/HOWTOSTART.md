@@ -34,25 +34,28 @@ sudo -s
 ## 2단계: 원클릭 시작 스크립트 실행
 
 ```bash
-bash /root/MES_PROJECT/start.sh
+bash /root/MES_PROJECT/init.sh
 ```
 
 이 한 줄로 전체 시스템이 자동으로 올라갑니다.
 
 ---
 
-## start.sh 가 수행하는 작업 (8단계)
+## init.sh 가 수행하는 작업 (9단계)
+
+> 모든 설정값은 `env.sh`에서 읽습니다 (하드코딩 없음).
 
 | 단계 | 작업 | 설명 | 예상 소요 |
 |------|------|------|-----------|
-| **1/8** | 시스템 설정 | swap 비활성화, containerd/kubelet 재시작 | 즉시 |
-| **2/8** | K8s API 대기 | Kubernetes API 서버가 응답할 때까지 대기 (최대 60초) | 5~30초 |
-| **3/8** | 네트워크 복구 | Cilium CNI Pod 재시작으로 클러스터 네트워크 복구 | 10~30초 |
-| **4/8** | Pod 정리 | Unknown/Error/CrashLoopBackOff 상태의 불량 Pod 삭제 | 즉시 |
-| **5/8** | DB 배포 | PostgreSQL PV/PVC 생성, Deployment 배포, Secret 생성 | 10~30초 |
-| **6/8** | 백엔드 배포 | Python 소스 ConfigMap 생성, FastAPI Deployment 배포 | 즉시 |
-| **7/8** | 프론트엔드 | `npm run build` → ConfigMap 생성 → nginx Deployment 배포 | 10~20초 |
-| **8/8** | 검증 | 방화벽 개방, Pod 재시작, HTTP 응답 확인 | 30~180초 |
+| **1/9** | 시스템 설정 | swap 비활성화, containerd/kubelet 재시작 | 즉시 |
+| **2/9** | K8s API 대기 | Kubernetes API 서버가 응답할 때까지 대기 | 5~30초 |
+| **3/9** | 네트워크 복구 | Cilium CNI Pod 재시작으로 클러스터 네트워크 복구 | 10~30초 |
+| **4/9** | Pod 정리 | Unknown/Error/CrashLoopBackOff 상태의 불량 Pod 삭제 | 즉시 |
+| **5/9** | DB 배포 | PostgreSQL PV/PVC 생성, Deployment 배포, Secret 생성 | 10~30초 |
+| **6/9** | Keycloak 배포 | Keycloak 인증 서버 Deployment 배포 | 30~60초 |
+| **7/9** | 백엔드 배포 | Python 소스 ConfigMap 생성, FastAPI Deployment 배포 | 즉시 |
+| **8/9** | 프론트엔드 | `npm run build` → ConfigMap 생성 → nginx Deployment 배포 | 10~20초 |
+| **9/9** | 검증 | 방화벽 개방, Pod 재시작, HTTP 응답 확인, Keycloak Realm 설정 | 30~180초 |
 
 전체 소요 시간: **약 2~5분** (API 서버 pip install 포함)
 
@@ -66,6 +69,7 @@ bash /root/MES_PROJECT/start.sh
 |--------|-----|------|
 | 웹 UI | `http://192.168.64.5:30173` | MES 프론트엔드 (14개 메뉴) |
 | API 문서 | `http://192.168.64.5:30461/docs` | Swagger UI (37개 엔드포인트) |
+| Keycloak | `http://192.168.64.5:30080` | 인증 관리 콘솔 |
 
 > API 서버는 Pod 시작 시 `pip install`을 수행하므로, 최초 기동 시 1~2분 후 응답합니다.
 
@@ -161,7 +165,7 @@ kubectl exec -i deployment/postgres -- psql -U postgres -d mes_db < /root/MES_PR
 
 ## 수동 개별 배포 (참고)
 
-start.sh를 사용하지 않고 개별 컴포넌트를 수동으로 배포하는 방법입니다.
+init.sh를 사용하지 않고 개별 컴포넌트를 수동으로 배포하는 방법입니다.
 
 ### DB만 배포
 
@@ -215,7 +219,7 @@ kubectl scale deployment mes-api mes-frontend --replicas=0
 shutdown -h now
 ```
 
-다음 부팅 시 `bash /root/MES_PROJECT/start.sh`를 다시 실행하면 됩니다.
+다음 부팅 시 `bash /root/MES_PROJECT/init.sh`를 다시 실행하면 됩니다.
 
 ---
 
@@ -228,19 +232,20 @@ VM 부팅
   │
   ├─ root 전환: sudo -s
   │
-  ├─ 시작 스크립트: bash /root/MES_PROJECT/start.sh
-  │   ├─ [1/8] swap off, kubelet restart
-  │   ├─ [2/8] K8s API 대기
-  │   ├─ [3/8] Cilium 복구
-  │   ├─ [4/8] 불량 Pod 정리
-  │   ├─ [5/8] PostgreSQL 배포
-  │   ├─ [6/8] FastAPI 백엔드 배포
-  │   ├─ [7/8] React 프론트엔드 빌드 & 배포
-  │   └─ [8/8] 검증 (HTTP 200 확인)
+  ├─ 시작 스크립트: bash /root/MES_PROJECT/init.sh
+  │   ├─ [1/9] swap off, kubelet restart
+  │   ├─ [2/9] K8s API 대기
+  │   ├─ [3/9] Cilium 복구
+  │   ├─ [4/9] 불량 Pod 정리
+  │   ├─ [5/9] PostgreSQL 배포
+  │   ├─ [6/9] Keycloak 인증 서버 배포
+  │   ├─ [7/9] FastAPI 백엔드 배포
+  │   ├─ [8/9] React 프론트엔드 빌드 & 배포
+  │   └─ [9/9] 검증 + Keycloak Realm 설정
   │
   └─ 브라우저 접속: http://192.168.64.5:30173
 ```
 
 ---
 
-**최종 업데이트**: 2026-02-13
+**최종 업데이트**: 2026-02-14

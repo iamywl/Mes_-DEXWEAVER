@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import Keycloak from 'keycloak-js';
 
 axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
+
+/* ── Keycloak 설정 ───────────────────────────────────────── */
+const KC_URL = import.meta.env.VITE_KC_URL || `http://${window.location.hostname}:30080`;
+const KC_REALM = 'mes-realm';
+const KC_CLIENT = 'mes-frontend';
 
 /* ── helper components ─────────────────────────────────── */
 const Card = ({title, value, color='text-blue-500'}) => (
@@ -55,6 +61,11 @@ const FilterCount = ({total, filtered}) => (
 
 /* ── main app ──────────────────────────────────────────── */
 const App = () => {
+  /* ── Keycloak 인증 상태 ───────────────────────────────── */
+  const [kcReady, setKcReady] = useState(false);
+  const [kcUser, setKcUser] = useState(null);
+  const kcRef = useRef(null);
+
   const [menu, setMenu] = useState('DASHBOARD');
   const [db, setDb] = useState({ items:[], bom:[], plans:[], flows:[], pods:[], logs:'', infra:{} });
   const [extra, setExtra] = useState({});
@@ -88,6 +99,34 @@ const App = () => {
   const [hubbleView, setHubbleView] = useState('map');
   const [selectedSvc, setSelectedSvc] = useState(null);
   const [flowPanelOpen, setFlowPanelOpen] = useState(true);
+
+  /* ── Keycloak 초기화 ──────────────────────────────── */
+  useEffect(() => {
+    const kc = new Keycloak({ url: KC_URL, realm: KC_REALM, clientId: KC_CLIENT });
+    kcRef.current = kc;
+    kc.init({ onLoad: 'login-required', checkLoginIframe: false, pkceMethod: 'S256' })
+      .then(authenticated => {
+        if (authenticated) {
+          setKcUser({
+            name: kc.tokenParsed?.preferred_username || kc.tokenParsed?.name || 'User',
+            roles: kc.tokenParsed?.realm_access?.roles || [],
+          });
+          axios.interceptors.request.use(async config => {
+            try { await kc.updateToken(30); } catch { kc.login(); }
+            config.headers.Authorization = `Bearer ${kc.token}`;
+            return config;
+          });
+          setKcReady(true);
+        } else {
+          kc.login();
+        }
+      })
+      .catch(() => {
+        console.warn('Keycloak init failed, running without auth');
+        setKcUser({ name: 'Guest', roles: [] });
+        setKcReady(true);
+      });
+  }, []);
 
   /* ── data fetching ─────────────────────────────────── */
   const fetchCore = async () => {
@@ -219,11 +258,22 @@ const App = () => {
     {id:'K8S_MANAGER',  label:'K8s'},
   ];
 
+  if (!kcReady) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#020617]">
+        <div className="text-center space-y-4">
+          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-slate-400 text-sm">Connecting to authentication server...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-[#020617] text-slate-400 font-sans text-[11px]">
       {/* sidebar */}
-      <aside className="w-52 bg-[#0f172a] border-r border-slate-800 p-4 space-y-0.5 overflow-y-auto">
-        <h1 className="text-lg font-black text-blue-500 mb-6 tracking-tighter italic">KNU MES v5.0</h1>
+      <aside className="w-52 bg-[#0f172a] border-r border-slate-800 p-4 space-y-0.5 overflow-y-auto flex flex-col">
+        <h1 className="text-lg font-black text-blue-500 mb-6 tracking-tighter italic">KNU MES v5.1</h1>
         {menus.map(m=>(
           <button key={m.id} onClick={()=>setMenu(m.id)}
             className={`w-full text-left px-3 py-1.5 rounded-lg transition-all text-xs
@@ -231,6 +281,17 @@ const App = () => {
             {m.label}
           </button>
         ))}
+        {/* user info + logout */}
+        <div className="mt-auto pt-4 border-t border-slate-800">
+          <div className="px-2 py-2 text-[10px]">
+            <div className="text-white font-bold truncate">{kcUser?.name || 'User'}</div>
+            <div className="text-slate-500">{(kcUser?.roles||[]).filter(r=>r!=='default-roles-mes-realm'&&r!=='offline_access'&&r!=='uma_authorization').join(', ') || 'user'}</div>
+          </div>
+          <button onClick={()=>kcRef.current?.logout({ redirectUri: window.location.origin })}
+            className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-all">
+            Logout
+          </button>
+        </div>
       </aside>
 
       {/* main content */}
