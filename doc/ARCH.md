@@ -81,6 +81,7 @@
 | `db-credentials` (Secret) | `DATABASE_URL=postgresql://postgres:mes1234@postgres:5432/mes_db` |
 | `postgres-pv` (PersistentVolume) | 1Gi, hostPath `/mnt/data` |
 | `postgres-pvc` (PersistentVolumeClaim) | postgres-pv에 바인딩 |
+| `pip-cache` (hostPath Volume) | `/mnt/pip-cache` — API Pod의 pip 패키지 캐시 (재기동 시 다운로드 생략) |
 
 ### 3.4 배포 방식: ConfigMap 기반 (Docker 빌드 불필요)
 
@@ -96,8 +97,9 @@
 ```
 
 기존 Docker 이미지를 수정하지 않고, ConfigMap만 갱신하여 코드를 배포합니다.
-- `api-code` ConfigMap → `/mnt` 에 마운트 → 컨테이너 시작 시 `/app/`으로 복사 → pip install → 실행
+- `api-code` ConfigMap → `/mnt` 에 마운트 → 컨테이너 시작 시 `/app/`으로 복사 → pip install (캐시 활용) → 실행
 - `frontend-build` ConfigMap → `/usr/share/nginx/html` 에 마운트 → nginx가 즉시 서빙
+- `pip-cache` hostPath (`/mnt/pip-cache`) → `/pip-cache` 에 마운트 → pip 패키지 캐시 재사용
 
 ---
 
@@ -446,8 +448,8 @@ MES_PROJECT/
 ├── Dockerfile                    # 백엔드 Docker 이미지
 ├── docker-compose.yml            # 로컬 개발용 (PostgreSQL)
 ├── Jenkinsfile                   # CI/CD 파이프라인 (Jenkins)
-├── init.sh                      # VM 부팅 후 원클릭 시작
-├── env.sh                        # 환경 변수 중앙 관리
+├── init.sh                      # VM 부팅 후 원클릭 시작 (병렬 배포 + 프로그레스 바)
+├── env.sh                        # 환경 변수 중앙 관리 + 프로그레스 바 유틸
 ├── setup-keycloak.sh             # Keycloak Realm/Client/사용자 자동 설정
 │
 ├── api_modules/                  # 백엔드 비즈니스 로직 (27개 모듈)
@@ -550,4 +552,4 @@ MES_PROJECT/
 
 ---
 
-**최종 업데이트**: 2026-02-15
+**최종 업데이트**: 2026-02-23

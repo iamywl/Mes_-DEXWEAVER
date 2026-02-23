@@ -3,8 +3,8 @@
 > Kubernetes 기반 클라우드 네이티브 MES (Manufacturing Execution System)
 > 경북대학교 스마트 팩토리 프로젝트
 
-**문서 버전**: v5.3
-**최종 작성일**: 2026-02-15
+**문서 버전**: v5.4
+**최종 작성일**: 2026-02-23
 
 ---
 
@@ -139,8 +139,8 @@ MES_PROJECT/
 
 | 파일 | 역할 | 비고 |
 |------|------|------|
-| `init.sh` | VM 부팅 후 전체 시스템을 기동하는 통합 초기화 스크립트 (9단계) | `sudo bash /root/MES_PROJECT/init.sh`로 실행 |
-| `env.sh` | 모든 환경 변수를 중앙 관리. 다른 스크립트가 `source`하여 사용 | 하드코딩 금지. 변경 시 이 파일만 수정 |
+| `init.sh` | VM 부팅 후 전체 시스템을 기동하는 통합 초기화 스크립트 (11단계, 병렬 배포 + 프로그레스 바) | `sudo bash /root/MES_PROJECT/init.sh`로 실행 |
+| `env.sh` | 모든 환경 변수를 중앙 관리 + 프로그레스 바 유틸 함수 포함. 다른 스크립트가 `source`하여 사용 | 하드코딩 금지. 변경 시 이 파일만 수정 |
 | `setup-keycloak.sh` | Keycloak REST API를 호출하여 Realm, Client, 사용자를 자동 생성 | init.sh의 마지막 단계에서 자동 호출 |
 
 #### 백엔드 핵심 파일
@@ -164,49 +164,39 @@ MES_PROJECT/
 
 ## 3. 핵심 동작 흐름
 
-### 3.1 시스템 기동 흐름 (init.sh)
+### 3.1 시스템 기동 흐름 (init.sh — 최적화 버전 v5.4)
+
+실시간 프로그레스 바와 병렬 배포가 적용된 11단계 기동 프로세스입니다.
 
 ```
 init.sh 실행 (sudo bash /root/MES_PROJECT/init.sh)
     │
-    ├─ [1/9] env.sh source → 환경 변수 및 공통 유틸 로드
+    ├─ env.sh source → 환경 변수 + 프로그레스 바 유틸 로드
     │
-    ├─ [2/9] 시스템 기본 설정
-    │         ├─ swapoff -a (swap 비활성화)
-    │         ├─ mkdir -p /mnt/data (PV 경로 생성)
-    │         └─ containerd/kubelet 재시작
+    ├─ [1] 시스템설정: swapoff, /mnt/data 생성, containerd/kubelet 재시작
+    ├─ [2] K8s API 대기 (최대 60초)
+    ├─ [3] Cilium 네트워크 복구 (이미 Running이면 스킵)
+    ├─ [4] 불량 Pod 정리
     │
-    ├─ [3/9] Kubernetes API 서버 대기 (최대 60초)
+    ├─ [5+6] ── 병렬 배포 ──────────────────────────────────
+    │  ├─ DB: postgres-pv → db-secret → postgres.yaml + Ready 대기
+    │  └─ Keycloak: keycloak.yaml (동시 apply)
     │
-    ├─ [4/9] Cilium 네트워크 복구
-    │         └─ Cilium Pod 강제 재시작 → 정상 확인 대기
+    ├─ [7] 백엔드: ConfigMap(api-code) → CORS 치환 → mes-api.yaml
+    │       (pip install은 hostPath 캐시(/mnt/pip-cache) 재사용)
     │
-    ├─ [5/9] 불량 Pod 정리 (Failed/Unknown/Error/CrashLoop)
+    ├─ [8] 프론트 빌드: dist/ 존재 + 소스 미변경 → 빌드 스킵
+    │       (변경 감지 시만 npm install + build)
+    ├─ [9] 프론트 배포: ConfigMap(frontend-build) + rollout restart
     │
-    ├─ [6/9] PostgreSQL DB 배포
-    │         ├─ kubectl apply -f postgres-pv.yaml
-    │         ├─ kubectl apply -f db-secret.yaml
-    │         └─ kubectl apply -f postgres.yaml → Pod Ready 대기
+    ├─ [10] ── 병렬 Health Check ───────────────────────────
+    │  ├─ 프론트엔드 HTTP 200 (백그라운드)
+    │  ├─ API 서버 HTTP 200 (백그라운드)
+    │  └─ Keycloak 응답 (백그라운드)
     │
-    ├─ [7/9] Keycloak 배포
-    │         └─ kubectl apply -f keycloak.yaml (기동 30~60초 소요)
-    │
-    ├─ [8/9] 백엔드 API 배포
-    │         ├─ ConfigMap 생성: app.py + api_modules/*.py → api-code
-    │         └─ CORS_ORIGINS 치환 후 mes-api.yaml 적용
-    │
-    ├─ [9/9] 프론트엔드 빌드 & 배포
-    │         ├─ npm install && npm run build
-    │         ├─ ConfigMap 생성: dist/ → frontend-build
-    │         ├─ kubectl apply -f nginx-config.yaml
-    │         └─ kubectl apply -f mes-frontend.yaml
-    │
-    └─ 최종 검증
-          ├─ 방화벽 개방 (ufw allow 30000:32767/tcp)
-          ├─ rollout restart (ConfigMap 갱신 반영)
-          ├─ 프론트엔드 HTTP 200 대기 (최대 90초)
-          ├─ API 서버 HTTP 200 대기 (최대 180초, pip install 포함)
-          └─ setup-keycloak.sh 실행 (Realm/Client/사용자 생성)
+    └─ [11] Keycloak 설정: Realm/Client/사용자 자동 생성
+
+    프로그레스 바: [2:15] ████████████████████ 100%  ● ● ● ● ● ● ● ● ● ● ●
 ```
 
 ### 3.2 사용자 요청 흐름
@@ -263,11 +253,11 @@ mkdir -p /app/api_modules &&
 cp /mnt/*.py /app/api_modules/ &&         # ConfigMap에서 소스 복사
 mv /app/api_modules/app.py /app/app.py && # app.py를 상위로 이동
 touch /app/api_modules/__init__.py &&     # __init__.py 생성
-pip install --no-cache-dir fastapi uvicorn psycopg2-binary kubernetes pydantic psutil &&
+pip install --cache-dir /pip-cache fastapi uvicorn psycopg2-binary kubernetes pydantic psutil &&
 python /app/app.py                         # 서버 기동 (port 80)
 ```
 
-> **주의**: `pip install`이 매번 실행되므로 첫 기동 시 1~2분이 소요됩니다.
+> **v5.4 최적화**: pip 캐시를 hostPath 볼륨(`/mnt/pip-cache` → Pod 내 `/pip-cache`)으로 마운트하여 재기동 시 패키지 다운로드를 생략합니다. 최초 기동 시에만 1~2분 소요됩니다.
 
 ---
 
@@ -630,7 +620,7 @@ bash /root/MES_PROJECT/setup-keycloak.sh
 |---|----------|------|
 | 1 | **swap이 켜져 있으면 kubelet이 실패** | VM 재시작 시 swap이 다시 활성화됨. `init.sh`가 `swapoff -a`로 자동 처리하지만, 수동으로 kubectl 사용 시 반드시 확인 |
 | 2 | **Cilium eBPF가 VM 재시작 후 초기화 실패 가능** | eBPF 맵이 리셋되면서 Pod 네트워크가 불통. `init.sh`가 Cilium Pod를 강제 재시작하여 자동 복구 |
-| 3 | **API Pod는 ConfigMap 방식이라 pip install이 매번 실행** | Pod 재시작 시마다 패키지 설치 (1~2분). 네트워크 불안정 시 실패할 수 있음 |
+| 3 | **API Pod는 ConfigMap 방식이라 pip install이 매번 실행** | v5.4부터 hostPath 캐시(`/mnt/pip-cache`)를 사용하여 재기동 시 빠름. 최초 기동만 1~2분 소요 |
 | 4 | **프론트엔드는 단일 App.jsx 파일** | ~88KB 단일 파일이므로 변경 시 전체 빌드 필요. 컴포넌트 분리가 되어 있지 않음 |
 | 5 | **레거시 모듈이 ConfigMap에 포함** | `app.py`에서 import하지 않는 레거시 모듈들도 ConfigMap에 포함됨. 삭제해도 무방하나 참고용으로 유지 중 |
 | 6 | **DB 데이터는 hostPath PV 사용** | `/mnt/data`에 저장. VM 삭제 시 데이터 유실. 백업 필요 시 `pg_dump` 사용 |
@@ -761,7 +751,7 @@ kubectl logs -f deployment/postgres
 | 항목 | 내용 |
 |------|------|
 | 프로젝트명 | 경북대학교 스마트 팩토리 MES |
-| 버전 | v5.2 |
+| 버전 | v5.4 |
 | 저장소 경로 | `/root/MES_PROJECT` |
 | VM 접속 | `ssh c1_master1@192.168.64.5` → `sudo -s` |
 
@@ -815,4 +805,4 @@ kubectl logs -f deployment/postgres
 ---
 
 **프로젝트**: 경북대학교 스마트 팩토리 MES
-**최종 업데이트**: 2026-02-15
+**최종 업데이트**: 2026-02-23

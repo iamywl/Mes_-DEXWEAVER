@@ -41,23 +41,51 @@ bash /root/MES_PROJECT/init.sh
 
 ---
 
-## init.sh 가 수행하는 작업 (9단계)
+## init.sh 가 수행하는 작업 (11단계, 최적화 버전)
 
 > 모든 설정값은 `env.sh`에서 읽습니다 (하드코딩 없음).
+> v5.4부터 병렬 배포, 빌드 캐시, 실시간 프로그레스 바가 적용되었습니다.
 
-| 단계 | 작업 | 설명 | 예상 소요 |
-|------|------|------|-----------|
-| **1/9** | 시스템 설정 | swap 비활성화, containerd/kubelet 재시작 | 즉시 |
-| **2/9** | K8s API 대기 | Kubernetes API 서버가 응답할 때까지 대기 | 5~30초 |
-| **3/9** | 네트워크 복구 | Cilium CNI Pod 재시작으로 클러스터 네트워크 복구 | 10~30초 |
-| **4/9** | Pod 정리 | Unknown/Error/CrashLoopBackOff 상태의 불량 Pod 삭제 | 즉시 |
-| **5/9** | DB 배포 | PostgreSQL PV/PVC 생성, Deployment 배포, Secret 생성 | 10~30초 |
-| **6/9** | Keycloak 배포 | Keycloak 인증 서버 Deployment 배포 | 30~60초 |
-| **7/9** | 백엔드 배포 | Python 소스 ConfigMap 생성, FastAPI Deployment 배포 | 즉시 |
-| **8/9** | 프론트엔드 | `npm run build` → ConfigMap 생성 → nginx Deployment 배포 | 10~20초 |
-| **9/9** | 검증 | 방화벽 개방, Pod 재시작, HTTP 응답 확인, Keycloak Realm 설정 | 30~180초 |
+### 실시간 프로그레스 바
 
-전체 소요 시간: **약 2~5분** (API 서버 pip install 포함)
+부팅 중 아래와 같은 프로그레스 바가 실시간으로 표시됩니다:
+
+```
+  [1:23] ████████████░░░░░░░░ 60%  ● ● ● ● ● ● ◉ ○ ○ ○ ○ 백엔드
+```
+
+- `[경과시간]` — 부팅 시작 후 경과 시간 (분:초)
+- `█░` — 전체 진행률 바 (0~100%)
+- `●` 완료 / `◉` 진행중 / `○` 대기 / `●`(빨강) 실패
+- 마지막에 현재 진행 중인 단계 이름 표시
+
+### 부팅 단계
+
+| # | 단계 | 설명 | 최적화 |
+|---|------|------|--------|
+| 1 | 시스템설정 | swap off, containerd/kubelet 재시작 | - |
+| 2 | K8s API | Kubernetes API 서버 응답 대기 (최대 60초) | - |
+| 3 | 네트워크 | Cilium CNI 네트워크 복구 | 이미 Running이면 **스킵** |
+| 4 | Pod정리 | Failed/Unknown/Error Pod 삭제 | - |
+| 5 | DB배포 | PostgreSQL PV/PVC/Deployment 배포 | DB/Keycloak **병렬** apply |
+| 6 | Keycloak | Keycloak 인증 서버 배포 | DB와 **동시** 배포 |
+| 7 | 백엔드 | ConfigMap 생성 + FastAPI Deployment | pip **캐시** 재사용 (hostPath) |
+| 8 | 프론트빌드 | React 빌드 | `dist/` 존재 + 소스 미변경 시 **빌드 스킵** |
+| 9 | 프론트배포 | ConfigMap + nginx Deployment + rollout restart | - |
+| 10 | 서비스대기 | 프론트/API/Keycloak HTTP 응답 확인 | 3개 서비스 **병렬** 대기 |
+| 11 | KC설정 | Keycloak Realm/Client/사용자 자동 생성 | - |
+
+### 최적화 효과
+
+| 최적화 항목 | Before | After |
+|-------------|--------|-------|
+| DB/Keycloak 배포 | 순차 실행 | 병렬 apply |
+| 프론트 빌드 | 매번 `npm install + build` | 변경 없으면 스킵 |
+| pip install | `--no-cache-dir` (매번 다운로드) | hostPath 캐시 재사용 |
+| Health Check | 순차 대기 (프론트→API→KC) | 3개 동시 백그라운드 |
+| Cilium 복구 | 무조건 Pod 재시작 | Running이면 스킵 |
+
+전체 소요 시간: **약 1~3분** (캐시 활용 시 대폭 단축)
 
 ---
 
@@ -71,7 +99,7 @@ bash /root/MES_PROJECT/init.sh
 | API 문서 | `http://192.168.64.5:30461/docs` | Swagger UI (37개 엔드포인트) |
 | Keycloak | `http://192.168.64.5:30080` | 인증 관리 콘솔 |
 
-> API 서버는 Pod 시작 시 `pip install`을 수행하므로, 최초 기동 시 1~2분 후 응답합니다.
+> API 서버는 Pod 시작 시 `pip install`을 수행합니다. 최초 기동 시 1~2분 소요되나, 이후 pip 캐시가 유지되어 재기동이 빨라집니다.
 
 ---
 
@@ -233,19 +261,18 @@ VM 부팅
   ├─ root 전환: sudo -s
   │
   ├─ 시작 스크립트: bash /root/MES_PROJECT/init.sh
-  │   ├─ [1/9] swap off, kubelet restart
-  │   ├─ [2/9] K8s API 대기
-  │   ├─ [3/9] Cilium 복구
-  │   ├─ [4/9] 불량 Pod 정리
-  │   ├─ [5/9] PostgreSQL 배포
-  │   ├─ [6/9] Keycloak 인증 서버 배포
-  │   ├─ [7/9] FastAPI 백엔드 배포
-  │   ├─ [8/9] React 프론트엔드 빌드 & 배포
-  │   └─ [9/9] 검증 + Keycloak Realm 설정
+  │   ├─ [1~4] 시스템설정 → K8s API → 네트워크(스킵가능) → Pod정리
+  │   ├─ [5+6] DB + Keycloak ─── 병렬 배포 ───┐
+  │   ├─ [7]   백엔드 배포 (pip 캐시 활용)     │
+  │   ├─ [8+9] 프론트 빌드(캐시) + 배포        │
+  │   ├─ [10]  서비스 Health Check ── 병렬 대기 ┘
+  │   └─ [11]  Keycloak 설정 (Realm/사용자)
+  │
+  │   ████████████████████ 100%  ● ● ● ● ● ● ● ● ● ● ●  [2:15 소요]
   │
   └─ 브라우저 접속: http://192.168.64.5:30173
 ```
 
 ---
 
-**최종 업데이트**: 2026-02-15
+**최종 업데이트**: 2026-02-23
