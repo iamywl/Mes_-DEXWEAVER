@@ -3,8 +3,8 @@
 > Kubernetes 기반 클라우드 네이티브 MES (Manufacturing Execution System)
 > 경북대학교 스마트 팩토리 프로젝트
 
-**문서 버전**: v5.2
-**최종 작성일**: 2026-02-14
+**문서 버전**: v5.3
+**최종 작성일**: 2026-02-15
 
 ---
 
@@ -17,9 +17,10 @@
 5. [데이터베이스 스키마 개요](#5-데이터베이스-스키마-개요)
 6. [API 엔드포인트 전체 목록](#6-api-엔드포인트-전체-목록)
 7. [기술 스택](#7-기술-스택)
-8. [주의사항 및 알려진 이슈](#8-주의사항-및-알려진-이슈)
-9. [트러블슈팅 가이드](#9-트러블슈팅-가이드)
-10. [연락처 및 참고 자료](#10-연락처-및-참고-자료)
+8. [CI/CD 파이프라인](#8-cicd-파이프라인)
+9. [주의사항 및 알려진 이슈](#9-주의사항-및-알려진-이슈)
+10. [트러블슈팅 가이드](#10-트러블슈팅-가이드)
+11. [연락처 및 참고 자료](#11-연락처-및-참고-자료)
 
 ---
 
@@ -59,7 +60,9 @@ MES_PROJECT/
 ├── env.sh                     # 환경 변수 설정 (모든 스크립트가 source)
 ├── setup-keycloak.sh          # Keycloak 자동 설정 스크립트
 ├── app.py                     # FastAPI 메인 라우터 (37+ API 엔드포인트)
-├── test_app.py                # 테스트 파일
+├── test_app.py                # 테스트 파일 (25개 테스트)
+├── Jenkinsfile                # CI/CD 파이프라인 (Jenkins)
+├── requirements.txt           # Python 의존성
 ├── Dockerfile                 # 컨테이너 이미지 빌드 (참고용, 실제 배포는 ConfigMap)
 ├── tempid_pw.md               # 임시 계정 정보
 │
@@ -120,7 +123,11 @@ MES_PROJECT/
 ├── doc/
 │   ├── ARCH.md                # 아키텍처 문서
 │   ├── HOWTOSTART.md          # VM 부팅 후 시작 가이드
+│   ├── HOWTOCONTRIBUTE.md     # 기여 가이드
+│   ├── CODE_REVIEW.md         # 코드 품질 검토서
+│   ├── CICD_REVIEW.md         # CI/CD 파이프라인 검토서
 │   ├── USER_MANUAL.md         # 사용자 매뉴얼
+│   ├── MES_PRESENTATION.md    # Marp 발표 자료
 │   └── HANDOVER.md            # 이 문서 (인수인계)
 │
 └── README.md                  # 프로젝트 개요
@@ -567,9 +574,57 @@ Swagger UI: `http://<IP>:30461/docs`
 
 ---
 
-## 8. 주의사항 및 알려진 이슈
+## 8. CI/CD 파이프라인
 
-### 8.1 반드시 알아야 할 사항
+### 8.1 개요
+
+Jenkins 기반 CI/CD 파이프라인이 `Jenkinsfile`에 정의되어 있습니다.
+ConfigMap 기반 배포 방식에 맞춰 작성되었으며, `init.sh`와 동일한 배포 흐름을 따릅니다.
+
+### 8.2 파이프라인 단계
+
+```
+Clean → Lint → Test → Build FE → Deploy DB → Deploy Keycloak
+  → Deploy Backend → Deploy Frontend → Verify & Configure
+```
+
+| 단계 | 내용 | 도구 |
+|------|------|------|
+| **Lint** | Python (black, flake8, isort) + JS (eslint) | pip, npx |
+| **Test** | pytest (25개 테스트) + npm test | pytest, vitest |
+| **Build FE** | `npm run build` | Vite |
+| **Deploy DB** | `infra/postgres-pv.yaml` + `postgres.yaml` + Secret | kubectl |
+| **Deploy Keycloak** | `infra/keycloak.yaml` + `setup-keycloak.sh` | kubectl, curl |
+| **Deploy Backend** | ConfigMap(`api-code`) + `infra/mes-api.yaml` + CORS 치환 | kubectl, sed |
+| **Deploy Frontend** | ConfigMap(`frontend-build`) + `infra/mes-frontend.yaml` | kubectl |
+| **Verify** | rollout status + HTTP 200 확인 | kubectl, curl |
+
+### 8.3 테스트 커버리지
+
+현재 25개 테스트가 인프라/네트워크/AI 엔드포인트를 커버합니다.
+비즈니스 API(items, bom, plans 등)는 DB 의존성으로 인해 미커버 상태입니다.
+
+> 상세 분석: `doc/CICD_REVIEW.md` 참조
+
+---
+
+## 9. 주의사항 및 알려진 이슈
+
+### 9.1 Keycloak 24.x VERIFY_PROFILE 이슈
+
+Keycloak 24.x에서는 `VERIFY_PROFILE` Required Action이 기본 활성화됩니다.
+사용자에게 `lastName`, `email` 필드가 없으면 로그인 시 "Account is not fully set up" 오류가 발생합니다.
+
+**해결**: `setup-keycloak.sh`에서 자동 처리됩니다.
+- VERIFY_PROFILE Required Action 비활성화
+- 사용자 생성 시 `lastName`, `email`, `emailVerified=true` 포함
+
+수동 해결이 필요한 경우:
+```bash
+bash /root/MES_PROJECT/setup-keycloak.sh
+```
+
+### 9.2 반드시 알아야 할 사항
 
 | # | 주의사항 | 상세 |
 |---|----------|------|
@@ -581,7 +636,7 @@ Swagger UI: `http://<IP>:30461/docs`
 | 6 | **DB 데이터는 hostPath PV 사용** | `/mnt/data`에 저장. VM 삭제 시 데이터 유실. 백업 필요 시 `pg_dump` 사용 |
 | 7 | **CORS_ORIGINS에 __CORS_ORIGINS__ 플레이스홀더** | `mes-api.yaml`에 하드코딩되지 않고, `init.sh`가 `sed`로 치환. 수동 `kubectl apply` 시 주의 |
 
-### 8.2 알려진 제한사항
+### 9.3 알려진 제한사항
 
 | # | 제한사항 | 영향 |
 |---|----------|------|
@@ -593,9 +648,9 @@ Swagger UI: `http://<IP>:30461/docs`
 
 ---
 
-## 9. 트러블슈팅 가이드
+## 10. 트러블슈팅 가이드
 
-### 9.1 K8s API 서버 연결 실패
+### 10.1 K8s API 서버 연결 실패
 
 ```bash
 # kubelet 상태 확인
@@ -609,7 +664,7 @@ systemctl restart kubelet
 kubectl get nodes
 ```
 
-### 9.2 Pod가 ContainerCreating에서 멈춤
+### 10.2 Pod가 ContainerCreating에서 멈춤
 
 ```bash
 # Cilium 네트워크 문제 — Pod 재시작
@@ -618,7 +673,7 @@ sleep 10
 kubectl get pods
 ```
 
-### 9.3 API 서버 응답 없음 (502 / Connection Refused)
+### 10.3 API 서버 응답 없음 (502 / Connection Refused)
 
 ```bash
 # API Pod 로그 확인 — pip install 진행 중일 수 있음
@@ -628,7 +683,7 @@ kubectl logs deployment/mes-api --tail=30
 kubectl rollout restart deployment mes-api
 ```
 
-### 9.4 프론트엔드 빈 화면
+### 10.4 프론트엔드 빈 화면
 
 ```bash
 # ConfigMap 재생성
@@ -638,7 +693,7 @@ kubectl create configmap frontend-build --from-file=dist/
 kubectl rollout restart deployment mes-frontend
 ```
 
-### 9.5 DB 연결 실패
+### 10.5 DB 연결 실패
 
 ```bash
 # PostgreSQL Pod 상태 확인
@@ -649,7 +704,7 @@ kubectl logs deployment/postgres --tail=20
 kubectl exec -it deployment/postgres -- psql -U postgres -d mes_db -c "SELECT 1;"
 ```
 
-### 9.6 Keycloak 로그인 안 됨
+### 10.6 Keycloak 로그인 안 됨
 
 ```bash
 # Keycloak Pod 상태 확인
@@ -663,14 +718,14 @@ curl -s http://localhost:30080/realms/mes-realm | python3 -m json.tool
 bash /root/MES_PROJECT/setup-keycloak.sh
 ```
 
-### 9.7 전체 시스템 재시작
+### 10.7 전체 시스템 재시작
 
 ```bash
 # 가장 확실한 방법: init.sh 재실행
 sudo bash /root/MES_PROJECT/init.sh
 ```
 
-### 9.8 상태 확인 명령어 모음
+### 10.8 상태 확인 명령어 모음
 
 ```bash
 # Pod 상태 확인
@@ -699,9 +754,9 @@ kubectl logs -f deployment/postgres
 
 ---
 
-## 10. 연락처 및 참고 자료
+## 11. 연락처 및 참고 자료
 
-### 10.1 프로젝트 정보
+### 11.1 프로젝트 정보
 
 | 항목 | 내용 |
 |------|------|
@@ -710,7 +765,7 @@ kubectl logs -f deployment/postgres
 | 저장소 경로 | `/root/MES_PROJECT` |
 | VM 접속 | `ssh c1_master1@192.168.64.5` → `sudo -s` |
 
-### 10.2 테스트 계정
+### 11.2 테스트 계정
 
 | 계정 | 비밀번호 | 역할 |
 |------|----------|------|
@@ -718,7 +773,7 @@ kubectl logs -f deployment/postgres
 | worker01 | worker1234 | 작업자 |
 | viewer01 | viewer1234 | 조회 전용 |
 
-### 10.3 주요 접속 URL
+### 11.3 주요 접속 URL
 
 | 서비스 | URL |
 |--------|-----|
@@ -726,16 +781,20 @@ kubectl logs -f deployment/postgres
 | API Swagger 문서 | `http://<IP>:30461/docs` |
 | Keycloak 관리 콘솔 | `http://<IP>:30080` |
 
-### 10.4 관련 문서
+### 11.4 관련 문서
 
 | 문서 | 경로 | 설명 |
 |------|------|------|
 | 아키텍처 문서 | `doc/ARCH.md` | 시스템 구조, 모듈 상세, DB 스키마, API 목록 |
 | 시작 가이드 | `doc/HOWTOSTART.md` | VM 부팅 후 시스템 기동 절차 |
+| 기여 가이드 | `doc/HOWTOCONTRIBUTE.md` | 개발 환경, 코드 컨벤션, 브랜치 전략, PR 워크플로우 |
+| 코드 품질 검토서 | `doc/CODE_REVIEW.md` | PEP8/JS/Shell/K8s 코딩 표준 준수 검토 |
+| CI/CD 검토서 | `doc/CICD_REVIEW.md` | CI/CD 파이프라인 구축 현황 및 개선 사항 |
 | 사용자 매뉴얼 | `doc/USER_MANUAL.md` | 각 메뉴별 사용 방법 |
+| 발표 자료 | `doc/MES_PRESENTATION.md` | Marp 슬라이드 |
 | README | `README.md` | 프로젝트 개요 및 빠른 시작 |
 
-### 10.5 기능 코드 매핑 요약 (FN-001 ~ FN-037)
+### 11.5 기능 코드 매핑 요약 (FN-001 ~ FN-037)
 
 | FN 코드 | 기능 영역 | 백엔드 모듈 | 프론트엔드 메뉴 |
 |---------|-----------|------------|----------------|
@@ -756,4 +815,4 @@ kubectl logs -f deployment/postgres
 ---
 
 **프로젝트**: 경북대학교 스마트 팩토리 MES
-**최종 업데이트**: 2026-02-14
+**최종 업데이트**: 2026-02-15

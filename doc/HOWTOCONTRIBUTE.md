@@ -757,6 +757,9 @@ MES_PROJECT/
 └── doc/                      # 프로젝트 문서
     ├── HOWTOSTART.md          # 시작 가이드
     ├── ARCH.md                # 아키텍처 문서
+    ├── HANDOVER.md            # 인수인계 문서
+    ├── CODE_REVIEW.md         # 코드 품질 검토서
+    ├── CICD_REVIEW.md         # CI/CD 파이프라인 검토서
     └── HOWTOCONTRIBUTE.md     # 기여 가이드 (본 문서)
 ```
 

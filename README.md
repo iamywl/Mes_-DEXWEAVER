@@ -1,4 +1,4 @@
-# KNU MES v5.2 — 스마트 팩토리 Manufacturing Execution System
+# KNU MES v5.3 — 스마트 팩토리 Manufacturing Execution System
 
 > Kubernetes 기반 클라우드 네이티브 MES 시스템 — 경북대학교 스마트 팩토리
 
@@ -137,6 +137,8 @@ MES_PROJECT/
 │   ├── HOWTOSTART.md           # VM 부팅 시작 가이드
 │   ├── HOWTOCONTRIBUTE.md      # 기여 가이드
 │   ├── HANDOVER.md             # 인수인계 문서
+│   ├── CODE_REVIEW.md          # 코드 품질 검토서
+│   ├── CICD_REVIEW.md          # CI/CD 파이프라인 검토서
 │   ├── USER_MANUAL.md          # 사용자 매뉴얼
 │   └── MES_PRESENTATION.md    # Marp 발표 자료
 └── README.md                   # 이 파일
@@ -226,6 +228,7 @@ kubectl rollout restart deployment mes-frontend
 
 | 버전 | 날짜 | 주요 변경 |
 |------|------|-----------|
+| v5.3 | 2026-02-15 | CI/CD 파이프라인(Jenkinsfile) 재구축, 코드품질/CI/CD 검토서 작성, 로그인 VERIFY_PROFILE 수정, 레거시 k8s/ 정리 |
 | v5.2 | 2026-02-14 | Keycloak 인증(OIDC/PKCE), init.sh 통합(하드코딩 제거), env.sh 설정 분리, 레거시 스크립트 정리, 인수인계/기여 문서 추가 |
 | v5.1 | 2026-02-13 | BOM 강화(목록/전개/역전개/통계), Process 강화(마스터/라우팅뷰어/요약), 5개 API 추가 |
 | v5.0 | 2026-02-13 | 전 테이블 필터 기능, Hubble 네트워크 UI, 원클릭 시작 스크립트 |
@@ -235,4 +238,4 @@ kubectl rollout restart deployment mes-frontend
 ---
 
 **프로젝트**: 경북대학교 스마트 팩토리 MES
-**최종 업데이트**: 2026-02-14
+**최종 업데이트**: 2026-02-15

@@ -101,6 +101,7 @@ const App = () => {
   const [flowPanelOpen, setFlowPanelOpen] = useState(true);
 
   /* ── Keycloak 초기화 ──────────────────────────────── */
+  const interceptorId = useRef(null);
   useEffect(() => {
     const kc = new Keycloak({ url: KC_URL, realm: KC_REALM, clientId: KC_CLIENT });
     kcRef.current = kc;
@@ -111,7 +112,8 @@ const App = () => {
             name: kc.tokenParsed?.preferred_username || kc.tokenParsed?.name || 'User',
             roles: kc.tokenParsed?.realm_access?.roles || [],
           });
-          axios.interceptors.request.use(async config => {
+          if (interceptorId.current !== null) axios.interceptors.request.eject(interceptorId.current);
+          interceptorId.current = axios.interceptors.request.use(async config => {
             try { await kc.updateToken(30); } catch { kc.login(); }
             config.headers.Authorization = `Bearer ${kc.token}`;
             return config;
@@ -273,7 +275,10 @@ const App = () => {
     <div className="flex min-h-screen bg-[#020617] text-slate-400 font-sans text-[11px]">
       {/* sidebar */}
       <aside className="w-52 bg-[#0f172a] border-r border-slate-800 p-4 space-y-0.5 overflow-y-auto flex flex-col">
-        <h1 className="text-lg font-black text-blue-500 mb-6 tracking-tighter italic">KNU MES v5.1</h1>
+        <button onClick={()=>setMenu('DASHBOARD')} className="text-left mb-6 group cursor-pointer">
+          <h1 className="text-lg font-black text-blue-500 tracking-tighter italic group-hover:text-blue-400 transition-colors">KNU MES v5.2</h1>
+          <div className="text-[9px] text-slate-600 group-hover:text-slate-500 transition-colors">Manufacturing Execution System</div>
+        </button>
         {menus.map(m=>(
           <button key={m.id} onClick={()=>setMenu(m.id)}
             className={`w-full text-left px-3 py-1.5 rounded-lg transition-all text-xs
@@ -287,8 +292,11 @@ const App = () => {
             <div className="text-white font-bold truncate">{kcUser?.name || 'User'}</div>
             <div className="text-slate-500">{(kcUser?.roles||[]).filter(r=>r!=='default-roles-mes-realm'&&r!=='offline_access'&&r!=='uma_authorization').join(', ') || 'user'}</div>
           </div>
-          <button onClick={()=>kcRef.current?.logout({ redirectUri: window.location.origin })}
-            className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-all">
+          <button onClick={()=>{
+            const kc = kcRef.current;
+            if (kc) { kc.logout({ redirectUri: window.location.origin }); }
+          }}
+            className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-all font-bold">
             Logout
           </button>
         </div>

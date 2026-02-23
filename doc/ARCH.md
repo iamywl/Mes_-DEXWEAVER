@@ -28,12 +28,13 @@
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
            │                    │
-      :30173 (Web)        :30461 (API)
-           │                    │
-    ┌──────┴────────────────────┴──────┐
-    │         사용자 브라우저            │
-    │   http://192.168.64.5:30173      │
-    └──────────────────────────────────┘
+      :30173 (Web)        :30461 (API)      :30080 (Auth)
+           │                    │              │
+    ┌──────┴────────────────────┴──────────────┴──┐
+    │              사용자 브라우저                   │
+    │   http://192.168.64.5:30173                  │
+    │   Keycloak OIDC 로그인 → JWT Bearer Token    │
+    └──────────────────────────────────────────────┘
 ```
 
 ---
@@ -42,12 +43,14 @@
 
 | 계층 | 기술 | 버전 | 역할 |
 |------|------|------|------|
-| **인프라** | Kubernetes (kubeadm) | v1.30+ | 컨테이너 오케스트레이션 |
+| **인프라** | Kubernetes (kubeadm) | v1.28+ | 컨테이너 오케스트레이션 |
 | **네트워크** | Cilium eBPF + Hubble | 최신 | CNI, 네트워크 정책, 플로우 모니터링 |
+| **인증** | Keycloak (OIDC/PKCE) | 24.0.5 | SSO 인증 서버 |
 | **DB** | PostgreSQL | 15 | 관계형 데이터 저장소 (19개 테이블) |
 | **백엔드** | Python FastAPI | 0.109 | REST API 서버 (37개 엔드포인트) |
 | **프론트엔드** | React 19 + Vite + Tailwind CSS 4 | 최신 | SPA 웹 UI (14개 메뉴) |
 | **프론트엔드 서빙** | nginx:alpine | 최신 | 정적 파일 서빙 + API 리버스 프록시 |
+| **CI/CD** | Jenkins (Jenkinsfile) | - | 린트 → 테스트 → 빌드 → 배포 파이프라인 |
 | **배포 방식** | ConfigMap 기반 | - | Docker 빌드 없이 코드 배포 |
 
 ---
@@ -61,6 +64,7 @@
 | `mes-frontend` | `nginx:alpine` | 80 | **30173** | React 빌드 파일 서빙, API 리버스 프록시 |
 | `mes-api` | `python:3.9-slim` | 80 | **30461** | FastAPI REST API 서버 |
 | `postgres` | `postgres:15` | 5432 | - (ClusterIP) | PostgreSQL 데이터베이스 |
+| `keycloak` | `keycloak` | 8080 | **30080** | Keycloak OIDC 인증 서버 |
 
 ### 3.2 ConfigMap
 
@@ -441,10 +445,10 @@ MES_PROJECT/
 ├── requirements.txt              # Python 의존성
 ├── Dockerfile                    # 백엔드 Docker 이미지
 ├── docker-compose.yml            # 로컬 개발용 (PostgreSQL)
+├── Jenkinsfile                   # CI/CD 파이프라인 (Jenkins)
 ├── init.sh                      # VM 부팅 후 원클릭 시작
-├── mes-all-in-one.sh             # 레거시 배포 스크립트
-├── postgres.yaml                 # PostgreSQL K8s Deployment
-├── postgres-pv.yaml              # PV 정의
+├── env.sh                        # 환경 변수 중앙 관리
+├── setup-keycloak.sh             # Keycloak Realm/Client/사용자 자동 설정
 │
 ├── api_modules/                  # 백엔드 비즈니스 로직 (27개 모듈)
 │   ├── database.py               #   커넥션 풀
@@ -481,21 +485,20 @@ MES_PROJECT/
 │   ├── postgres-pv.yaml          #   PV + PVC
 │   ├── db-secret.yaml            #   DB 접속 Secret
 │   ├── postgres.yaml             #   PostgreSQL Deployment + Service
+│   ├── keycloak.yaml             #   Keycloak Deployment + Service
 │   ├── mes-api.yaml              #   FastAPI Deployment + Service
 │   ├── nginx-config.yaml         #   nginx ConfigMap
 │   └── mes-frontend.yaml         #   Frontend Deployment + Service
 │
-├── k8s/                          # 레거시 Kubernetes 매니페스트 (참고용)
-│   ├── backend-deployment.yaml
-│   ├── backend-service.yaml
-│   ├── frontend-deployment.yaml
-│   ├── frontend-service.yaml
-│   └── db-secret.yaml
-│
 ├── doc/                          # 문서
 │   ├── HOWTOSTART.md             #   시작 가이드
 │   ├── ARCH.md                   #   아키텍처 문서 (이 파일)
-│   └── USER_MANUAL.md            #   사용자 매뉴얼
+│   ├── HANDOVER.md               #   인수인계 문서
+│   ├── HOWTOCONTRIBUTE.md        #   기여 가이드
+│   ├── CODE_REVIEW.md            #   코드 품질 검토서
+│   ├── CICD_REVIEW.md            #   CI/CD 파이프라인 검토서
+│   ├── USER_MANUAL.md            #   사용자 매뉴얼
+│   └── MES_PRESENTATION.md      #   Marp 발표 자료
 │
 └── README.md                     # 프로젝트 개요
 ```
@@ -507,7 +510,7 @@ MES_PROJECT/
 | 변수 | 기본값 | 사용처 |
 |------|--------|--------|
 | `DATABASE_URL` | `postgresql://postgres:mes1234@postgres:5432/mes_db` | 백엔드 → DB 연결 |
-| `CORS_ORIGINS` | `http://localhost:30173,http://localhost:3000` | 백엔드 CORS 허용 |
+| `CORS_ORIGINS` | `http://<IP>:30173,http://localhost:30173,...` | 백엔드 CORS 허용 (env.sh에서 자동 생성) |
 | `JWT_SECRET` | `mes-secret-key-2026` | 인증 토큰 서명 |
 | `VITE_API_URL` | (비어있음 → nginx 프록시) | 프론트엔드 API 기본 URL |
 
@@ -547,4 +550,4 @@ MES_PROJECT/
 
 ---
 
-**최종 업데이트**: 2026-02-13
+**최종 업데이트**: 2026-02-15

@@ -43,6 +43,22 @@ curl -s -o /dev/null -w '' -X POST "${KC_URL}/admin/realms" \
   }" 2>/dev/null
 log_ok "Realm 생성 완료"
 
+# ── VERIFY_PROFILE 비활성화 ──────────────────────────────
+# Keycloak 24.x에서 VERIFY_PROFILE이 기본 활성화되어 있어
+# lastName/email 누락 시 로그인 차단됨 → 비활성화
+log_info "VERIFY_PROFILE Required Action 비활성화..."
+curl -s -o /dev/null -X PUT "${KC_URL}/admin/realms/${KC_REALM}/authentication/required-actions/VERIFY_PROFILE" \
+  -H "${AUTH}" -H "Content-Type: application/json" \
+  -d '{
+    "alias": "VERIFY_PROFILE",
+    "name": "Verify Profile",
+    "providerId": "VERIFY_PROFILE",
+    "enabled": false,
+    "defaultAction": false,
+    "priority": 90
+  }' 2>/dev/null
+log_ok "VERIFY_PROFILE 비활성화 완료"
+
 # ── Client 생성 ──────────────────────────────────────────
 log_info "Client '${KC_CLIENT_ID}' 생성..."
 curl -s -o /dev/null -w '' -X POST "${KC_URL}/admin/realms/${KC_REALM}/clients" \
@@ -61,15 +77,28 @@ curl -s -o /dev/null -w '' -X POST "${KC_URL}/admin/realms/${KC_REALM}/clients" 
   }" 2>/dev/null
 log_ok "Client 생성 완료"
 
+# ── Realm Role 생성 ─────────────────────────────────────
+log_info "Realm Role 생성..."
+for role in admin worker viewer; do
+  curl -s -o /dev/null -X POST "${KC_URL}/admin/realms/${KC_REALM}/roles" \
+    -H "${AUTH}" -H "Content-Type: application/json" \
+    -d "{\"name\": \"${role}\"}" 2>/dev/null
+done
+log_ok "Role 생성 완료 (admin, worker, viewer)"
+
 # ── 테스트 사용자 생성 함수 ──────────────────────────────
 create_user() {
-  local userid=$1 pass=$2 role=$3 name=$4
+  local userid=$1 pass=$2 role=$3 firstname=$4 lastname=$5
   curl -s -o /dev/null -w '' -X POST "${KC_URL}/admin/realms/${KC_REALM}/users" \
     -H "${AUTH}" -H "Content-Type: application/json" \
     -d "{
       \"username\": \"${userid}\",
-      \"firstName\": \"${name}\",
+      \"firstName\": \"${firstname}\",
+      \"lastName\": \"${lastname}\",
+      \"email\": \"${userid}@mes.local\",
+      \"emailVerified\": true,
       \"enabled\": true,
+      \"requiredActions\": [],
       \"credentials\": [{
         \"type\": \"password\",
         \"value\": \"${pass}\",
@@ -82,20 +111,11 @@ create_user() {
   log_ok "${userid} (${role})"
 }
 
-# ── Realm Role 생성 ─────────────────────────────────────
-log_info "Realm Role 생성..."
-for role in admin worker viewer; do
-  curl -s -o /dev/null -X POST "${KC_URL}/admin/realms/${KC_REALM}/roles" \
-    -H "${AUTH}" -H "Content-Type: application/json" \
-    -d "{\"name\": \"${role}\"}" 2>/dev/null
-done
-log_ok "Role 생성 완료 (admin, worker, viewer)"
-
 # ── 사용자 생성 ─────────────────────────────────────────
 log_info "테스트 사용자 생성..."
-create_user "admin"    "${KC_ADMIN_PASS}" "admin"  "시스템관리자"
-create_user "worker01" "worker1234"  "worker" "박작업자"
-create_user "viewer01" "viewer1234"  "viewer" "조회전용A"
+create_user "admin"    "${KC_ADMIN_PASS}" "admin"  "시스템"  "관리자"
+create_user "worker01" "worker1234"       "worker" "박"      "작업자"
+create_user "viewer01" "viewer1234"       "viewer" "조회"    "전용A"
 
 # ── 사용자에 Role 할당 ──────────────────────────────────
 log_info "사용자 Role 할당..."

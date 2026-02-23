@@ -8,3 +8,7 @@ Thumbs.db
 
 # Docker data (데이터 저장 폴더가 있다면 제외)
 postgres_data/
+
+# Python
+__pycache__/
+*.pyc
