@@ -22,7 +22,7 @@ spec:
               cp /mnt/*.py /app/api_modules/ &&
               mv /app/api_modules/app.py /app/app.py &&
               touch /app/api_modules/__init__.py &&
-              pip install --no-cache-dir fastapi uvicorn psycopg2-binary kubernetes pydantic psutil &&
+              pip install --cache-dir /pip-cache fastapi uvicorn psycopg2-binary kubernetes pydantic psutil &&
               python /app/app.py
           env:
             - name: DATABASE_URL
@@ -35,10 +35,16 @@ spec:
           volumeMounts:
             - name: code-volume
               mountPath: /mnt
+            - name: pip-cache
+              mountPath: /pip-cache
       volumes:
         - name: code-volume
           configMap:
             name: api-code
+        - name: pip-cache
+          hostPath:
+            path: /mnt/pip-cache
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service

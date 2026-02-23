@@ -80,3 +80,69 @@ wait_for_http_code() {
   log_err "${label} ${timeout}초 타임아웃"
   return 1
 }
+
+# ── 프로그레스 바 유틸 ──────────────────────────────────────
+BOOT_START_TIME=""
+PROGRESS_TASKS=()          # ("label|status")  status: pending/run/done/fail
+PROGRESS_FILE="/tmp/mes_boot_progress"
+
+boot_timer_start() { BOOT_START_TIME=$(date +%s); }
+
+boot_elapsed() {
+  local now=$(date +%s)
+  local diff=$((now - BOOT_START_TIME))
+  printf "%d:%02d" $((diff / 60)) $((diff % 60))
+}
+
+# 태스크 등록: progress_add "라벨"
+progress_add() {
+  PROGRESS_TASKS+=("$1|pending")
+}
+
+# 태스크 상태 변경: progress_set "라벨" "run|done|fail"
+progress_set() {
+  local label="$1" new_status="$2"
+  for i in "${!PROGRESS_TASKS[@]}"; do
+    case "${PROGRESS_TASKS[$i]}" in
+      "${label}|"*) PROGRESS_TASKS[$i]="${label}|${new_status}" ;;
+    esac
+  done
+  progress_render
+}
+
+# 프로그레스 바 렌더링
+progress_render() {
+  local total=${#PROGRESS_TASKS[@]}
+  local done=0 fail=0 running=""
+  for entry in "${PROGRESS_TASKS[@]}"; do
+    local lbl="${entry%%|*}" st="${entry##*|}"
+    case "$st" in
+      done) done=$((done + 1)) ;;
+      fail) fail=$((fail + 1)); done=$((done + 1)) ;;
+      run)  running="$lbl" ;;
+    esac
+  done
+
+  local pct=0
+  [ "$total" -gt 0 ] && pct=$((done * 100 / total))
+  local filled=$((pct / 5))
+  local empty=$((20 - filled))
+  local bar=$(printf '█%.0s' $(seq 1 $filled 2>/dev/null))$(printf '░%.0s' $(seq 1 $empty 2>/dev/null))
+
+  # 상태 아이콘 나열
+  local icons=""
+  for entry in "${PROGRESS_TASKS[@]}"; do
+    local st="${entry##*|}"
+    case "$st" in
+      done) icons+="${GREEN}●${NC} " ;;
+      fail) icons+="${RED}●${NC} " ;;
+      run)  icons+="${YELLOW}◉${NC} " ;;
+      *)    icons+="○ " ;;
+    esac
+  done
+
+  echo -ne "\r\033[K"
+  echo -ne "  ${CYAN}[$(boot_elapsed)]${NC} ${bar} ${pct}%  ${icons}"
+  [ -n "$running" ] && echo -ne " ${YELLOW}${running}${NC}"
+  [ "$done" -eq "$total" ] && echo ""
+}
