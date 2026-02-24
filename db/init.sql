@@ -250,17 +250,17 @@ CREATE TABLE IF NOT EXISTS ai_forecasts (
 
 -- ── 사용자 (10명) ───────────────────────────────────────────
 INSERT INTO users (user_id, password, name, email, role) VALUES
-('admin',    'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '시스템관리자', 'admin@knu.ac.kr',   'admin'),
-('mgr01',    'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '김생산부장',   'mgr01@knu.ac.kr',   'admin'),
-('mgr02',    'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '이품질팀장',   'mgr02@knu.ac.kr',   'admin'),
-('worker01', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '박작업자',     'w01@knu.ac.kr',     'worker'),
-('worker02', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '최기술자',     'w02@knu.ac.kr',     'worker'),
-('worker03', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '정조립공',     'w03@knu.ac.kr',     'worker'),
-('worker04', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '한검사원',     'w04@knu.ac.kr',     'worker'),
-('worker05', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '강포장원',     'w05@knu.ac.kr',     'worker'),
-('viewer01', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '조회전용A',    'v01@knu.ac.kr',     'viewer'),
-('viewer02', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '조회전용B',    'v02@knu.ac.kr',     'viewer')
-ON CONFLICT (user_id) DO NOTHING;
+('admin',    '$2b$12$qFMMFhvNO90wit48INExI.uzSH2O3rYzQR.6FsXBaBQomXOssEzQm', '시스템관리자', 'admin@knu.ac.kr',   'admin'),
+('mgr01',    '$2b$12$eOl2oHfSFzGPfcCjZyXiGuwQZahVWdel1V1swpFuRfGh1AByfu5LS', '김생산부장',   'mgr01@knu.ac.kr',   'admin'),
+('mgr02',    '$2b$12$eOl2oHfSFzGPfcCjZyXiGuwQZahVWdel1V1swpFuRfGh1AByfu5LS', '이품질팀장',   'mgr02@knu.ac.kr',   'admin'),
+('worker01', '$2b$12$15Guq.8IsiZLM4auWMkl1OwhsbDZGC32NXCDG4O6FOUsFyGJOq7A.', '박작업자',     'w01@knu.ac.kr',     'worker'),
+('worker02', '$2b$12$15Guq.8IsiZLM4auWMkl1OwhsbDZGC32NXCDG4O6FOUsFyGJOq7A.', '최기술자',     'w02@knu.ac.kr',     'worker'),
+('worker03', '$2b$12$15Guq.8IsiZLM4auWMkl1OwhsbDZGC32NXCDG4O6FOUsFyGJOq7A.', '정조립공',     'w03@knu.ac.kr',     'worker'),
+('worker04', '$2b$12$15Guq.8IsiZLM4auWMkl1OwhsbDZGC32NXCDG4O6FOUsFyGJOq7A.', '한검사원',     'w04@knu.ac.kr',     'worker'),
+('worker05', '$2b$12$15Guq.8IsiZLM4auWMkl1OwhsbDZGC32NXCDG4O6FOUsFyGJOq7A.', '강포장원',     'w05@knu.ac.kr',     'worker'),
+('viewer01', '$2b$12$8uQqO4eDD6D.Qz4jS/PUZeYD3mDJKfN23rGkFVspNqwkEAgfQnj5S', '조회전용A',    'v01@knu.ac.kr',     'viewer'),
+('viewer02', '$2b$12$8uQqO4eDD6D.Qz4jS/PUZeYD3mDJKfN23rGkFVspNqwkEAgfQnj5S', '조회전용B',    'v02@knu.ac.kr',     'viewer')
+ON CONFLICT (user_id) DO UPDATE SET password = EXCLUDED.password;
 
 INSERT INTO user_permissions (user_id, menu, can_read, can_write) VALUES
 ('admin',    'ALL',              TRUE, TRUE),

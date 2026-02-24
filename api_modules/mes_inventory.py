@@ -146,10 +146,15 @@ async def get_inventory(warehouse: str = None,
             params.append(category)
         wsql = "WHERE " + " AND ".join(where) if where else ""
 
+        # available = stock - reserved (진행중 작업지시에 할당된 수량)
         cur.execute(
             f"SELECT i.item_code, i.name, "
             f"COALESCE(SUM(inv.qty),0) AS stock, "
-            f"i.safety_stock "
+            f"i.safety_stock, "
+            f"COALESCE(("
+            f"  SELECT SUM(wo.plan_qty) FROM work_orders wo "
+            f"  WHERE wo.item_code = i.item_code AND wo.status IN ('WAIT','WORKING')"
+            f"),0) AS reserved "
             f"FROM items i "
             f"LEFT JOIN inventory inv ON i.item_code = inv.item_code "
             f"{'AND inv.warehouse = %s' if warehouse else ''} "
@@ -164,7 +169,8 @@ async def get_inventory(warehouse: str = None,
 
         items = []
         for r in rows:
-            stock, safety = r[2], r[3]
+            stock, safety, reserved = r[2], r[3], r[4]
+            available = max(0, stock - reserved)
             if stock <= 0:
                 st = "OUT"
             elif stock < safety:
@@ -173,7 +179,7 @@ async def get_inventory(warehouse: str = None,
                 st = "NORMAL"
             items.append({
                 "item_code": r[0], "name": r[1],
-                "stock": stock, "available": stock,
+                "stock": stock, "available": available,
                 "safety": safety, "status": st,
             })
         return {"items": items}

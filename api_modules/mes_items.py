@@ -181,3 +181,30 @@ async def update_item(item_code: str, data: dict) -> dict:
     finally:
         if conn:
             release_conn(conn)
+
+
+async def delete_item(item_code: str) -> dict:
+    """FN-007: Delete an item (soft delete or hard delete)."""
+    conn = None
+    try:
+        conn = get_conn()
+        if not conn:
+            return {"error": "Database connection failed."}
+
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM items WHERE item_code = %s", (item_code,))
+        if not cursor.fetchone():
+            cursor.close()
+            return {"error": "Item not found."}
+
+        cursor.execute("DELETE FROM items WHERE item_code = %s", (item_code,))
+        conn.commit()
+        cursor.close()
+        return {"success": True, "deleted": item_code}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return {"error": str(e)}
+    finally:
+        if conn:
+            release_conn(conn)

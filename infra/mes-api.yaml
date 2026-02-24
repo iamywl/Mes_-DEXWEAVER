@@ -22,7 +22,9 @@ spec:
               cp /mnt/*.py /app/api_modules/ &&
               mv /app/api_modules/app.py /app/app.py &&
               touch /app/api_modules/__init__.py &&
-              pip install --cache-dir /pip-cache fastapi uvicorn psycopg2-binary kubernetes pydantic psutil &&
+              pip install --cache-dir /pip-cache fastapi uvicorn psycopg2-binary kubernetes pydantic psutil bcrypt PyJWT &&
+              pip install --cache-dir /pip-cache numpy scikit-learn xgboost shap ortools 2>/dev/null || true &&
+              pip install --cache-dir /pip-cache prophet 2>/dev/null || true &&
               python /app/app.py
           env:
             - name: DATABASE_URL

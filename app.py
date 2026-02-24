@@ -21,6 +21,7 @@ from api_modules import (
     mes_defect_predict,
     mes_equipment,
     mes_inventory,
+    mes_inventory_movement,
     mes_inventory_status,
     mes_items,
     mes_plan,
@@ -66,6 +67,16 @@ async def get_permissions(user_id: str):
     return await mes_auth.get_permissions(user_id)
 
 
+@app.put("/api/auth/permissions/{user_id}")
+async def update_permissions(user_id: str, request: Request):
+    return await mes_auth.update_permissions(user_id, await request.json())
+
+
+@app.get("/api/auth/users")
+async def list_users():
+    return await mes_auth.list_users()
+
+
 # ── FN-004~007: Items ────────────────────────────────────
 
 @app.post("/api/items")
@@ -87,6 +98,11 @@ async def get_item(item_code: str):
 @app.put("/api/items/{item_code}")
 async def update_item(item_code: str, request: Request):
     return await mes_items.update_item(item_code, await request.json())
+
+
+@app.delete("/api/items/{item_code}")
+async def delete_item(item_code: str):
+    return await mes_items.delete_item(item_code)
 
 
 # ── FN-008~009: BOM ──────────────────────────────────────
@@ -273,6 +289,15 @@ async def get_inventory(warehouse: str = None, category: str = None):
     return await mes_inventory.get_inventory(warehouse, category)
 
 
+@app.post("/api/inventory/move")
+async def inventory_move(request: Request):
+    body = await request.json()
+    return await mes_inventory_movement.move_inventory(
+        body["item_code"], body["lot_no"], body["qty"],
+        body["from_location"], body["to_location"],
+    )
+
+
 # ── FN-032~034: Equipment Status & AI ────────────────────
 
 @app.put("/api/equipments/{equip_code}/status")
@@ -306,7 +331,11 @@ async def report_quality(start_date: str = None, end_date: str = None,
 
 @app.post("/api/ai/insights")
 async def ai_insights(request: Request):
-    return await mes_reports.ai_insights(await request.json())
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    return await mes_reports.ai_insights(data)
 
 
 # ── Legacy / Infrastructure ──────────────────────────────

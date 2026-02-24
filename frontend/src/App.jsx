@@ -58,12 +58,43 @@ const FilterCount = ({total, filtered}) => (
     {filtered < total ? <>{filtered} / {total}</> : total} rows
   </span>
 );
+const Modal = ({open, onClose, title, children}) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div className="bg-[#1e293b] rounded-2xl border border-slate-700 p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-white font-bold text-sm">{title}</h3>
+          <button onClick={onClose} className="text-slate-500 hover:text-white text-lg cursor-pointer">&times;</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+};
+const Select = ({value, onChange, options, className='', ...rest}) => (
+  <select value={value} onChange={e=>onChange(e.target.value)} {...rest}
+    className={`bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs ${className}`}>
+    {options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
+  </select>
+);
+const FormRow = ({label, children}) => (
+  <div className="mb-3">
+    <label className="block text-slate-400 text-[10px] uppercase font-bold mb-1">{label}</label>
+    {children}
+  </div>
+);
+const BtnSuccess = ({children,...p}) => <button {...p} className={`bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold text-xs cursor-pointer ${p.className||''}`}>{children}</button>;
 
 /* ── main app ──────────────────────────────────────────── */
 const App = () => {
-  /* ── Keycloak 인증 상태 ───────────────────────────────── */
-  const [kcReady, setKcReady] = useState(false);
-  const [kcUser, setKcUser] = useState(null);
+  /* ── 인증 상태 (자체 로그인 우선, Keycloak fallback) ───── */
+  const [authReady, setAuthReady] = useState(false);
+  const [authUser, setAuthUser] = useState(null);  // {id, name, role, token}
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [userPerms, setUserPerms] = useState(null); // [{menu, read, write}, ...]
   const kcRef = useRef(null);
 
   const [menu, setMenu] = useState('DASHBOARD');
@@ -88,6 +119,55 @@ const App = () => {
   });
   const setFilter = (table, field, val) => setTf(prev=>({...prev,[table]:{...prev[table],[field]:val}}));
 
+  /* ── modal & toast state ────────────────────────────── */
+  const [modal, setModal] = useState({ type: null, data: {} });
+  const openModal = async (type, data={}) => {
+    setModalRoutes([{seq:1, process_code:'', cycle_time:0}]);
+    setModalChecks([{name:'', type:'NUMERIC', std:0, min:0, max:0, unit:''}]);
+    setModalResults([{check_name:'', value:0}]);
+    setModalSelUser(''); setModalPerms([]);
+    setModalSchedule(null); setModalSelPlans([]);
+    setModal({ type, data });
+    try {
+      const needs = { item:['items'], bom:['items'], process:['equips'], routing:['items','procs'], equipment:['procs'],
+        equip_status:['equips'], plan:['items'], work_order:['plans','equips'], work_result:['wo'],
+        quality_std:['items'], inspection:['items'], inv_in:['inv'], inv_out:['inv'], inv_move:['inv'],
+        schedule_optimize:['plans'], permissions:['users'] };
+      const n = needs[type]||[];
+      if (n.includes('items') && !(extra.itemList||[]).length) { const r=await axios.get('/api/items?size=100'); setExtra(p=>({...p,itemList:r.data.items||[]})); }
+      if (n.includes('procs') && !(extra.processList||[]).length) { const r=await axios.get('/api/processes'); setExtra(p=>({...p,processList:r.data.processes||[]})); }
+      if (n.includes('equips') && !(extra.equips||[]).length) { const r=await axios.get('/api/equipments'); setExtra(p=>({...p,equips:r.data.equipments||[]})); }
+      if (n.includes('plans') && !(extra.planList||[]).length) { const r=await axios.get('/api/plans'); setExtra(p=>({...p,planList:r.data.plans||[]})); }
+      if (n.includes('wo') && !(extra.woList||[]).length) { const r=await axios.get('/api/work-orders'); setExtra(p=>({...p,woList:r.data.orders||[]})); }
+      if (n.includes('inv') && !(extra.invItems||[]).length) { const r=await axios.get('/api/inventory'); setExtra(p=>({...p,invItems:r.data.items||[]})); }
+      if (n.includes('users') && !(extra.userList||[]).length) { const r=await axios.get('/api/auth/users'); setExtra(p=>({...p,userList:r.data.users||[]})); }
+    } catch(e) { console.error('Modal data load error',e); }
+  };
+  const closeModal = () => setModal({ type: null, data: {} });
+  const [toast, setToast] = useState(null);
+  const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null), 3000); };
+
+  /* ── modal-internal form state (lifted from IIFEs) ──── */
+  const [modalRoutes, setModalRoutes] = useState([{seq:1, process_code:'', cycle_time:0}]);
+  const [modalChecks, setModalChecks] = useState([{name:'', type:'NUMERIC', std:0, min:0, max:0, unit:''}]);
+  const [modalResults, setModalResults] = useState([{check_name:'', value:0}]);
+  const [modalSelUser, setModalSelUser] = useState('');
+  const [modalPerms, setModalPerms] = useState([]);
+  const [modalSchedule, setModalSchedule] = useState(null);
+  const [modalSelPlans, setModalSelPlans] = useState([]);
+  const refreshPage = async (m) => {
+    try {
+      if (m==='ITEMS') { const r=await axios.get('/api/items?size=100'); setExtra(p=>({...p, itemList:r.data.items||[]})); }
+      if (m==='BOM') { const [i,b,s]=await Promise.all([axios.get('/api/items?size=100'),axios.get('/api/bom'),axios.get('/api/bom/summary')]); setExtra(p=>({...p, itemList:i.data.items||[], bomEntries:b.data.entries||[], bomSummary:s.data||{}})); }
+      if (m==='PROCESS') { const [i,pr,rs]=await Promise.all([axios.get('/api/items?size=100'),axios.get('/api/processes'),axios.get('/api/routings')]); setExtra(p=>({...p, itemList:i.data.items||[], processList:pr.data.processes||[], routingSummary:rs.data.routings||[]})); }
+      if (m==='EQUIPMENT') { const r=await axios.get('/api/equipments'); setExtra(p=>({...p, equips:r.data.equipments||[]})); }
+      if (m==='PLANS') { const r=await axios.get('/api/plans'); setExtra(p=>({...p, planList:r.data.plans||[]})); }
+      if (m==='WORK_ORDER') { const r=await axios.get('/api/work-orders'); setExtra(p=>({...p, woList:r.data.orders||[]})); }
+      if (m==='QUALITY') { const r=await axios.get('/api/quality/defects'); setExtra(p=>({...p, defects:r.data})); }
+      if (m==='INVENTORY') { const r=await axios.get('/api/inventory'); setExtra(p=>({...p, invItems:r.data.items||[]})); }
+    } catch(e) { console.error(e); }
+  };
+
   /* ── BOM/Process page sub-tab state ──────────────────── */
   const [bomTab, setBomTab] = useState('list');
   const [procTab, setProcTab] = useState('master');
@@ -100,34 +180,99 @@ const App = () => {
   const [selectedSvc, setSelectedSvc] = useState(null);
   const [flowPanelOpen, setFlowPanelOpen] = useState(true);
 
-  /* ── Keycloak 초기화 ──────────────────────────────── */
+  /* ── 인증 초기화 (자체 JWT 우선, Keycloak fallback) ─── */
   const interceptorId = useRef(null);
-  useEffect(() => {
-    const kc = new Keycloak({ url: KC_URL, realm: KC_REALM, clientId: KC_CLIENT });
-    kcRef.current = kc;
-    kc.init({ onLoad: 'login-required', checkLoginIframe: false, pkceMethod: 'S256' })
-      .then(authenticated => {
-        if (authenticated) {
-          setKcUser({
-            name: kc.tokenParsed?.preferred_username || kc.tokenParsed?.name || 'User',
-            roles: kc.tokenParsed?.realm_access?.roles || [],
-          });
-          if (interceptorId.current !== null) axios.interceptors.request.eject(interceptorId.current);
-          interceptorId.current = axios.interceptors.request.use(async config => {
-            try { await kc.updateToken(30); } catch { kc.login(); }
-            config.headers.Authorization = `Bearer ${kc.token}`;
-            return config;
-          });
-          setKcReady(true);
-        } else {
-          kc.login();
-        }
-      })
-      .catch(() => {
-        console.warn('Keycloak init failed, running without auth');
-        setKcUser({ name: 'Guest', roles: [] });
-        setKcReady(true);
+
+  // 자체 로그인 처리
+  const handleLogin = async (userId, password) => {
+    setAuthLoading(true); setAuthError('');
+    try {
+      const r = await axios.post('/api/auth/login', { user_id: userId, password });
+      if (r.data.error) { setAuthError(r.data.error); setAuthLoading(false); return; }
+      const user = { id: r.data.user.id, name: r.data.user.name, role: r.data.user.role, token: r.data.token };
+      setAuthUser(user);
+      localStorage.setItem('mes_user', JSON.stringify(user));
+      // 토큰 인터셉터 설정
+      if (interceptorId.current !== null) axios.interceptors.request.eject(interceptorId.current);
+      interceptorId.current = axios.interceptors.request.use(config => {
+        config.headers.Authorization = `Bearer ${user.token}`;
+        return config;
       });
+      setAuthReady(true);
+      loadUserPerms(user.id);
+    } catch (e) { setAuthError('Login failed. Check server connection.'); }
+    setAuthLoading(false);
+  };
+
+  // 자체 회원가입 처리
+  const handleRegister = async (formData) => {
+    setAuthLoading(true); setAuthError('');
+    try {
+      const r = await axios.post('/api/auth/register', formData);
+      if (r.data.error) { setAuthError(r.data.error); setAuthLoading(false); return; }
+      setAuthError(''); setAuthMode('login');
+      setAuthError('Registration successful! Please login.');
+    } catch (e) { setAuthError('Registration failed. Check server connection.'); }
+    setAuthLoading(false);
+  };
+
+  // 로그아웃
+  const handleLogout = () => {
+    setAuthUser(null); setAuthReady(false); setAuthMode('login'); setAuthError('');
+    localStorage.removeItem('mes_user');
+    if (interceptorId.current !== null) { axios.interceptors.request.eject(interceptorId.current); interceptorId.current = null; }
+    const kc = kcRef.current;
+    if (kc?.authenticated) { try { kc.logout({ redirectUri: window.location.origin }); } catch {} }
+  };
+
+  // 초기화: localStorage에서 세션 복원 또는 Keycloak 시도
+  useEffect(() => {
+    const saved = localStorage.getItem('mes_user');
+    if (saved) {
+      try {
+        const user = JSON.parse(saved);
+        setAuthUser(user);
+        if (interceptorId.current !== null) axios.interceptors.request.eject(interceptorId.current);
+        interceptorId.current = axios.interceptors.request.use(config => {
+          config.headers.Authorization = `Bearer ${user.token}`;
+          return config;
+        });
+        setAuthReady(true);
+        // Load permissions for restored session
+        axios.get(`/api/auth/permissions/${user.id}`).then(r => setUserPerms(r.data.permissions || [])).catch(() => setUserPerms([]));
+        return;
+      } catch {}
+    }
+    // Keycloak fallback 시도
+    try {
+      const kc = new Keycloak({ url: KC_URL, realm: KC_REALM, clientId: KC_CLIENT });
+      kcRef.current = kc;
+      kc.init({ onLoad: 'check-sso', checkLoginIframe: false, pkceMethod: 'S256' })
+        .then(authenticated => {
+          if (authenticated) {
+            const user = {
+              id: kc.tokenParsed?.preferred_username || 'kc-user',
+              name: kc.tokenParsed?.preferred_username || kc.tokenParsed?.name || 'User',
+              role: (kc.tokenParsed?.realm_access?.roles || []).includes('admin') ? 'admin' : 'worker',
+              token: kc.token,
+            };
+            setAuthUser(user);
+            if (interceptorId.current !== null) axios.interceptors.request.eject(interceptorId.current);
+            interceptorId.current = axios.interceptors.request.use(async config => {
+              try { await kc.updateToken(30); } catch {}
+              config.headers.Authorization = `Bearer ${kc.token}`;
+              return config;
+            });
+            setAuthReady(true);
+          }
+          // Keycloak 미인증이면 자체 로그인 화면 표시 (authReady=false 유지)
+        })
+        .catch(() => {
+          // Keycloak 서버 없음 → 자체 로그인 화면 표시
+        });
+    } catch {
+      // Keycloak 라이브러리 에러 → 자체 로그인 화면 표시
+    }
   }, []);
 
   /* ── data fetching ─────────────────────────────────── */
@@ -153,6 +298,10 @@ const App = () => {
   useEffect(() => {
     const load = async () => {
       try {
+        if (menu==='DASHBOARD') {
+          const r = await axios.get('/api/dashboard/production');
+          setExtra(prev=>({...prev, prodDashboard: r.data}));
+        }
         if (menu==='ITEMS') {
           const r = await axios.get('/api/items?size=100');
           setExtra(prev=>({...prev, itemList: r.data.items||[]}));
@@ -242,6 +391,28 @@ const App = () => {
     return () => clearInterval(t);
   }, [menu]);
 
+  /* ── permission helpers ────────────────────────────── */
+  const loadUserPerms = async (userId) => {
+    try {
+      const r = await axios.get(`/api/auth/permissions/${userId}`);
+      setUserPerms(r.data.permissions || []);
+    } catch { setUserPerms([]); }
+  };
+  const canRead = (menuId) => {
+    if (!authUser) return false;
+    if (authUser.role === 'admin') return true;
+    if (!userPerms) return true; // permissions not loaded yet, show all
+    const p = userPerms.find(x => x.menu === menuId);
+    return p ? p.read : false;
+  };
+  const canWrite = (menuId) => {
+    if (!authUser) return false;
+    if (authUser.role === 'admin') return true;
+    if (!userPerms) return false;
+    const p = userPerms.find(x => x.menu === menuId);
+    return p ? p.write : false;
+  };
+
   /* ── sidebar menu ──────────────────────────────────── */
   const menus = [
     {id:'DASHBOARD',    label:'Dashboard'},
@@ -260,12 +431,67 @@ const App = () => {
     {id:'K8S_MANAGER',  label:'K8s'},
   ];
 
-  if (!kcReady) {
+  /* ── 로그인/회원가입 화면 (미인증 상태) ────────────── */
+  if (!authReady) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#020617]">
-        <div className="text-center space-y-4">
-          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-slate-400 text-sm">Connecting to authentication server...</p>
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-black text-blue-500 tracking-tighter italic">KNU MES v5.2</h1>
+            <p className="text-slate-600 text-xs mt-1">Manufacturing Execution System</p>
+          </div>
+          <div className="bg-[#1e293b] rounded-2xl border border-slate-700 p-6">
+            {/* 탭 전환 */}
+            <div className="flex mb-6 border-b border-slate-700">
+              <button onClick={()=>{setAuthMode('login');setAuthError('');}}
+                className={`flex-1 py-2 text-xs font-bold transition-all cursor-pointer ${authMode==='login'?'text-blue-400 border-b-2 border-blue-400':'text-slate-500 hover:text-slate-300'}`}>
+                Login
+              </button>
+              <button onClick={()=>{setAuthMode('register');setAuthError('');}}
+                className={`flex-1 py-2 text-xs font-bold transition-all cursor-pointer ${authMode==='register'?'text-emerald-400 border-b-2 border-emerald-400':'text-slate-500 hover:text-slate-300'}`}>
+                Register
+              </button>
+            </div>
+
+            {authError && (
+              <div className={`text-xs p-2 rounded-lg mb-4 ${authError.includes('successful')?'bg-emerald-900/50 text-emerald-300 border border-emerald-800':'bg-red-900/50 text-red-300 border border-red-800'}`}>
+                {authError}
+              </div>
+            )}
+
+            {/* 로그인 폼 */}
+            {authMode==='login' && (
+              <form onSubmit={e=>{e.preventDefault();const fd=new FormData(e.target);handleLogin(fd.get('user_id'),fd.get('password'));}}>
+                <FormRow label="User ID"><Input name="user_id" required className="w-full" placeholder="Enter your ID" autoFocus/></FormRow>
+                <FormRow label="Password"><Input name="password" type="password" required className="w-full" placeholder="Enter password"/></FormRow>
+                <BtnSuccess type="submit" className="w-full mt-2" disabled={authLoading}>
+                  {authLoading ? 'Logging in...' : 'Login'}
+                </BtnSuccess>
+              </form>
+            )}
+
+            {/* 회원가입 폼 */}
+            {authMode==='register' && (
+              <form onSubmit={e=>{
+                e.preventDefault();const fd=new FormData(e.target);
+                if(fd.get('password')!==fd.get('password_confirm')){setAuthError('Passwords do not match');return;}
+                handleRegister({user_id:fd.get('user_id'),password:fd.get('password'),name:fd.get('name'),email:fd.get('email'),role:fd.get('role')});
+              }}>
+                <FormRow label="User ID"><Input name="user_id" required className="w-full" placeholder="Choose a user ID" autoFocus/></FormRow>
+                <FormRow label="Password"><Input name="password" type="password" required className="w-full" placeholder="Choose a password"/></FormRow>
+                <FormRow label="Confirm Password"><Input name="password_confirm" type="password" required className="w-full" placeholder="Confirm password"/></FormRow>
+                <FormRow label="Name"><Input name="name" required className="w-full" placeholder="Full name"/></FormRow>
+                <FormRow label="Email"><Input name="email" type="email" className="w-full" placeholder="email@example.com"/></FormRow>
+                <FormRow label="Role">
+                  <Select name="role" onChange={()=>{}} value="" options={[{value:'worker',label:'Worker'},{value:'admin',label:'Admin'},{value:'viewer',label:'Viewer'}]} className="w-full"/>
+                </FormRow>
+                <BtnSuccess type="submit" className="w-full mt-2" disabled={authLoading}>
+                  {authLoading ? 'Registering...' : 'Register'}
+                </BtnSuccess>
+              </form>
+            )}
+          </div>
+          <p className="text-center text-slate-700 text-[10px] mt-4">Keycloak SSO is also supported when available</p>
         </div>
       </div>
     );
@@ -279,7 +505,7 @@ const App = () => {
           <h1 className="text-lg font-black text-blue-500 tracking-tighter italic group-hover:text-blue-400 transition-colors">KNU MES v5.2</h1>
           <div className="text-[9px] text-slate-600 group-hover:text-slate-500 transition-colors">Manufacturing Execution System</div>
         </button>
-        {menus.map(m=>(
+        {menus.filter(m => canRead(m.id)).map(m=>(
           <button key={m.id} onClick={()=>setMenu(m.id)}
             className={`w-full text-left px-3 py-1.5 rounded-lg transition-all text-xs
               ${menu===m.id ? 'bg-blue-600 text-white font-bold':'hover:bg-slate-800'}`}>
@@ -289,14 +515,23 @@ const App = () => {
         {/* user info + logout */}
         <div className="mt-auto pt-4 border-t border-slate-800">
           <div className="px-2 py-2 text-[10px]">
-            <div className="text-white font-bold truncate">{kcUser?.name || 'User'}</div>
-            <div className="text-slate-500">{(kcUser?.roles||[]).filter(r=>r!=='default-roles-mes-realm'&&r!=='offline_access'&&r!=='uma_authorization').join(', ') || 'user'}</div>
+            <div className="text-white font-bold truncate">{authUser?.name || 'User'}</div>
+            <div className="text-slate-500">{authUser?.role || 'user'}</div>
           </div>
-          <button onClick={()=>{
-            const kc = kcRef.current;
-            if (kc) { kc.logout({ redirectUri: window.location.origin }); }
-          }}
-            className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-all font-bold">
+          {authUser?.role==='admin' && (
+            <>
+              <button onClick={()=>openModal('register')}
+                className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-emerald-400 hover:bg-emerald-500/10 transition-all font-bold cursor-pointer">
+                + Register User
+              </button>
+              <button onClick={async()=>{try{const r=await axios.get('/api/auth/users');setExtra(p=>({...p,userList:r.data.users||[]}));}catch{}openModal('permissions');}}
+                className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-purple-400 hover:bg-purple-500/10 transition-all font-bold cursor-pointer">
+                Permissions
+              </button>
+            </>
+          )}
+          <button onClick={handleLogout}
+            className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-all font-bold cursor-pointer">
             Logout
           </button>
         </div>
@@ -309,7 +544,14 @@ const App = () => {
         </h2>
 
         {/* ── DASHBOARD ────────────────────────────────── */}
-        {menu==='DASHBOARD' && (
+        {menu==='DASHBOARD' && (() => {
+          const prod = extra.prodDashboard||{};
+          const lines = prod.lines||[];
+          const hourly = prod.hourly||[];
+          const totalTarget = lines.reduce((s,l)=>s+l.target,0);
+          const totalActual = lines.reduce((s,l)=>s+l.actual,0);
+          const overallRate = totalTarget>0 ? (totalActual/totalTarget*100).toFixed(1) : 0;
+          return (
           <div className="space-y-6">
             <div className="grid grid-cols-4 gap-4">
               <Card title="Items" value={db.items?.length||0} />
@@ -317,8 +559,56 @@ const App = () => {
               <Card title="Memory" value={db.infra.mem||'0%'} color="text-purple-400" />
               <Card title="Pods" value={db.pods?.length||0} color="text-emerald-500" />
             </div>
+
+            {/* REQ-020: Production Status Dashboard */}
+            <div className="border-t border-slate-800 pt-4">
+              <h3 className="text-white font-bold mb-4">Production Status (Today)</h3>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <Card title="Total Target" value={totalTarget} color="text-blue-400"/>
+                <Card title="Total Actual" value={totalActual} color="text-emerald-400"/>
+                <Card title="Achievement" value={`${overallRate}%`} color={overallRate>=90?'text-emerald-400':overallRate>=70?'text-amber-400':'text-red-400'}/>
+              </div>
+              {lines.length>0 && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-3">Line Status</h4>
+                    {lines.map((l,i)=>(
+                      <div key={i} className="bg-[#0f172a] p-3 rounded-xl border border-slate-800 mb-2">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-white font-bold text-xs">{l.line_id}</span>
+                          <Badge v={l.status}/>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${l.rate>=0.9?'bg-emerald-500':l.rate>=0.7?'bg-amber-500':'bg-red-500'}`} style={{width:`${Math.min(l.rate*100,100)}%`}}/>
+                          </div>
+                          <span className="text-xs text-slate-400">{l.actual}/{l.target}</span>
+                          <span className={`text-[10px] font-bold ${l.rate>=0.9?'text-emerald-400':l.rate>=0.7?'text-amber-400':'text-red-400'}`}>{(l.rate*100).toFixed(0)}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-3">Hourly Output</h4>
+                    <div className="bg-[#0f172a] p-4 rounded-xl border border-slate-800">
+                      {hourly.length>0 ? hourly.map((h,i)=>(
+                        <div key={i} className="flex items-center gap-3 mb-1.5">
+                          <span className="text-[10px] text-slate-500 w-8">{h.hour}:00</span>
+                          <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-500 rounded-full" style={{width:`${(h.qty/Math.max(...hourly.map(x=>x.qty),1))*100}%`}}/>
+                          </div>
+                          <span className="text-blue-400 text-[10px] font-bold w-10 text-right">{h.qty}</span>
+                        </div>
+                      )) : <span className="text-slate-600 text-xs">No hourly data</span>}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {lines.length===0 && <div className="text-slate-600 text-xs bg-[#0f172a] p-6 rounded-xl border border-slate-800 text-center">No production data for today</div>}
+            </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* ── ITEMS (FN-004~007) ───────────────────────── */}
         {menu==='ITEMS' && (() => {
@@ -338,6 +628,9 @@ const App = () => {
           });
           return (
             <div className="space-y-4">
+              {canWrite('ITEMS') && <div className="flex justify-end gap-2">
+                <BtnSuccess onClick={()=>openModal('item')}>+ New Item</BtnSuccess>
+              </div>}
               <FilterBar>
                 <FilterSelect label="Category" value={tf.items.category} onChange={v=>setFilter('items','category',v)}
                   options={[{value:'ALL',label:'All'}, ...categories.map(c=>({value:c,label:c}))]} />
@@ -346,7 +639,7 @@ const App = () => {
                 <FilterSearch value={tf.items.search} onChange={v=>setFilter('items','search',v)} placeholder="Search code, name, spec..." />
                 <FilterCount total={allItems.length} filtered={filtered.length} />
               </FilterBar>
-              <Table cols={['Code','Name','Category','Unit','Spec','Stock','Safety','Status']}
+              <Table cols={['Code','Name','Category','Unit','Spec','Stock','Safety','Status','Actions']}
                 rows={filtered}
                 renderRow={(i,k)=>(
                   <tr key={k}>
@@ -358,6 +651,12 @@ const App = () => {
                     <td className="p-3 text-blue-400 font-bold">{i.stock}</td>
                     <td className="p-3">{i.safety_stock}</td>
                     <td className="p-3"><Badge v={i.stock<=0?'OUT':i.stock<i.safety_stock?'LOW':'NORMAL'}/></td>
+                    <td className="p-3">
+                      <div className="flex gap-1">
+                        <button onClick={()=>openModal('item_edit',{item:i})} className="text-blue-400 hover:text-blue-300 text-[10px] font-bold cursor-pointer">Edit</button>
+                        <button onClick={async()=>{if(confirm(`Delete ${i.item_code}?`)){try{await axios.delete(`/api/items/${i.item_code}`);showToast(`${i.item_code} deleted`);refreshPage('ITEMS');}catch(e){showToast('Delete failed',false);}}}} className="text-red-400 hover:text-red-300 text-[10px] font-bold cursor-pointer">Del</button>
+                      </div>
+                    </td>
                   </tr>
                 )} />
             </div>
@@ -402,6 +701,9 @@ const App = () => {
             {/* BOM List tab */}
             {bomTab==='list' && (
               <div className="space-y-3">
+                {canWrite('BOM') && <div className="flex justify-end gap-2">
+                  <BtnSuccess onClick={()=>openModal('bom')}>+ New BOM</BtnSuccess>
+                </div>}
                 <FilterBar>
                   <FilterSelect label="Parent" value={tf.bom.parent} onChange={v=>setFilter('bom','parent',v)}
                     options={[{value:'ALL',label:'All Parents'}, ...parents.map(p=>({value:p,label:p}))]} />
@@ -572,6 +874,9 @@ const App = () => {
             {/* Process Master tab */}
             {procTab==='master' && (
               <div className="space-y-3">
+                {canWrite('PROCESS') && <div className="flex justify-end gap-2">
+                  <BtnSuccess onClick={()=>openModal('process')}>+ New Process</BtnSuccess>
+                </div>}
                 <FilterBar>
                   <FilterSearch value={tf.proc.search} onChange={v=>setFilter('proc','search',v)} placeholder="Search code, name, equipment..." />
                   <FilterCount total={allProcs.length} filtered={filteredProcs.length} />
@@ -609,6 +914,7 @@ const App = () => {
             {procTab==='routing' && (
               <div className="space-y-4">
                 <div className="flex gap-2 items-center">
+                  {canWrite('PROCESS') && <BtnSuccess onClick={()=>openModal('routing')}>+ New Routing</BtnSuccess>}
                   <select className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs"
                     onChange={async e => {
                       if(!e.target.value) { setExtra(prev=>({...prev, routingData:null})); return; }
@@ -711,6 +1017,10 @@ const App = () => {
           });
           return (
             <div className="space-y-4">
+              {canWrite('EQUIPMENT') && <div className="flex justify-end gap-2">
+                <BtnSuccess onClick={()=>openModal('equipment')}>+ New Equipment</BtnSuccess>
+                <Btn onClick={()=>openModal('equip_status')}>Change Status</Btn>
+              </div>}
               <FilterBar>
                 <FilterSelect label="Status" value={tf.equips.status} onChange={v=>setFilter('equips','status',v)}
                   options={[{value:'ALL',label:'All'}, ...statuses.map(s=>({value:s,label:s}))]} />
@@ -754,6 +1064,9 @@ const App = () => {
           });
           return (
             <div className="space-y-4">
+              {canWrite('PLANS') && <div className="flex justify-end gap-2">
+                <BtnSuccess onClick={()=>openModal('plan')}>+ New Plan</BtnSuccess>
+              </div>}
               <FilterBar>
                 <FilterSelect label="Status" value={tf.plans.status} onChange={v=>setFilter('plans','status',v)}
                   options={[{value:'ALL',label:'All'}, ...statuses.map(s=>({value:s,label:s}))]} />
@@ -800,6 +1113,10 @@ const App = () => {
           });
           return (
             <div className="space-y-4">
+              {canWrite('WORK_ORDER') && <div className="flex justify-end gap-2">
+                <BtnSuccess onClick={()=>openModal('work_order')}>+ New Work Order</BtnSuccess>
+                <Btn onClick={()=>openModal('work_result')}>Record Result</Btn>
+              </div>}
               <FilterBar>
                 <FilterSelect label="Status" value={tf.wo.status} onChange={v=>setFilter('wo','status',v)}
                   options={[{value:'ALL',label:'All'}, ...statuses.map(s=>({value:s,label:s}))]} />
@@ -834,7 +1151,13 @@ const App = () => {
           });
           return (
           <div className="space-y-6">
-            <h3 className="text-white font-bold">Defect Summary</h3>
+            <div className="flex justify-between items-center">
+              <h3 className="text-white font-bold">Defect Summary</h3>
+              {canWrite('QUALITY') && <div className="flex gap-2">
+                <BtnSuccess onClick={()=>openModal('quality_std')}>+ Quality Standard</BtnSuccess>
+                <Btn onClick={()=>openModal('inspection')}>+ New Inspection</Btn>
+              </div>}
+            </div>
             <FilterBar>
               <FilterSearch value={tf.quality.search} onChange={v=>setFilter('quality','search',v)} placeholder="Search defect type..." />
               <FilterCount total={allDefects.length} filtered={filtered.length} />
@@ -884,6 +1207,11 @@ const App = () => {
           });
           return (
             <div className="space-y-4">
+              {canWrite('INVENTORY') && <div className="flex justify-end gap-2">
+                <BtnSuccess onClick={()=>openModal('inv_in')}>+ Receive (入庫)</BtnSuccess>
+                <Btn onClick={()=>openModal('inv_out')}>Issue (出庫)</Btn>
+                <button onClick={()=>openModal('inv_move')} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold text-xs cursor-pointer">Move (移動)</button>
+              </div>}
               <FilterBar>
                 <FilterSelect label="Status" value={tf.inv.status} onChange={v=>setFilter('inv','status',v)}
                   options={[{value:'ALL',label:'All'}, ...statuses.map(s=>({value:s,label:s}))]} />
@@ -908,6 +1236,10 @@ const App = () => {
 
         {/* ── AI CENTER (FN-018,028,034) ───────────────── */}
         {menu==='AI_CENTER' && (
+          <div className="space-y-4">
+          <div className="flex justify-end">
+            <BtnSuccess onClick={()=>openModal('schedule_optimize')}>AI Schedule Optimize</BtnSuccess>
+          </div>
           <div className="grid grid-cols-3 gap-4">
             {/* Demand Forecast */}
             <div className="bg-[#1e293b]/30 p-4 rounded-2xl border border-slate-800 space-y-3">
@@ -987,6 +1319,7 @@ const App = () => {
                 </div>
               )}
             </div>
+          </div>
           </div>
         )}
 
@@ -1522,6 +1855,653 @@ const App = () => {
         })()}
 
       </main>
+
+      {/* ── Toast notification ──────────────────────────── */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-[60] px-5 py-3 rounded-xl text-xs font-bold shadow-lg border ${toast.ok ? 'bg-emerald-900/90 border-emerald-700 text-emerald-300' : 'bg-red-900/90 border-red-700 text-red-300'}`}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* ── MODAL: Item Registration ─────────────────────── */}
+      <Modal open={modal.type==='item'} onClose={closeModal} title="New Item Registration">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            const r=await axios.post('/api/items',{name:fd.get('name'),category:fd.get('category'),unit:fd.get('unit'),spec:fd.get('spec'),safety_stock:Number(fd.get('safety_stock')||0)});
+            showToast(`Item ${r.data.item_code} created`);
+            closeModal(); refreshPage('ITEMS');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Item Name"><Input name="name" required className="w-full" placeholder="Enter item name"/></FormRow>
+          <FormRow label="Category">
+            <Select name="category" onChange={()=>{}} value="" options={[{value:'RAW',label:'RAW'},{value:'SEMI',label:'SEMI'},{value:'PRODUCT',label:'PRODUCT'}]} className="w-full"/>
+          </FormRow>
+          <FormRow label="Unit">
+            <Select name="unit" onChange={()=>{}} value="" options={[{value:'EA',label:'EA'},{value:'KG',label:'KG'},{value:'M',label:'M'},{value:'L',label:'L'}]} className="w-full"/>
+          </FormRow>
+          <FormRow label="Spec"><Input name="spec" className="w-full" placeholder="Specification"/></FormRow>
+          <FormRow label="Safety Stock"><Input name="safety_stock" type="number" className="w-full" defaultValue="0"/></FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Register</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: BOM Registration ──────────────────────── */}
+      <Modal open={modal.type==='bom'} onClose={closeModal} title="New BOM Registration">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            await axios.post('/api/bom',{parent_item:fd.get('parent_item'),child_item:fd.get('child_item'),qty_per_unit:Number(fd.get('qty_per_unit')||1),loss_rate:Number(fd.get('loss_rate')||0)});
+            showToast('BOM entry created');
+            closeModal(); refreshPage('BOM');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Parent Item (Product)">
+            <select name="parent_item" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select parent item</option>
+              {(extra.itemList||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Child Item (Component)">
+            <select name="child_item" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select child item</option>
+              {(extra.itemList||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Qty per Unit"><Input name="qty_per_unit" type="number" step="0.01" required className="w-full" defaultValue="1"/></FormRow>
+          <FormRow label="Loss Rate (%)"><Input name="loss_rate" type="number" step="0.01" className="w-full" defaultValue="0"/></FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Register</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Process Registration ──────────────────── */}
+      <Modal open={modal.type==='process'} onClose={closeModal} title="New Process Registration">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            const r=await axios.post('/api/processes',{name:fd.get('name'),std_time_min:Number(fd.get('std_time_min')||0),description:fd.get('description'),equip_code:fd.get('equip_code')||null});
+            showToast(`Process ${r.data.process_code} created`);
+            closeModal(); refreshPage('PROCESS');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Process Name"><Input name="name" required className="w-full" placeholder="Enter process name"/></FormRow>
+          <FormRow label="Standard Time (min)"><Input name="std_time_min" type="number" required className="w-full" defaultValue="0"/></FormRow>
+          <FormRow label="Description"><Input name="description" className="w-full" placeholder="Process description"/></FormRow>
+          <FormRow label="Equipment">
+            <select name="equip_code" className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">None</option>
+              {(extra.equips||[]).map(e=><option key={e.equip_code} value={e.equip_code}>{e.equip_code} - {e.name}</option>)}
+            </select>
+          </FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Register</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Routing Registration ──────────────────── */}
+      <Modal open={modal.type==='routing'} onClose={closeModal} title="New Routing Registration">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            await axios.post('/api/routings',{item_code:fd.get('item_code'),routes:modalRoutes.filter(r=>r.process_code)});
+            showToast('Routing created');
+            closeModal(); refreshPage('PROCESS');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Item">
+            <select name="item_code" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select item</option>
+              {(extra.itemList||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Process Steps">
+            {modalRoutes.map((r,idx)=>(
+              <div key={idx} className="flex gap-2 mb-2 items-center">
+                <span className="text-slate-500 text-[10px] w-6">{r.seq}</span>
+                <select value={r.process_code} onChange={e=>{const n=[...modalRoutes];n[idx].process_code=e.target.value;setModalRoutes(n);}}
+                  className="bg-[#0f172a] border border-slate-700 p-1.5 rounded text-white text-xs flex-1">
+                  <option value="">Select process</option>
+                  {(extra.processList||[]).map(p=><option key={p.process_code} value={p.process_code}>{p.process_code} - {p.name}</option>)}
+                </select>
+                <Input type="number" value={r.cycle_time} onChange={e=>{const n=[...modalRoutes];n[idx].cycle_time=Number(e.target.value);setModalRoutes(n);}} className="w-20" placeholder="min"/>
+                {modalRoutes.length>1 && <button type="button" onClick={()=>setModalRoutes(modalRoutes.filter((_,i)=>i!==idx))} className="text-red-400 hover:text-red-300 cursor-pointer">x</button>}
+              </div>
+            ))}
+            <button type="button" onClick={()=>setModalRoutes([...modalRoutes,{seq:modalRoutes.length+1,process_code:'',cycle_time:0}])} className="text-blue-400 text-[10px] hover:text-blue-300 cursor-pointer">+ Add Step</button>
+          </FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Register</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Equipment Registration ────────────────── */}
+      <Modal open={modal.type==='equipment'} onClose={closeModal} title="New Equipment Registration">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            const r=await axios.post('/api/equipments',{name:fd.get('name'),process_code:fd.get('process_code')||null,capacity_per_hour:Number(fd.get('capacity_per_hour')||100),install_date:fd.get('install_date')||null});
+            showToast(`Equipment ${r.data.equip_code} created`);
+            closeModal(); refreshPage('EQUIPMENT');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Equipment Name"><Input name="name" required className="w-full" placeholder="Enter equipment name"/></FormRow>
+          <FormRow label="Process">
+            <select name="process_code" className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">None</option>
+              {(extra.processList||[]).map(p=><option key={p.process_code} value={p.process_code}>{p.process_code} - {p.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Capacity per Hour"><Input name="capacity_per_hour" type="number" className="w-full" defaultValue="100"/></FormRow>
+          <FormRow label="Install Date"><Input name="install_date" type="date" className="w-full"/></FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Register</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Equipment Status Change ───────────────── */}
+      <Modal open={modal.type==='equip_status'} onClose={closeModal} title="Change Equipment Status">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          const code=fd.get('equip_code');
+          try {
+            await axios.put(`/api/equipments/${code}/status`,{status:fd.get('status'),reason:fd.get('reason'),worker_id:fd.get('worker_id')});
+            showToast(`Equipment ${code} status updated`);
+            closeModal(); refreshPage('EQUIPMENT');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Equipment">
+            <select name="equip_code" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select equipment</option>
+              {(extra.equips||[]).map(e=><option key={e.equip_code} value={e.equip_code}>{e.equip_code} - {e.name} ({e.status})</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="New Status">
+            <Select name="status" onChange={()=>{}} value="" options={[{value:'RUNNING',label:'RUNNING'},{value:'STOP',label:'STOP'},{value:'DOWN',label:'DOWN'}]} className="w-full"/>
+          </FormRow>
+          <FormRow label="Reason"><Input name="reason" className="w-full" placeholder="Reason for status change"/></FormRow>
+          <FormRow label="Worker ID"><Input name="worker_id" className="w-full" placeholder="Worker ID"/></FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Update Status</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Production Plan Registration ──────────── */}
+      <Modal open={modal.type==='plan'} onClose={closeModal} title="New Production Plan">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            const r=await axios.post('/api/plans',{item_code:fd.get('item_code'),plan_qty:Number(fd.get('plan_qty')),due_date:fd.get('due_date'),priority:fd.get('priority')});
+            showToast(`Plan #${r.data.plan_id} created`);
+            closeModal(); refreshPage('PLANS');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Item">
+            <select name="item_code" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select item</option>
+              {(extra.itemList||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Plan Quantity"><Input name="plan_qty" type="number" required className="w-full" placeholder="Quantity"/></FormRow>
+          <FormRow label="Due Date"><Input name="due_date" type="date" required className="w-full"/></FormRow>
+          <FormRow label="Priority">
+            <Select name="priority" onChange={()=>{}} value="" options={[{value:'MID',label:'MID'},{value:'HIGH',label:'HIGH'},{value:'LOW',label:'LOW'}]} className="w-full"/>
+          </FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Register</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Work Order Creation ────────────────────── */}
+      <Modal open={modal.type==='work_order'} onClose={closeModal} title="New Work Order">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            const r=await axios.post('/api/work-orders',{plan_id:Number(fd.get('plan_id')),work_date:fd.get('work_date')||undefined,equip_code:fd.get('equip_code')||undefined});
+            showToast(`Work Order ${r.data.work_order_id} created`);
+            closeModal(); refreshPage('WORK_ORDER');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Production Plan">
+            <select name="plan_id" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select plan</option>
+              {(extra.planList||[]).filter(p=>p.status!=='DONE').map(p=><option key={p.plan_id} value={p.plan_id}>#{p.plan_id} - {p.item_name} (qty:{p.qty}, {p.status})</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Work Date"><Input name="work_date" type="date" className="w-full"/></FormRow>
+          <FormRow label="Equipment">
+            <select name="equip_code" className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Auto assign</option>
+              {(extra.equips||[]).map(e=><option key={e.equip_code} value={e.equip_code}>{e.equip_code} - {e.name}</option>)}
+            </select>
+          </FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Create</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Work Result Registration ──────────────── */}
+      <Modal open={modal.type==='work_result'} onClose={closeModal} title="Record Work Result">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            const r=await axios.post('/api/work-results',{wo_id:fd.get('wo_id'),good_qty:Number(fd.get('good_qty')||0),defect_qty:Number(fd.get('defect_qty')||0),defect_code:fd.get('defect_code')||undefined,worker_id:fd.get('worker_id')||undefined,start_time:fd.get('start_time')||undefined,end_time:fd.get('end_time')||undefined});
+            showToast(`Result recorded (Progress: ${r.data.progress_pct}%)`);
+            closeModal(); refreshPage('WORK_ORDER');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Work Order">
+            <select name="wo_id" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select work order</option>
+              {(extra.woList||[]).filter(w=>w.status!=='DONE').map(w=><option key={w.wo_id} value={w.wo_id}>{w.wo_id} - {w.item_name} (qty:{w.plan_qty})</option>)}
+            </select>
+          </FormRow>
+          <div className="grid grid-cols-2 gap-3">
+            <FormRow label="Good Qty"><Input name="good_qty" type="number" className="w-full" defaultValue="0"/></FormRow>
+            <FormRow label="Defect Qty"><Input name="defect_qty" type="number" className="w-full" defaultValue="0"/></FormRow>
+          </div>
+          <FormRow label="Defect Code"><Input name="defect_code" className="w-full" placeholder="e.g. DEF-001"/></FormRow>
+          <FormRow label="Worker ID"><Input name="worker_id" className="w-full" placeholder="Worker ID"/></FormRow>
+          <div className="grid grid-cols-2 gap-3">
+            <FormRow label="Start Time"><Input name="start_time" type="datetime-local" className="w-full"/></FormRow>
+            <FormRow label="End Time"><Input name="end_time" type="datetime-local" className="w-full"/></FormRow>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Record</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Quality Standard Registration ─────────── */}
+      <Modal open={modal.type==='quality_std'} onClose={closeModal} title="New Quality Standard">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            await axios.post('/api/quality/standards',{item_code:fd.get('item_code'),checks:modalChecks.filter(c=>c.name)});
+            showToast('Quality standard created');
+            closeModal(); refreshPage('QUALITY');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Item">
+            <select name="item_code" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select item</option>
+              {(extra.itemList||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Check Items">
+            {modalChecks.map((c,idx)=>(
+              <div key={idx} className="flex gap-1.5 mb-2 items-center flex-wrap">
+                <Input value={c.name} onChange={e=>{const n=[...modalChecks];n[idx].name=e.target.value;setModalChecks(n);}} className="flex-1 min-w-[80px]" placeholder="Name"/>
+                <select value={c.type} onChange={e=>{const n=[...modalChecks];n[idx].type=e.target.value;setModalChecks(n);}}
+                  className="bg-[#0f172a] border border-slate-700 p-1.5 rounded text-white text-[10px]">
+                  <option value="NUMERIC">Numeric</option><option value="VISUAL">Visual</option><option value="FUNCTIONAL">Functional</option>
+                </select>
+                <Input value={c.min} onChange={e=>{const n=[...modalChecks];n[idx].min=Number(e.target.value);setModalChecks(n);}} type="number" step="0.01" className="w-16" placeholder="Min"/>
+                <Input value={c.max} onChange={e=>{const n=[...modalChecks];n[idx].max=Number(e.target.value);setModalChecks(n);}} type="number" step="0.01" className="w-16" placeholder="Max"/>
+                <Input value={c.unit} onChange={e=>{const n=[...modalChecks];n[idx].unit=e.target.value;setModalChecks(n);}} className="w-14" placeholder="Unit"/>
+                {modalChecks.length>1 && <button type="button" onClick={()=>setModalChecks(modalChecks.filter((_,i)=>i!==idx))} className="text-red-400 hover:text-red-300 cursor-pointer">x</button>}
+              </div>
+            ))}
+            <button type="button" onClick={()=>setModalChecks([...modalChecks,{name:'',type:'NUMERIC',std:0,min:0,max:0,unit:''}])} className="text-blue-400 text-[10px] hover:text-blue-300 cursor-pointer">+ Add Check</button>
+          </FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Register</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Quality Inspection ────────────────────── */}
+      <Modal open={modal.type==='inspection'} onClose={closeModal} title="New Quality Inspection">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            const r=await axios.post('/api/quality/inspections',{type:fd.get('type'),item_code:fd.get('item_code'),lot_no:fd.get('lot_no'),inspector_id:fd.get('inspector_id'),results:modalResults.filter(r=>r.check_name)});
+            showToast(`Inspection: ${r.data.judgment}${r.data.fail_items?.length ? ' (Fail: '+r.data.fail_items.join(', ')+')' : ''}`);
+            closeModal(); refreshPage('QUALITY');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Inspection Type">
+            <Select name="type" onChange={()=>{}} value="" options={[{value:'INCOMING',label:'INCOMING'},{value:'PROCESS',label:'PROCESS'},{value:'OUTGOING',label:'OUTGOING'}]} className="w-full"/>
+          </FormRow>
+          <FormRow label="Item">
+            <select name="item_code" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select item</option>
+              {(extra.itemList||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Lot No"><Input name="lot_no" className="w-full" placeholder="LOT-YYYYMMDD-001"/></FormRow>
+          <FormRow label="Inspector ID"><Input name="inspector_id" className="w-full" placeholder="Inspector ID"/></FormRow>
+          <FormRow label="Measurement Results">
+            {modalResults.map((r,idx)=>(
+              <div key={idx} className="flex gap-2 mb-2 items-center">
+                <Input value={r.check_name} onChange={e=>{const n=[...modalResults];n[idx].check_name=e.target.value;setModalResults(n);}} className="flex-1" placeholder="Check name"/>
+                <Input value={r.value} onChange={e=>{const n=[...modalResults];n[idx].value=Number(e.target.value);setModalResults(n);}} type="number" step="0.01" className="w-24" placeholder="Value"/>
+                {modalResults.length>1 && <button type="button" onClick={()=>setModalResults(modalResults.filter((_,i)=>i!==idx))} className="text-red-400 hover:text-red-300 cursor-pointer">x</button>}
+              </div>
+            ))}
+            <button type="button" onClick={()=>setModalResults([...modalResults,{check_name:'',value:0}])} className="text-blue-400 text-[10px] hover:text-blue-300 cursor-pointer">+ Add Result</button>
+          </FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Submit Inspection</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Inventory In (입고) ───────────────────── */}
+      <Modal open={modal.type==='inv_in'} onClose={closeModal} title="Inventory Receive (입고)">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            const r=await axios.post('/api/inventory/in',{item_code:fd.get('item_code'),qty:Number(fd.get('qty')),supplier:fd.get('supplier'),warehouse:fd.get('warehouse')||'WH01',location:fd.get('location')});
+            showToast(`Received: LOT ${r.data.lot_no}, Slip ${r.data.slip_no}`);
+            closeModal(); refreshPage('INVENTORY');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Item">
+            <select name="item_code" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select item</option>
+              {(extra.invItems||extra.itemList||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Quantity"><Input name="qty" type="number" required className="w-full" placeholder="Quantity"/></FormRow>
+          <FormRow label="Supplier"><Input name="supplier" className="w-full" placeholder="Supplier name"/></FormRow>
+          <FormRow label="Warehouse"><Input name="warehouse" className="w-full" defaultValue="WH01"/></FormRow>
+          <FormRow label="Location"><Input name="location" className="w-full" placeholder="e.g. A-01-01"/></FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Receive</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Inventory Out (출고) ──────────────────── */}
+      <Modal open={modal.type==='inv_out'} onClose={closeModal} title="Inventory Issue (출고)">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            const r=await axios.post('/api/inventory/out',{item_code:fd.get('item_code'),qty:Number(fd.get('qty')),out_type:fd.get('out_type'),ref_id:fd.get('ref_id')});
+            showToast(`Issued: Slip ${r.data.slip_no} (${r.data.lots_used?.length||0} lots used)`);
+            closeModal(); refreshPage('INVENTORY');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Item">
+            <select name="item_code" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select item</option>
+              {(extra.invItems||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name} (stock:{i.stock})</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Quantity"><Input name="qty" type="number" required className="w-full" placeholder="Quantity"/></FormRow>
+          <FormRow label="Out Type">
+            <Select name="out_type" onChange={()=>{}} value="" options={[{value:'OUT',label:'Production/Ship'},{value:'MOVE',label:'Move'}]} className="w-full"/>
+          </FormRow>
+          <FormRow label="Reference ID"><Input name="ref_id" className="w-full" placeholder="e.g. WO-20240101-001"/></FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Issue</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Item Edit (REQ-006) ───────────────────── */}
+      <Modal open={modal.type==='item_edit'} onClose={closeModal} title={`Edit Item: ${modal.data?.item?.item_code||''}`}>
+        {modal.data?.item && (
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          const body={};
+          ['name','category','unit','spec'].forEach(f=>{if(fd.get(f))body[f]=fd.get(f);});
+          if(fd.get('safety_stock'))body.safety_stock=Number(fd.get('safety_stock'));
+          try {
+            await axios.put(`/api/items/${modal.data.item.item_code}`,body);
+            showToast(`Item ${modal.data.item.item_code} updated`);
+            closeModal(); refreshPage('ITEMS');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Item Name"><Input name="name" defaultValue={modal.data.item.name} required className="w-full"/></FormRow>
+          <FormRow label="Category">
+            <select name="category" defaultValue={modal.data.item.category} className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="RAW">RAW</option><option value="SEMI">SEMI</option><option value="PRODUCT">PRODUCT</option>
+            </select>
+          </FormRow>
+          <FormRow label="Unit">
+            <select name="unit" defaultValue={modal.data.item.unit} className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="EA">EA</option><option value="KG">KG</option><option value="M">M</option><option value="L">L</option>
+            </select>
+          </FormRow>
+          <FormRow label="Spec"><Input name="spec" defaultValue={modal.data.item.spec||''} className="w-full"/></FormRow>
+          <FormRow label="Safety Stock"><Input name="safety_stock" type="number" defaultValue={modal.data.item.safety_stock||0} className="w-full"/></FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Update</BtnSuccess>
+          </div>
+        </form>
+        )}
+      </Modal>
+
+      {/* ── MODAL: Inventory Move (REQ-028) ──────────────── */}
+      <Modal open={modal.type==='inv_move'} onClose={closeModal} title="Inventory Movement (재고이동)">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            const r=await axios.post('/api/inventory/move',{item_code:fd.get('item_code'),lot_no:fd.get('lot_no'),qty:Number(fd.get('qty')),from_location:fd.get('from_location'),to_location:fd.get('to_location')});
+            if(r.data.error) throw {response:{data:r.data}};
+            showToast(r.data.message||'Inventory moved');
+            closeModal(); refreshPage('INVENTORY');
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Item">
+            <select name="item_code" required className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select item</option>
+              {(extra.invItems||[]).map(i=><option key={i.item_code} value={i.item_code}>{i.item_code} - {i.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Lot No"><Input name="lot_no" required className="w-full" placeholder="LOT-YYYYMMDD-001"/></FormRow>
+          <FormRow label="Quantity"><Input name="qty" type="number" required className="w-full" placeholder="Quantity to move"/></FormRow>
+          <FormRow label="From Location"><Input name="from_location" required className="w-full" placeholder="e.g. A-01-01"/></FormRow>
+          <FormRow label="To Location"><Input name="to_location" required className="w-full" placeholder="e.g. B-02-03"/></FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Move</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: User Registration (REQ-002) ──────────── */}
+      <Modal open={modal.type==='register'} onClose={closeModal} title="User Registration (회원가입)">
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          if(fd.get('password')!==fd.get('password_confirm')){showToast('Passwords do not match',false);return;}
+          try {
+            const r=await axios.post('/api/auth/register',{user_id:fd.get('user_id'),password:fd.get('password'),name:fd.get('name'),email:fd.get('email'),role:fd.get('role')});
+            if(r.data.error) throw {response:{data:r.data}};
+            showToast(`User ${r.data.user_id} registered`);
+            closeModal();
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="User ID"><Input name="user_id" required className="w-full" placeholder="Enter user ID"/></FormRow>
+          <FormRow label="Password"><Input name="password" type="password" required className="w-full" placeholder="Password"/></FormRow>
+          <FormRow label="Confirm Password"><Input name="password_confirm" type="password" required className="w-full" placeholder="Confirm password"/></FormRow>
+          <FormRow label="Name"><Input name="name" required className="w-full" placeholder="Full name"/></FormRow>
+          <FormRow label="Email"><Input name="email" type="email" className="w-full" placeholder="email@example.com"/></FormRow>
+          <FormRow label="Role">
+            <Select name="role" onChange={()=>{}} value="" options={[{value:'worker',label:'Worker'},{value:'admin',label:'Admin'},{value:'viewer',label:'Viewer'}]} className="w-full"/>
+          </FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Register</BtnSuccess>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Permission Management (REQ-003) ───────── */}
+      <Modal open={modal.type==='permissions'} onClose={closeModal} title="Permission Management (권한관리)">
+        <div>
+          <FormRow label="Select User">
+            <select value={modalSelUser} onChange={async e=>{
+              const uid=e.target.value; setModalSelUser(uid);
+              const allMenus=['DASHBOARD','ITEMS','BOM','PROCESS','EQUIPMENT','PLANS','WORK_ORDER','QUALITY','INVENTORY','AI_CENTER','REPORTS'];
+              if(!uid){setModalPerms([]);return;}
+              try {
+                const r = await axios.get(`/api/auth/permissions/${uid}`);
+                const existing = r.data.permissions||[];
+                setModalPerms(allMenus.map(m=>{const found=existing.find(p=>p.menu===m); return {menu:m,read:found?found.read:false,write:found?found.write:false};}));
+              } catch{ setModalPerms(allMenus.map(m=>({menu:m,read:false,write:false}))); }
+            }}
+              className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">Select user</option>
+              {(extra.userList||[]).map(u=><option key={u.user_id} value={u.user_id}>{u.user_id} - {u.name} ({u.role})</option>)}
+            </select>
+          </FormRow>
+          {modalSelUser && modalPerms.length>0 && (
+            <div>
+              <div className="bg-[#0f172a] rounded-xl border border-slate-800 overflow-hidden mb-4">
+                <table className="w-full text-left">
+                  <thead className="bg-[#1e293b] text-slate-500 uppercase text-[10px]">
+                    <tr><th className="p-2">Menu</th><th className="p-2 text-center">Read</th><th className="p-2 text-center">Write</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {modalPerms.map((p,idx)=>(
+                      <tr key={p.menu}>
+                        <td className="p-2 text-white text-xs">{p.menu}</td>
+                        <td className="p-2 text-center"><input type="checkbox" checked={p.read} onChange={e=>{const n=[...modalPerms];n[idx].read=e.target.checked;setModalPerms(n);}}/></td>
+                        <td className="p-2 text-center"><input type="checkbox" checked={p.write} onChange={e=>{const n=[...modalPerms];n[idx].write=e.target.checked;setModalPerms(n);}}/></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={()=>{setModalPerms(modalPerms.map(p=>({...p,read:true,write:true})));}} className="text-blue-400 text-[10px] hover:text-blue-300 cursor-pointer">Select All</button>
+                <button type="button" onClick={()=>{setModalPerms(modalPerms.map(p=>({...p,read:false,write:false})));}} className="text-slate-400 text-[10px] hover:text-slate-300 cursor-pointer">Clear All</button>
+                <BtnSuccess onClick={async()=>{
+                  try {
+                    await axios.put(`/api/auth/permissions/${modalSelUser}`,{permissions:modalPerms});
+                    showToast(`Permissions updated for ${modalSelUser}`);
+                  } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+                }}>Save Permissions</BtnSuccess>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── MODAL: AI Schedule Optimize (REQ-016) ────────── */}
+      <Modal open={modal.type==='schedule_optimize'} onClose={closeModal} title="AI Schedule Optimization (일정최적화)">
+        <div>
+          <FormRow label="Select Plans to Optimize">
+            <div className="max-h-40 overflow-y-auto bg-[#0f172a] rounded-lg border border-slate-800 p-2">
+              {(extra.planList||[]).filter(p=>p.status!=='DONE').length>0 ? (extra.planList||[]).filter(p=>p.status!=='DONE').map(p=>(
+                <label key={p.plan_id} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-slate-800/30 px-1 rounded">
+                  <input type="checkbox" checked={modalSelPlans.includes(p.plan_id)} onChange={e=>{
+                    setModalSelPlans(prev=>e.target.checked?[...prev,p.plan_id]:prev.filter(id=>id!==p.plan_id));
+                  }}/>
+                  <span className="text-xs text-white">#{p.plan_id} - {p.item_name} (qty:{p.qty}, due:{p.due_date})</span>
+                  <Badge v={p.priority}/>
+                </label>
+              )) : <span className="text-slate-600 text-xs">No active plans</span>}
+            </div>
+          </FormRow>
+          <div className="flex justify-end gap-2 mb-4">
+            <BtnSuccess onClick={async()=>{
+              if(modalSelPlans.length===0){showToast('Select at least one plan',false);return;}
+              try {
+                const r=await axios.post('/api/ai/schedule-optimize',{plan_ids:modalSelPlans});
+                if(r.data.error) throw {response:{data:r.data}};
+                setModalSchedule(r.data);
+                showToast(`Optimized: makespan ${r.data.makespan}min, util ${(r.data.utilization*100).toFixed(0)}%`);
+              } catch(err){ showToast(err.response?.data?.error||'Optimization failed',false); }
+            }}>Optimize</BtnSuccess>
+          </div>
+          {modalSchedule && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#0f172a] p-3 rounded-lg border border-slate-800 text-center">
+                  <div className="text-[10px] text-slate-500 uppercase">Makespan</div>
+                  <div className="text-xl font-bold text-blue-400">{modalSchedule.makespan} min</div>
+                </div>
+                <div className="bg-[#0f172a] p-3 rounded-lg border border-slate-800 text-center">
+                  <div className="text-[10px] text-slate-500 uppercase">Utilization</div>
+                  <div className="text-xl font-bold text-emerald-400">{(modalSchedule.utilization*100).toFixed(0)}%</div>
+                </div>
+              </div>
+              <h4 className="text-slate-400 font-bold text-[10px] uppercase">Gantt Chart</h4>
+              <div className="bg-[#0f172a] p-4 rounded-xl border border-slate-800 overflow-x-auto">
+                {(() => {
+                  const equips = [...new Set((modalSchedule.schedule||[]).map(s=>s.equip))];
+                  const maxEnd = Math.max(...(modalSchedule.schedule||[]).map(s=>s.end_min),1);
+                  const colors = ['bg-blue-500','bg-purple-500','bg-amber-500','bg-emerald-500','bg-red-500','bg-cyan-500','bg-pink-500'];
+                  return equips.map((eq,ei)=>(
+                    <div key={eq} className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] text-slate-400 w-20 truncate">{eq}</span>
+                      <div className="flex-1 h-6 bg-slate-800 rounded relative" style={{minWidth:'300px'}}>
+                        {(modalSchedule.schedule||[]).filter(s=>s.equip===eq).map((s,si)=>(
+                          <div key={si} className={`absolute h-full rounded ${colors[s.plan_id%colors.length]} opacity-80 flex items-center justify-center`}
+                            style={{left:`${(s.start_min/maxEnd)*100}%`,width:`${((s.end_min-s.start_min)/maxEnd)*100}%`}}
+                            title={`Plan #${s.plan_id}: ${s.start_min}-${s.end_min}min`}>
+                            <span className="text-[8px] text-white font-bold truncate px-1">P{s.plan_id}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
+                <div className="flex justify-between mt-1">
+                  <span className="text-[9px] text-slate-600">0 min</span>
+                  <span className="text-[9px] text-slate-600">{Math.max(...(modalSchedule.schedule||[]).map(s=>s.end_min),0)} min</span>
+                </div>
+              </div>
+              <Table cols={['Seq','Plan ID','Equipment','Start (min)','End (min)','Duration']}
+                rows={modalSchedule.schedule||[]}
+                renderRow={(s,k)=>(
+                  <tr key={k}>
+                    <td className="p-2 text-white">{s.seq}</td>
+                    <td className="p-2 text-blue-400 font-mono">#{s.plan_id}</td>
+                    <td className="p-2 text-purple-400">{s.equip}</td>
+                    <td className="p-2">{s.start_min}</td>
+                    <td className="p-2">{s.end_min}</td>
+                    <td className="p-2 text-amber-400 font-bold">{s.duration_min}m</td>
+                  </tr>
+                )} />
+            </div>
+          )}
+        </div>
+      </Modal>
+
     </div>
   );
 };
