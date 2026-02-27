@@ -1,0 +1,1034 @@
+{
+  "timestamp": "2026-02-27T15:44:52.555380",
+  "version": "v4.3",
+  "Q1_functional_suitability": {
+    "score": 96.7,
+    "pass": 29,
+    "total": 30,
+    "sub": {
+      "completeness": "25/25",
+      "correctness": "3 tests",
+      "appropriateness": "2 tests"
+    },
+    "tests": [
+      {
+        "name": "Completeness /api/auth/login",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/auth/users",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/items",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/bom",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/bom/summary",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/bom/where-used/ITEM-003",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/bom/explode/ITEM-001",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/processes",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/routings",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/equipments",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/equipments/status",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/plans",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/work-orders",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/quality/defects",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/inventory",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/reports/production",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/reports/quality",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/lot/trace/LOT-20260210-001",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/dashboard/production",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/health",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/ai/demand-forecast",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/ai/schedule-optimize",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/ai/defect-predict",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/ai/failure-predict",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Completeness /api/ai/insights",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Correctness: BOM explode structure",
+        "passed": true
+      },
+      {
+        "name": "Correctness: AI defect prob in range",
+        "passed": false
+      },
+      {
+        "name": "Correctness: Health version present",
+        "passed": true
+      },
+      {
+        "name": "Appropriateness: /api/items returns item list",
+        "passed": true
+      },
+      {
+        "name": "Appropriateness: Quality report is dict",
+        "passed": true
+      }
+    ]
+  },
+  "Q2_reliability": {
+    "score": 100.0,
+    "pass": 19,
+    "total": 19,
+    "sub": {
+      "maturity": "100-cycle",
+      "availability": "100.0%",
+      "fault_tolerance": "15/15",
+      "recoverability": "2 tests"
+    },
+    "tests": [
+      {
+        "name": "Maturity: 100-cycle stability",
+        "passed": true,
+        "detail": "100/100"
+      },
+      {
+        "name": "Availability: 5-min monitor (100.0%)",
+        "passed": true,
+        "detail": "30/30"
+      },
+      {
+        "name": "Fault Tolerance: 빈 로그인",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: 잘못된 JSON body",
+        "passed": true,
+        "status": 500
+      },
+      {
+        "name": "Fault Tolerance: 존재하지 않는 리소스",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: 음수 수량",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: SQL Injection",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: XSS 공격",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: 초대형 페이로드",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: 빈 토큰",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: 변조 토큰",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: 존재하지 않는 엔드포인트",
+        "passed": true,
+        "status": 404
+      },
+      {
+        "name": "Fault Tolerance: 잘못된 날짜 형식",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: 빈 배열 입력",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: 중복 키 삽입",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: 특수문자 공정명",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Fault Tolerance: 0 용량 설비",
+        "passed": true,
+        "status": 200
+      },
+      {
+        "name": "Recoverability: Error → immediate recovery",
+        "passed": true
+      },
+      {
+        "name": "Recoverability: Bad login → normal login",
+        "passed": true
+      }
+    ]
+  },
+  "Q3_performance": {
+    "score": 100.0,
+    "pass": 20,
+    "total": 20,
+    "percentiles": {
+      "p50": 32.6,
+      "p95": 44.8,
+      "p99": 1416.1
+    },
+    "sub": {
+      "time_behaviour": "p50=33ms p95=45ms p99=1416ms",
+      "resource_utilization": "CPU=0.0% MEM=26.3%",
+      "capacity": "100 concurrent tested"
+    },
+    "tests": [
+      {
+        "name": "Time: /api/items",
+        "passed": true,
+        "avg_ms": 35.8
+      },
+      {
+        "name": "Time: /api/bom",
+        "passed": true,
+        "avg_ms": 33.5
+      },
+      {
+        "name": "Time: /api/equipments",
+        "passed": true,
+        "avg_ms": 27.0
+      },
+      {
+        "name": "Time: /api/plans",
+        "passed": true,
+        "avg_ms": 35.4
+      },
+      {
+        "name": "Time: /api/work-orders",
+        "passed": true,
+        "avg_ms": 31.2
+      },
+      {
+        "name": "Time: /api/inventory",
+        "passed": true,
+        "avg_ms": 32.7
+      },
+      {
+        "name": "Time: /api/reports/production",
+        "passed": true,
+        "avg_ms": 37.0
+      },
+      {
+        "name": "Time: /api/reports/quality",
+        "passed": true,
+        "avg_ms": 40.5
+      },
+      {
+        "name": "Time: /api/equipments/status",
+        "passed": true,
+        "avg_ms": 33.4
+      },
+      {
+        "name": "Time: /api/processes",
+        "passed": true,
+        "avg_ms": 26.9
+      },
+      {
+        "name": "Time: /api/routings",
+        "passed": true,
+        "avg_ms": 27.4
+      },
+      {
+        "name": "Time: /api/quality/defects",
+        "passed": true,
+        "avg_ms": 33.3
+      },
+      {
+        "name": "Time: /api/health",
+        "passed": true,
+        "avg_ms": 17.8
+      },
+      {
+        "name": "AI Time: /api/ai/insights",
+        "passed": true,
+        "ms": 54.7
+      },
+      {
+        "name": "AI Time: /api/ai/defect-predict",
+        "passed": true,
+        "ms": 1416.1
+      },
+      {
+        "name": "AI Time: /api/ai/failure-predict",
+        "passed": true,
+        "ms": 43.8
+      },
+      {
+        "name": "AI Time: /api/ai/schedule-optimize",
+        "passed": true,
+        "ms": 78.0
+      },
+      {
+        "name": "Resource: CPU/Memory monitoring available",
+        "passed": true,
+        "detail": "CPU=0.0%, MEM=26.3%"
+      },
+      {
+        "name": "Capacity: 50 concurrent",
+        "passed": true,
+        "detail": "50/50 OK, avg=113ms, TPS=227.9"
+      },
+      {
+        "name": "Capacity: 100 concurrent",
+        "passed": true,
+        "detail": "100/100 OK, avg=176ms, TPS=264.6"
+      }
+    ]
+  },
+  "Q4_security": {
+    "score": 100.0,
+    "pass": 23,
+    "total": 23,
+    "sub": {
+      "confidentiality": "10/10 APIs blocked",
+      "integrity": "SQL/XSS/param tests",
+      "non_repudiation": "2 tests",
+      "accountability": "2 tests",
+      "authenticity": "JWT+bcrypt+secrets+SHA256"
+    },
+    "tests": [
+      {
+        "name": "Confidentiality: /api/items blocked",
+        "passed": true
+      },
+      {
+        "name": "Confidentiality: /api/bom blocked",
+        "passed": true
+      },
+      {
+        "name": "Confidentiality: /api/plans blocked",
+        "passed": true
+      },
+      {
+        "name": "Confidentiality: /api/work-orders blocked",
+        "passed": true
+      },
+      {
+        "name": "Confidentiality: /api/inventory blocked",
+        "passed": true
+      },
+      {
+        "name": "Confidentiality: /api/equipments blocked",
+        "passed": true
+      },
+      {
+        "name": "Confidentiality: /api/auth/users blocked",
+        "passed": true
+      },
+      {
+        "name": "Confidentiality: /api/reports/production blocked",
+        "passed": true
+      },
+      {
+        "name": "Confidentiality: /api/quality/defects blocked",
+        "passed": true
+      },
+      {
+        "name": "Confidentiality: /api/processes blocked",
+        "passed": true
+      },
+      {
+        "name": "Integrity: SQL Injection blocked",
+        "passed": true
+      },
+      {
+        "name": "Integrity: XSS sanitized",
+        "passed": true
+      },
+      {
+        "name": "Integrity: No f-string in SQL",
+        "passed": true
+      },
+      {
+        "name": "Non-repudiation: Work records have user tracking",
+        "passed": true,
+        "detail": "DB schema includes worker_id, created_at"
+      },
+      {
+        "name": "Non-repudiation: Quality records traceable",
+        "passed": true
+      },
+      {
+        "name": "Accountability: LOT trace shows action history",
+        "passed": true
+      },
+      {
+        "name": "Accountability: User list with roles available",
+        "passed": true
+      },
+      {
+        "name": "Authenticity: JWT 3-part structure",
+        "passed": true
+      },
+      {
+        "name": "Authenticity: JWT has exp field",
+        "passed": true
+      },
+      {
+        "name": "Authenticity: JWT has role field",
+        "passed": true
+      },
+      {
+        "name": "Authenticity: bcrypt password hashing",
+        "passed": true
+      },
+      {
+        "name": "Authenticity: No hardcoded secrets",
+        "passed": true
+      },
+      {
+        "name": "Authenticity: SHA-256 hash (no MD5)",
+        "passed": true
+      }
+    ]
+  },
+  "Q5_usability": {
+    "score": 100.0,
+    "pass": 13,
+    "total": 13,
+    "sub": {
+      "recognizability": "2 tests",
+      "learnability": "2 tests",
+      "operability": "2 tests",
+      "error_protection": "2 tests",
+      "ui_aesthetics": "2 tests",
+      "accessibility": "3 tests"
+    },
+    "tests": [
+      {
+        "name": "Recognizability: /api/health accessible (no auth)",
+        "passed": true
+      },
+      {
+        "name": "Recognizability: Swagger /api/docs accessible",
+        "passed": true
+      },
+      {
+        "name": "Learnability: USER_MANUAL.md exists",
+        "passed": true
+      },
+      {
+        "name": "Learnability: Manual > 10KB",
+        "passed": true,
+        "detail": "26201 bytes"
+      },
+      {
+        "name": "Operability: Error responses have 'error' key",
+        "passed": true
+      },
+      {
+        "name": "Operability: Success responses are structured dict",
+        "passed": true
+      },
+      {
+        "name": "Error Protection: Korean error messages",
+        "passed": true
+      },
+      {
+        "name": "Error Protection: Admin self-register blocked",
+        "passed": true
+      },
+      {
+        "name": "UI Aesthetics: Frontend build (dist/) exists",
+        "passed": true
+      },
+      {
+        "name": "UI Aesthetics: index.html in dist",
+        "passed": true
+      },
+      {
+        "name": "Accessibility: HTML lang attribute",
+        "passed": true
+      },
+      {
+        "name": "Accessibility: charset meta",
+        "passed": true
+      },
+      {
+        "name": "Accessibility: viewport meta",
+        "passed": true
+      }
+    ]
+  },
+  "Q6_compatibility": {
+    "score": 100.0,
+    "pass": 8,
+    "total": 8,
+    "sub": {
+      "co_existence": "4 tests",
+      "interoperability": "4 tests"
+    },
+    "tests": [
+      {
+        "name": "Co-existence: docker-compose.yml exists",
+        "passed": true
+      },
+      {
+        "name": "Co-existence: Dockerfile exists",
+        "passed": true
+      },
+      {
+        "name": "Co-existence: K8s manifests exist",
+        "passed": true,
+        "detail": "7 files"
+      },
+      {
+        "name": "Co-existence: DB init.sql exists",
+        "passed": true
+      },
+      {
+        "name": "Interoperability: JSON Content-Type",
+        "passed": true
+      },
+      {
+        "name": "Interoperability: CORS middleware configured",
+        "passed": true
+      },
+      {
+        "name": "Interoperability: DATABASE_URL env var",
+        "passed": true
+      },
+      {
+        "name": "Interoperability: PostgreSQL connectivity",
+        "passed": true
+      }
+    ]
+  },
+  "Q7_maintainability": {
+    "score": 91.7,
+    "pass": 11,
+    "total": 12,
+    "sub": {
+      "modularity": "28 modules, avg 171 lines",
+      "reusability": "db_connection() x7",
+      "analysability": "docstring 86%, logging 10 modules",
+      "modifiability": "env_vars=1, hardcoded=0",
+      "testability": "test_app.py + 40 commits"
+    },
+    "tests": [
+      {
+        "name": "Modularity: 28 modules",
+        "passed": true,
+        "detail": "28 Python files"
+      },
+      {
+        "name": "Modularity: Avg 171 lines/module",
+        "passed": true,
+        "detail": "total=4780"
+      },
+      {
+        "name": "Reusability: db_connection() context manager",
+        "passed": true
+      },
+      {
+        "name": "Reusability: db_connection() used 7 times",
+        "passed": true
+      },
+      {
+        "name": "Analysability: Module docstrings (86%)",
+        "passed": true,
+        "detail": "24/28"
+      },
+      {
+        "name": "Analysability: logging used in 10 modules",
+        "passed": true
+      },
+      {
+        "name": "Analysability: print() calls = 0",
+        "passed": true
+      },
+      {
+        "name": "Modifiability: No hardcoded localhost in modules",
+        "passed": true,
+        "detail": "0 files with localhost"
+      },
+      {
+        "name": "Modifiability: os.getenv() usage (1 calls)",
+        "passed": false
+      },
+      {
+        "name": "Testability: test_app.py exists",
+        "passed": true
+      },
+      {
+        "name": "Testability: Frontend test config exists",
+        "passed": true
+      },
+      {
+        "name": "Testability: Git history (40 commits)",
+        "passed": true
+      }
+    ]
+  },
+  "Q8_portability": {
+    "score": 100.0,
+    "pass": 11,
+    "total": 11,
+    "sub": {
+      "adaptability": "3 tests",
+      "installability": "5 tests",
+      "replaceability": "3 tests"
+    },
+    "tests": [
+      {
+        "name": "Adaptability: DATABASE_URL from environment",
+        "passed": true
+      },
+      {
+        "name": "Adaptability: CORS_ORIGINS configurable",
+        "passed": true
+      },
+      {
+        "name": "Adaptability: env.sh configuration script",
+        "passed": true
+      },
+      {
+        "name": "Installability: Dockerfile present",
+        "passed": true
+      },
+      {
+        "name": "Installability: docker-compose.yml present",
+        "passed": true
+      },
+      {
+        "name": "Installability: init.sql schema present",
+        "passed": true
+      },
+      {
+        "name": "Installability: requirements.txt present",
+        "passed": true
+      },
+      {
+        "name": "Installability: frontend package.json present",
+        "passed": true
+      },
+      {
+        "name": "Replaceability: Swagger API documentation",
+        "passed": true
+      },
+      {
+        "name": "Replaceability: OpenAPI JSON schema",
+        "passed": true
+      },
+      {
+        "name": "Replaceability: JSON standard response format",
+        "passed": true
+      }
+    ]
+  },
+  "IQ_installation": {
+    "score": 100.0,
+    "pass": 14,
+    "total": 14,
+    "tests": [
+      {
+        "name": "IQ: OS = Linux-6.8.0-100-generic-x86_64-with-glibc2.39",
+        "passed": true
+      },
+      {
+        "name": "IQ: Python = 3.12.3",
+        "passed": true
+      },
+      {
+        "name": "IQ: PostgreSQL connected",
+        "passed": true
+      },
+      {
+        "name": "IQ: Node.js = v20.20.0",
+        "passed": true
+      },
+      {
+        "name": "IQ: Docker = Docker version 29.2.1, build a5c7197",
+        "passed": true
+      },
+      {
+        "name": "IQ: DB schema = 21 tables",
+        "passed": true
+      },
+      {
+        "name": "IQ: API port 8000 accessible",
+        "passed": true
+      },
+      {
+        "name": "IQ: app.py present",
+        "passed": true
+      },
+      {
+        "name": "IQ: Dockerfile present",
+        "passed": true
+      },
+      {
+        "name": "IQ: docker-compose.yml present",
+        "passed": true
+      },
+      {
+        "name": "IQ: db/init.sql present",
+        "passed": true
+      },
+      {
+        "name": "IQ: frontend/package.json present",
+        "passed": true
+      },
+      {
+        "name": "IQ: requirements.txt present",
+        "passed": true
+      },
+      {
+        "name": "IQ: api_modules/database.py present",
+        "passed": true
+      }
+    ]
+  },
+  "OQ_operational": {
+    "score": 100.0,
+    "pass": 27,
+    "total": 27,
+    "tests": [
+      {
+        "name": "OQ: Login",
+        "passed": true
+      },
+      {
+        "name": "OQ: List items",
+        "passed": true
+      },
+      {
+        "name": "OQ: List BOM",
+        "passed": true
+      },
+      {
+        "name": "OQ: BOM explode",
+        "passed": true
+      },
+      {
+        "name": "OQ: BOM where-used",
+        "passed": true
+      },
+      {
+        "name": "OQ: List processes",
+        "passed": true
+      },
+      {
+        "name": "OQ: List routings",
+        "passed": true
+      },
+      {
+        "name": "OQ: List equipments",
+        "passed": true
+      },
+      {
+        "name": "OQ: Equipment status",
+        "passed": true
+      },
+      {
+        "name": "OQ: List plans",
+        "passed": true
+      },
+      {
+        "name": "OQ: List work orders",
+        "passed": true
+      },
+      {
+        "name": "OQ: Quality defects",
+        "passed": true
+      },
+      {
+        "name": "OQ: Inventory",
+        "passed": true
+      },
+      {
+        "name": "OQ: Production report",
+        "passed": true
+      },
+      {
+        "name": "OQ: Quality report",
+        "passed": true
+      },
+      {
+        "name": "OQ: LOT trace",
+        "passed": true
+      },
+      {
+        "name": "OQ: AI demand forecast",
+        "passed": true
+      },
+      {
+        "name": "OQ: AI schedule optimize",
+        "passed": true
+      },
+      {
+        "name": "OQ: AI defect predict",
+        "passed": true
+      },
+      {
+        "name": "OQ: AI failure predict",
+        "passed": true
+      },
+      {
+        "name": "OQ: AI insights",
+        "passed": true
+      },
+      {
+        "name": "OQ: Dashboard",
+        "passed": true
+      },
+      {
+        "name": "OQ Boundary: page=0, size=0",
+        "passed": true
+      },
+      {
+        "name": "OQ Boundary: page=9999",
+        "passed": true
+      },
+      {
+        "name": "OQ Error: Empty login → error msg",
+        "passed": true
+      },
+      {
+        "name": "OQ Error: Wrong creds → error msg",
+        "passed": true
+      },
+      {
+        "name": "OQ Transaction: Invalid inventory in handled",
+        "passed": true
+      }
+    ]
+  },
+  "PQ_performance": {
+    "score": 100.0,
+    "pass": 5,
+    "total": 5,
+    "endurance": {
+      "total_requests": 332,
+      "fail_rate": 0.0,
+      "avg_ms": 40.9,
+      "max_ms": 67.4,
+      "degradation_pct": 4.4
+    },
+    "tests": [
+      {
+        "name": "PQ Endurance: 332 requests in 3min",
+        "passed": true,
+        "detail": "fail=0 (0.0%), avg=41ms, max=67ms"
+      },
+      {
+        "name": "PQ Stability: Response time degradation 4.4%",
+        "passed": true,
+        "detail": "first_q=40ms, last_q=42ms"
+      },
+      {
+        "name": "PQ SLA: 100.0% under 200ms",
+        "passed": true
+      },
+      {
+        "name": "PQ Load: 50 concurrent",
+        "passed": true,
+        "detail": "50/50 OK, avg=398ms"
+      },
+      {
+        "name": "PQ TPS: 76.8",
+        "passed": true
+      }
+    ]
+  },
+  "FAT_acceptance": {
+    "score": 100.0,
+    "pass": 17,
+    "total": 17,
+    "tests": [
+      {
+        "name": "FAT-E2E-01: Login",
+        "passed": true
+      },
+      {
+        "name": "FAT-E2E-02: Items available",
+        "passed": true
+      },
+      {
+        "name": "FAT-E2E-03: BOM available",
+        "passed": true
+      },
+      {
+        "name": "FAT-E2E-04: Plans available",
+        "passed": true
+      },
+      {
+        "name": "FAT-E2E-05: Work orders available",
+        "passed": true
+      },
+      {
+        "name": "FAT-E2E-06: Quality data available",
+        "passed": true
+      },
+      {
+        "name": "FAT-E2E-07: Inventory available",
+        "passed": true
+      },
+      {
+        "name": "FAT-E2E-08: LOT trace works",
+        "passed": true
+      },
+      {
+        "name": "FAT-E2E-09: AI insights",
+        "passed": true
+      },
+      {
+        "name": "FAT-E2E-10: AI defect predict",
+        "passed": true
+      },
+      {
+        "name": "FAT-E2E-11: Production report",
+        "passed": true
+      },
+      {
+        "name": "FAT-E2E-12: Quality report",
+        "passed": true
+      },
+      {
+        "name": "FAT-DOC: USER_MANUAL.md",
+        "passed": true
+      },
+      {
+        "name": "FAT-DOC: README.md",
+        "passed": true
+      },
+      {
+        "name": "FAT-DOC: doc/ARCH.md",
+        "passed": true
+      },
+      {
+        "name": "FAT-DOC: doc/REQ/Requirements_Specification.md",
+        "passed": true
+      },
+      {
+        "name": "FAT-DOC: doc/REQ/Functional_Specification.md",
+        "passed": true
+      }
+    ]
+  },
+  "overall": {
+    "total_pass": 197,
+    "total_tests": 199,
+    "score": 99.0
+  },
+  "scores_summary": {
+    "Q1_functional_suitability": 96.7,
+    "Q2_reliability": 100.0,
+    "Q3_performance": 100.0,
+    "Q4_security": 100.0,
+    "Q5_usability": 100.0,
+    "Q6_compatibility": 100.0,
+    "Q7_maintainability": 91.7,
+    "Q8_portability": 100.0,
+    "IQ_installation": 100.0,
+    "OQ_operational": 100.0,
+    "PQ_performance": 100.0,
+    "FAT_acceptance": 100.0
+  }
+}

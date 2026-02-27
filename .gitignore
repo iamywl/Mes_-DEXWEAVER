@@ -12,3 +12,7 @@ postgres_data/
 # Python
 __pycache__/
 *.pyc
+
+# Reports (Excel analysis files - but keep evaluation reports)
+reports/*
+!reports/rep_evaluation/

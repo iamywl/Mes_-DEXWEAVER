@@ -1,6 +1,6 @@
-# KNU MES v5.4 — 스마트 팩토리 Manufacturing Execution System
+# DEXWEAVER MES v4.0 — 스마트 팩토리 Manufacturing Execution System
 
-> Kubernetes 기반 클라우드 네이티브 MES 시스템 — 경북대학교 스마트 팩토리
+> Kubernetes 기반 클라우드 네이티브 MES 시스템 (GS인증 표준 준수)
 
 ---
 
@@ -20,8 +20,8 @@ bash /root/MES_PROJECT/init.sh
 | 서비스 | URL |
 |--------|-----|
 | 웹 UI | `http://192.168.64.5:30173` |
-| API 문서 (Swagger) | `http://192.168.64.5:30461/docs` |
-| Keycloak 관리 콘솔 | `http://192.168.64.5:30080` |
+| API 문서 (Swagger) | `http://192.168.64.5:30461/api/docs` |
+| 건강체크 (Health) | `http://192.168.64.5:30461/api/health` |
 
 테스트 계정: `admin` / `admin1234`, `worker01` / `worker1234`, `viewer01` / `viewer1234`
 

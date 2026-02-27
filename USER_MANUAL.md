@@ -1,7 +1,7 @@
-# KNU MES 사용자 설명서
+# DEXWEAVER MES 사용자 설명서
 
-> **KNU Smart Factory MES v5.5** | Manufacturing Execution System
-> 최종 업데이트: 2026-02-24
+> **DEXWEAVER MES v4.0** | Manufacturing Execution System
+> 최종 업데이트: 2026-02-27
 
 ---
 
@@ -29,16 +29,18 @@
 
 ## 1. 시스템 개요
 
-KNU MES는 제조 현장의 생산 계획부터 실적, 품질, 재고까지 전 과정을 관리하는 **통합 제조 실행 시스템**입니다.
+DEXWEAVER MES는 제조 현장의 생산 계획부터 실적, 품질, 재고까지 전 과정을 관리하는 **통합 제조 실행 시스템**입니다.
 
 ### 주요 특징
 
 | 특징 | 설명 |
 |------|------|
 | **14개 메뉴** | 기준정보, 생산, 품질, 재고, AI 분석, 인프라 모니터링 |
-| **38개 API** | RESTful API 기반 백엔드 (FastAPI) |
-| **5종 AI 엔진** | 수요예측(Prophet), 일정최적화(OR-Tools), 불량예측(XGBoost), 고장예측(IsolationForest), 종합인사이트 |
-| **역할 기반 권한** | admin / worker / viewer 3단계 접근 제어 |
+| **40+ API** | RESTful API 기반 백엔드 (FastAPI) |
+| **5종 AI 엔진** | 수요예측(Prophet), 일정최적화(OR-Tools), 불량예측(XGBoost), 고장예측(IsolationForest), 분석인사이트 |
+| **역할 기반 권한** | admin / manager / worker / viewer 4단계 접근 제어 |
+| **JWT 인증** | 모든 API에 백엔드 토큰 인증 적용 (KISA 보안 기준) |
+| **LOT 추적성** | 완제품 LOT → 원자재 → 설비 → 작업자 역추적 |
 | **실시간 모니터링** | K8s Pod 상태, 인프라 CPU/메모리, 네트워크 토폴로지 |
 
 ### 접속 정보
@@ -46,8 +48,8 @@ KNU MES는 제조 현장의 생산 계획부터 실적, 품질, 재고까지 전
 | 서비스 | URL |
 |--------|-----|
 | 웹 UI (프론트엔드) | `http://<서버IP>:30173` |
-| API 문서 (Swagger) | `http://<서버IP>:30461/docs` |
-| Keycloak 관리 콘솔 | `http://<서버IP>:30080` |
+| API 문서 (Swagger) | `http://<서버IP>:30461/api/docs` |
+| 건강체크 (Health) | `http://<서버IP>:30461/api/health` |
 
 ---
 
