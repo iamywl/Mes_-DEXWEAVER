@@ -211,7 +211,7 @@ const App = () => {
       const r = await axios.post('/api/auth/register', formData);
       if (r.data.error) { setAuthError(r.data.error); setAuthLoading(false); return; }
       setAuthError(''); setAuthMode('login');
-      setAuthError('Registration successful! Please login.');
+      setAuthError(r.data.message || 'Registration successful! Admin approval required before login.');
     } catch (e) { setAuthError('Registration failed. Check server connection.'); }
     setAuthLoading(false);
   };
@@ -483,7 +483,7 @@ const App = () => {
                 <FormRow label="Name"><Input name="name" required className="w-full" placeholder="Full name"/></FormRow>
                 <FormRow label="Email"><Input name="email" type="email" className="w-full" placeholder="email@example.com"/></FormRow>
                 <FormRow label="Role">
-                  <Select name="role" onChange={()=>{}} value="" options={[{value:'worker',label:'Worker'},{value:'admin',label:'Admin'},{value:'viewer',label:'Viewer'}]} className="w-full"/>
+                  <Select name="role" onChange={()=>{}} value="" options={[{value:'worker',label:'Worker'},{value:'manager',label:'Manager'},{value:'viewer',label:'Viewer'}]} className="w-full"/>
                 </FormRow>
                 <BtnSuccess type="submit" className="w-full mt-2" disabled={authLoading}>
                   {authLoading ? 'Registering...' : 'Register'}
@@ -523,6 +523,10 @@ const App = () => {
               <button onClick={()=>openModal('register')}
                 className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-emerald-400 hover:bg-emerald-500/10 transition-all font-bold cursor-pointer">
                 + Register User
+              </button>
+              <button onClick={async()=>{try{const r=await axios.get('/api/auth/users');setExtra(p=>({...p,userList:r.data.users||[]}));}catch{}openModal('user_approve');}}
+                className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-amber-400 hover:bg-amber-500/10 transition-all font-bold cursor-pointer">
+                User Approval
               </button>
               <button onClick={async()=>{try{const r=await axios.get('/api/auth/users');setExtra(p=>({...p,userList:r.data.users||[]}));}catch{}openModal('permissions');}}
                 className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-purple-400 hover:bg-purple-500/10 transition-all font-bold cursor-pointer">
@@ -710,7 +714,7 @@ const App = () => {
                   <FilterSearch value={tf.bom.search} onChange={v=>setFilter('bom','search',v)} placeholder="Search parent, child..." />
                   <FilterCount total={allEntries.length} filtered={filteredBom.length} />
                 </FilterBar>
-                <Table cols={['Parent Code','Parent Name','Child Code','Child Name','Category','Qty/Unit','Loss Rate']}
+                <Table cols={['Parent Code','Parent Name','Child Code','Child Name','Category','Qty/Unit','Loss Rate','Actions']}
                   rows={filteredBom}
                   renderRow={(e,k)=>(
                     <tr key={k}>
@@ -721,6 +725,12 @@ const App = () => {
                       <td className="p-3"><Badge v={e.child_category}/></td>
                       <td className="p-3 text-amber-400 font-bold">{e.qty_per_unit}</td>
                       <td className="p-3 text-slate-500">{e.loss_rate}%</td>
+                      <td className="p-3">
+                        <div className="flex gap-1">
+                          <button onClick={()=>openModal('bom_edit',{bom:e})} className="text-blue-400 hover:text-blue-300 text-[10px] font-bold cursor-pointer">Edit</button>
+                          <button onClick={async()=>{if(confirm(`Delete BOM ${e.parent_item}→${e.child_item}?`)){try{const r=await axios.delete(`/api/bom/${e.bom_id}`);if(r.data.error){showToast(r.data.error,false);}else{showToast('BOM entry deleted');refreshPage('BOM');}}catch(err){showToast('Delete failed',false);}}}} className="text-red-400 hover:text-red-300 text-[10px] font-bold cursor-pointer">Del</button>
+                        </div>
+                      </td>
                     </tr>
                   )} />
                 {/* Top parents chart */}
@@ -881,7 +891,7 @@ const App = () => {
                   <FilterSearch value={tf.proc.search} onChange={v=>setFilter('proc','search',v)} placeholder="Search code, name, equipment..." />
                   <FilterCount total={allProcs.length} filtered={filteredProcs.length} />
                 </FilterBar>
-                <Table cols={['Process Code','Name','Std Time','Description','Equipment','Equip Status']}
+                <Table cols={['Process Code','Name','Std Time','Description','Equipment','Equip Status','Actions']}
                   rows={filteredProcs}
                   renderRow={(p,k)=>(
                     <tr key={k}>
@@ -891,6 +901,12 @@ const App = () => {
                       <td className="p-3 text-slate-500 max-w-[200px] truncate">{p.description||'-'}</td>
                       <td className="p-3 text-purple-400">{p.equip_name||'-'} <span className="text-slate-600 text-[9px]">{p.equip_code||''}</span></td>
                       <td className="p-3">{p.equip_status ? <Badge v={p.equip_status}/> : <span className="text-slate-600">-</span>}</td>
+                      <td className="p-3">
+                        <div className="flex gap-1">
+                          <button onClick={()=>openModal('process_edit',{proc:p})} className="text-blue-400 hover:text-blue-300 text-[10px] font-bold cursor-pointer">Edit</button>
+                          <button onClick={async()=>{if(confirm(`Delete ${p.process_code}?`)){try{const r=await axios.delete(`/api/processes/${p.process_code}`);if(r.data.error){showToast(r.data.error,false);}else{showToast(`${p.process_code} deleted`);refreshPage('PROCESS');}}catch(err){showToast(err.response?.data?.error||'Delete failed',false);}}}} className="text-red-400 hover:text-red-300 text-[10px] font-bold cursor-pointer">Del</button>
+                        </div>
+                      </td>
                     </tr>
                   )} />
                 {/* Process time chart */}
@@ -1123,9 +1139,12 @@ const App = () => {
                 <FilterSearch value={tf.wo.search} onChange={v=>setFilter('wo','search',v)} placeholder="Search WO ID, item, equipment..." />
                 <FilterCount total={allWo.length} filtered={filtered.length} />
               </FilterBar>
-              <Table cols={['WO ID','Item','Qty','Date','Equipment','Status']}
+              <Table cols={['WO ID','Item','Qty','Date','Equipment','Status','Actions']}
                 rows={filtered}
-                renderRow={(w,k)=>(
+                renderRow={(w,k)=>{
+                  const transitions = {WAIT:['WORKING'],WORKING:['DONE','HOLD'],HOLD:['WORKING'],DONE:[]};
+                  const allowed = transitions[w.status]||[];
+                  return (
                   <tr key={k}>
                     <td className="p-3 font-mono text-blue-400">{w.wo_id}</td>
                     <td className="p-3 text-white">{w.item_name}</td>
@@ -1133,8 +1152,20 @@ const App = () => {
                     <td className="p-3">{w.work_date}</td>
                     <td className="p-3 text-purple-400">{w.equip_code}</td>
                     <td className="p-3"><Badge v={w.status}/></td>
+                    <td className="p-3">
+                      <div className="flex gap-1 flex-wrap">
+                        {allowed.map(s=>(
+                          <button key={s} onClick={async()=>{try{const r=await axios.put(`/api/work-orders/${w.wo_id}/status`,{status:s});if(r.data.error){showToast(r.data.error,false);}else{showToast(`${w.wo_id} → ${s}`);refreshPage('WORK_ORDER');}}catch(err){showToast(err.response?.data?.error||'Failed',false);}}}
+                            className={`px-2 py-0.5 rounded text-[9px] font-bold cursor-pointer ${s==='DONE'?'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30':s==='HOLD'?'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30':'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'}`}>
+                            →{s}
+                          </button>
+                        ))}
+                        <button onClick={async()=>{try{const r=await axios.get(`/api/work-orders/${w.wo_id}`);openModal('wo_detail',{detail:r.data});}catch{}}} className="text-slate-400 hover:text-white text-[9px] font-bold cursor-pointer">Detail</button>
+                      </div>
+                    </td>
                   </tr>
-                )} />
+                  );
+                }} />
             </div>
           );
         })()}
@@ -1207,11 +1238,14 @@ const App = () => {
           });
           return (
             <div className="space-y-4">
-              {canWrite('INVENTORY') && <div className="flex justify-end gap-2">
-                <BtnSuccess onClick={()=>openModal('inv_in')}>+ Receive (入庫)</BtnSuccess>
-                <Btn onClick={()=>openModal('inv_out')}>Issue (出庫)</Btn>
-                <button onClick={()=>openModal('inv_move')} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold text-xs cursor-pointer">Move (移動)</button>
-              </div>}
+              <div className="flex justify-end gap-2 flex-wrap">
+                {canWrite('INVENTORY') && <>
+                  <BtnSuccess onClick={()=>openModal('inv_in')}>+ Receive (入庫)</BtnSuccess>
+                  <Btn onClick={()=>openModal('inv_out')}>Issue (出庫)</Btn>
+                  <button onClick={()=>openModal('inv_move')} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold text-xs cursor-pointer">Move (移動)</button>
+                </>}
+                <button onClick={()=>openModal('lot_trace')} className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-bold text-xs cursor-pointer">LOT Trace (추적)</button>
+              </div>
               <FilterBar>
                 <FilterSelect label="Status" value={tf.inv.status} onChange={v=>setFilter('inv','status',v)}
                   options={[{value:'ALL',label:'All'}, ...statuses.map(s=>({value:s,label:s}))]} />
@@ -2265,7 +2299,7 @@ const App = () => {
           </FormRow>
           <FormRow label="Quantity"><Input name="qty" type="number" required className="w-full" placeholder="Quantity"/></FormRow>
           <FormRow label="Out Type">
-            <Select name="out_type" onChange={()=>{}} value="" options={[{value:'OUT',label:'Production/Ship'},{value:'MOVE',label:'Move'}]} className="w-full"/>
+            <Select name="out_type" onChange={()=>{}} value="" options={[{value:'OUT',label:'OUT (출고)'},{value:'SHIP',label:'SHIP (출하)'},{value:'SCRAP',label:'SCRAP (폐기)'},{value:'RETURN',label:'RETURN (반품)'}]} className="w-full"/>
           </FormRow>
           <FormRow label="Reference ID"><Input name="ref_id" className="w-full" placeholder="e.g. WO-20240101-001"/></FormRow>
           <div className="flex justify-end gap-2 mt-4">
@@ -2416,6 +2450,261 @@ const App = () => {
                 }}>Save Permissions</BtnSuccess>
               </div>
             </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── MODAL: BOM Edit ──────────────────────────────── */}
+      <Modal open={modal.type==='bom_edit'} onClose={closeModal} title={`Edit BOM: ${modal.data?.bom?.parent_item||''} → ${modal.data?.bom?.child_item||''}`}>
+        {modal.data?.bom && (
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          try {
+            const r=await axios.put(`/api/bom/${modal.data.bom.bom_id}`,{qty_per_unit:Number(fd.get('qty_per_unit')),loss_rate:Number(fd.get('loss_rate'))});
+            if(r.data.error){showToast(r.data.error,false);}else{showToast('BOM entry updated');closeModal();refreshPage('BOM');}
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <div className="bg-[#0f172a] p-3 rounded-lg border border-slate-800 mb-4 text-xs">
+            <div className="flex justify-between"><span className="text-slate-500">Parent:</span><span className="text-purple-400 font-mono">{modal.data.bom.parent_item} - {modal.data.bom.parent_name}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Child:</span><span className="text-blue-400 font-mono">{modal.data.bom.child_item} - {modal.data.bom.child_name}</span></div>
+          </div>
+          <FormRow label="Qty per Unit"><Input name="qty_per_unit" type="number" step="0.01" required className="w-full" defaultValue={modal.data.bom.qty_per_unit}/></FormRow>
+          <FormRow label="Loss Rate (%)"><Input name="loss_rate" type="number" step="0.01" className="w-full" defaultValue={modal.data.bom.loss_rate}/></FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Update</BtnSuccess>
+          </div>
+        </form>
+        )}
+      </Modal>
+
+      {/* ── MODAL: Process Edit ────────────────────────────── */}
+      <Modal open={modal.type==='process_edit'} onClose={closeModal} title={`Edit Process: ${modal.data?.proc?.process_code||''}`}>
+        {modal.data?.proc && (
+        <form onSubmit={async e=>{
+          e.preventDefault();
+          const fd=new FormData(e.target);
+          const body={};
+          if(fd.get('name')) body.name=fd.get('name');
+          if(fd.get('std_time_min')) body.std_time_min=Number(fd.get('std_time_min'));
+          if(fd.get('description')!==null) body.description=fd.get('description');
+          if(fd.get('equip_code')) body.equip_code=fd.get('equip_code');
+          try {
+            const r=await axios.put(`/api/processes/${modal.data.proc.process_code}`,body);
+            if(r.data.error){showToast(r.data.error,false);}else{showToast(`${modal.data.proc.process_code} updated`);closeModal();refreshPage('PROCESS');}
+          } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
+        }}>
+          <FormRow label="Process Name"><Input name="name" defaultValue={modal.data.proc.name} required className="w-full"/></FormRow>
+          <FormRow label="Standard Time (min)"><Input name="std_time_min" type="number" defaultValue={modal.data.proc.std_time_min} required className="w-full"/></FormRow>
+          <FormRow label="Description"><Input name="description" defaultValue={modal.data.proc.description||''} className="w-full"/></FormRow>
+          <FormRow label="Equipment">
+            <select name="equip_code" defaultValue={modal.data.proc.equip_code||''} className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs w-full">
+              <option value="">None</option>
+              {(extra.equips||[]).map(e=><option key={e.equip_code} value={e.equip_code}>{e.equip_code} - {e.name}</option>)}
+            </select>
+          </FormRow>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={closeModal} className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+            <BtnSuccess type="submit">Update</BtnSuccess>
+          </div>
+        </form>
+        )}
+      </Modal>
+
+      {/* ── MODAL: Work Order Detail ───────────────────────── */}
+      <Modal open={modal.type==='wo_detail'} onClose={closeModal} title={`Work Order Detail: ${modal.data?.detail?.wo_id||''}`}>
+        {modal.data?.detail && (() => {
+          const d = modal.data.detail;
+          return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div><span className="text-slate-500">Item:</span> <span className="text-white font-bold">{d.item?.name}</span> <span className="text-blue-400 font-mono">({d.item?.code})</span></div>
+              <div><span className="text-slate-500">Status:</span> <Badge v={d.status}/></div>
+              <div><span className="text-slate-500">Plan Qty:</span> <span className="text-white">{d.qty}</span></div>
+              <div><span className="text-slate-500">Progress:</span> <span className="text-emerald-400 font-bold">{d.progress_pct}%</span></div>
+              <div><span className="text-slate-500">Work Date:</span> <span className="text-white">{d.work_date}</span></div>
+              <div><span className="text-slate-500">Equipment:</span> <span className="text-purple-400">{d.equip_code||'-'}</span></div>
+            </div>
+            {/* Progress bar */}
+            <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${d.progress_pct>=100?'bg-emerald-500':d.progress_pct>=50?'bg-blue-500':'bg-amber-500'}`} style={{width:`${Math.min(d.progress_pct,100)}%`}}/>
+            </div>
+            {/* Routing */}
+            {(d.routing||[]).length>0 && (
+              <div>
+                <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-2">Routing</h4>
+                <div className="flex gap-2 items-center flex-wrap">
+                  {d.routing.map((r,i)=>(
+                    <React.Fragment key={i}>
+                      <div className="bg-[#0f172a] px-3 py-2 rounded-lg border border-slate-800 text-center">
+                        <div className="text-[9px] text-slate-600">Step {r.seq}</div>
+                        <div className="text-blue-400 font-bold text-xs">{r.process}</div>
+                        <div className="text-amber-400 text-[10px]">{r.cycle_time}min</div>
+                      </div>
+                      {i < d.routing.length-1 && <span className="text-slate-600">→</span>}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Results */}
+            {(d.results||[]).length>0 && (
+              <div>
+                <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-2">Work Results</h4>
+                <Table cols={['ID','Good','Defect','Worker','Start','End']}
+                  rows={d.results}
+                  renderRow={(r,k)=>(
+                    <tr key={k}>
+                      <td className="p-2 text-blue-400 font-mono">{r.result_id}</td>
+                      <td className="p-2 text-emerald-400 font-bold">{r.good_qty}</td>
+                      <td className="p-2 text-red-400">{r.defect_qty}</td>
+                      <td className="p-2">{r.worker_id||'-'}</td>
+                      <td className="p-2 text-[10px]">{r.start_time||'-'}</td>
+                      <td className="p-2 text-[10px]">{r.end_time||'-'}</td>
+                    </tr>
+                  )} />
+              </div>
+            )}
+          </div>
+          );
+        })()}
+      </Modal>
+
+      {/* ── MODAL: LOT Trace (추적) ────────────────────────── */}
+      <Modal open={modal.type==='lot_trace'} onClose={closeModal} title="LOT Traceability (추적)">
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Input id="lot-trace-input" className="flex-1" placeholder="Enter LOT No (e.g. LOT-20260101-001)"/>
+            <BtnSuccess onClick={async()=>{
+              const lotNo=document.getElementById('lot-trace-input').value.trim();
+              if(!lotNo){showToast('LOT번호를 입력하세요',false);return;}
+              try{
+                const r=await axios.get(`/api/lot/trace/${lotNo}`);
+                if(r.data.error){showToast(r.data.error,false);}else{setExtra(p=>({...p,lotTrace:r.data}));}
+              }catch(err){showToast('LOT 추적 실패',false);}
+            }}>Trace</BtnSuccess>
+          </div>
+          {extra.lotTrace && (
+            <div className="space-y-3">
+              <div className="bg-[#0f172a] p-3 rounded-lg border border-slate-800">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-white font-bold text-xs">LOT: <span className="text-blue-400 font-mono">{extra.lotTrace.lot_no}</span></span>
+                  <Badge v={extra.lotTrace.trace_complete ? 'PASS' : 'FAIL'}/>
+                </div>
+              </div>
+              {/* Inventory info */}
+              {(extra.lotTrace.inventory||[]).length>0 && (
+                <div>
+                  <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-1">Inventory</h4>
+                  {extra.lotTrace.inventory.map((inv,i)=>(
+                    <div key={i} className="bg-[#0f172a] p-2 rounded-lg border border-slate-800 mb-1 text-xs">
+                      <span className="text-blue-400 font-mono">{inv.item_code}</span> <span className="text-white">{inv.item_name}</span>
+                      <span className="text-emerald-400 ml-2 font-bold">{inv.qty} EA</span>
+                      <span className="text-slate-500 ml-2">WH:{inv.warehouse} LOC:{inv.location||'-'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Transactions */}
+              {(extra.lotTrace.transactions||[]).length>0 && (
+                <div>
+                  <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-1">Transactions</h4>
+                  <Table cols={['Slip','Item','Type','Qty','Warehouse','Supplier','Time']}
+                    rows={extra.lotTrace.transactions}
+                    renderRow={(t,k)=>(
+                      <tr key={k}>
+                        <td className="p-2 text-blue-400 font-mono text-[10px]">{t.slip_no}</td>
+                        <td className="p-2">{t.item_code}</td>
+                        <td className="p-2"><Badge v={t.type}/></td>
+                        <td className="p-2 font-bold">{t.qty}</td>
+                        <td className="p-2">{t.warehouse||'-'}</td>
+                        <td className="p-2">{t.supplier||'-'}</td>
+                        <td className="p-2 text-[10px] text-slate-500">{t.time||'-'}</td>
+                      </tr>
+                    )} />
+                </div>
+              )}
+              {/* Work Orders */}
+              {(extra.lotTrace.work_orders||[]).length>0 && (
+                <div>
+                  <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-1">Related Work Orders</h4>
+                  {extra.lotTrace.work_orders.map((wo,i)=>(
+                    <div key={i} className="bg-[#0f172a] p-2 rounded-lg border border-slate-800 mb-1 text-xs">
+                      <div className="flex justify-between">
+                        <span><span className="text-blue-400 font-mono">{wo.wo_id}</span> <span className="text-white">{wo.item_name}</span></span>
+                        <Badge v={wo.status}/>
+                      </div>
+                      <div className="text-slate-500 text-[10px]">Equipment: {wo.equip_code||'-'} | Date: {wo.work_date}</div>
+                      {(wo.results||[]).map((r,ri)=>(
+                        <div key={ri} className="text-[10px] ml-4 text-slate-400">
+                          Worker:{r.worker_id||'-'} Good:{r.good_qty} Defect:{r.defect_qty} [{r.start_time||'-'} ~ {r.end_time||'-'}]
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Inspections */}
+              {(extra.lotTrace.inspections||[]).length>0 && (
+                <div>
+                  <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-1">Quality Inspections</h4>
+                  {extra.lotTrace.inspections.map((ins,i)=>(
+                    <div key={i} className="bg-[#0f172a] p-2 rounded-lg border border-slate-800 mb-1 text-xs flex justify-between items-center">
+                      <span><span className="text-blue-400 font-mono">{ins.inspection_id}</span> <span className="text-slate-400">{ins.type}</span></span>
+                      <span><Badge v={ins.judgment}/> <span className="text-slate-500 text-[10px]">{ins.inspector_id||'-'} {ins.time||''}</span></span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(extra.lotTrace.inventory||[]).length===0 && (extra.lotTrace.transactions||[]).length===0 && (
+                <div className="text-center text-slate-600 py-4">No trace data found for this LOT.</div>
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── MODAL: User Approval (관리자 승인) ─────────────── */}
+      <Modal open={modal.type==='user_approve'} onClose={closeModal} title="User Approval (사용자 승인)">
+        <div className="space-y-3">
+          {(extra.userList||[]).length > 0 ? (
+            <div>
+              <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-2">Pending Approval</h4>
+              {(extra.userList||[]).filter(u=>!u.is_approved).length === 0 ? (
+                <div className="text-center text-slate-600 py-4">No pending users</div>
+              ) : (
+                (extra.userList||[]).filter(u=>!u.is_approved).map(u=>(
+                  <div key={u.user_id} className="bg-[#0f172a] p-3 rounded-lg border border-slate-800 mb-2 flex items-center justify-between">
+                    <div>
+                      <div className="text-white font-bold text-xs">{u.name} <span className="text-slate-500 font-mono text-[10px]">({u.user_id})</span></div>
+                      <div className="text-slate-500 text-[10px]">{u.email||'-'} | Role: {u.role} | {u.created_at}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={async()=>{try{const r=await axios.put(`/api/auth/approve/${u.user_id}`,{approved:true});if(r.data.error){showToast(r.data.error,false);}else{showToast(`${u.user_id} approved`);const rr=await axios.get('/api/auth/users');setExtra(p=>({...p,userList:rr.data.users||[]}));}}catch(err){showToast('Approval failed',false);}}}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-[10px] font-bold cursor-pointer">Approve</button>
+                      <button onClick={async()=>{try{const r=await axios.put(`/api/auth/approve/${u.user_id}`,{approved:false});if(r.data.error){showToast(r.data.error,false);}else{showToast(`${u.user_id} rejected`);const rr=await axios.get('/api/auth/users');setExtra(p=>({...p,userList:rr.data.users||[]}));}}catch(err){showToast('Rejection failed',false);}}}
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-[10px] font-bold cursor-pointer">Reject</button>
+                    </div>
+                  </div>
+                ))
+              )}
+              <h4 className="text-slate-400 font-bold text-[10px] uppercase mb-2 mt-4">All Users</h4>
+              <Table cols={['ID','Name','Role','Email','Approved','Created']}
+                rows={extra.userList||[]}
+                renderRow={(u,k)=>(
+                  <tr key={k}>
+                    <td className="p-2 text-blue-400 font-mono">{u.user_id}</td>
+                    <td className="p-2 text-white">{u.name}</td>
+                    <td className="p-2"><Badge v={u.role==='admin'?'RUNNING':u.role==='manager'?'HOLD':'NORMAL'}/> <span className="text-xs">{u.role}</span></td>
+                    <td className="p-2 text-slate-500">{u.email||'-'}</td>
+                    <td className="p-2">{u.is_approved ? <span className="text-emerald-400 font-bold">Yes</span> : <span className="text-red-400 font-bold">No</span>}</td>
+                    <td className="p-2 text-[10px] text-slate-500">{u.created_at}</td>
+                  </tr>
+                )} />
+            </div>
+          ) : (
+            <div className="text-center text-slate-600 py-4">Loading users...</div>
           )}
         </div>
       </Modal>
