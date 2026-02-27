@@ -76,14 +76,18 @@ async def create_process(data: dict) -> dict:
     try:
         conn = get_conn()
         if not conn:
-            return {"error": "Database connection failed."}
+            return {"error": "데이터베이스 연결에 실패했습니다."}
 
         cursor = conn.cursor()
 
-        # Auto-generate process_code
+        name = data.get("name", "").strip()
+        if not name:
+            return {"error": "공정명은 필수입니다."}
+
+        # Auto-generate process_code (numeric sort)
         cursor.execute(
             "SELECT process_code FROM processes "
-            "ORDER BY process_code DESC LIMIT 1"
+            "ORDER BY CAST(SUBSTRING(process_code FROM 5) AS INTEGER) DESC LIMIT 1"
         )
         row = cursor.fetchone()
         if row:
@@ -96,8 +100,7 @@ async def create_process(data: dict) -> dict:
             "INSERT INTO processes (process_code, name, std_time_min, "
             "description, equip_code) VALUES (%s, %s, %s, %s, %s)",
             (
-                process_code,
-                data["name"],
+                process_code, name,
                 data.get("std_time_min", 0),
                 data.get("description"),
                 data.get("equip_code"),
@@ -106,10 +109,84 @@ async def create_process(data: dict) -> dict:
         conn.commit()
         cursor.close()
         return {"process_code": process_code, "success": True}
-    except Exception as e:
+    except Exception:
         if conn:
             conn.rollback()
-        return {"error": str(e)}
+        return {"error": "공정 등록 중 오류가 발생했습니다."}
+    finally:
+        if conn:
+            release_conn(conn)
+
+
+async def update_process(process_code: str, data: dict) -> dict:
+    """FN-010: Update a process."""
+    conn = None
+    try:
+        conn = get_conn()
+        if not conn:
+            return {"error": "데이터베이스 연결에 실패했습니다."}
+        cursor = conn.cursor()
+
+        sets = []
+        params = []
+        for field, col in [("name", "name"), ("std_time_min", "std_time_min"),
+                           ("description", "description"), ("equip_code", "equip_code")]:
+            if field in data:
+                sets.append(f"{col} = %s")
+                params.append(data[field])
+
+        if not sets:
+            return {"error": "수정할 항목이 없습니다."}
+
+        params.append(process_code)
+        cursor.execute(
+            f"UPDATE processes SET {', '.join(sets)} WHERE process_code = %s",
+            params,
+        )
+        if cursor.rowcount == 0:
+            return {"error": "공정을 찾을 수 없습니다."}
+        conn.commit()
+        cursor.close()
+        return {"success": True, "process_code": process_code}
+    except Exception:
+        if conn:
+            conn.rollback()
+        return {"error": "공정 수정 중 오류가 발생했습니다."}
+    finally:
+        if conn:
+            release_conn(conn)
+
+
+async def delete_process(process_code: str) -> dict:
+    """FN-010: Delete a process (check FK references first)."""
+    conn = None
+    try:
+        conn = get_conn()
+        if not conn:
+            return {"error": "데이터베이스 연결에 실패했습니다."}
+        cursor = conn.cursor()
+
+        # Check if used in routings
+        cursor.execute(
+            "SELECT COUNT(*) FROM routings WHERE process_code = %s",
+            (process_code,),
+        )
+        if cursor.fetchone()[0] > 0:
+            return {"error": "라우팅에서 사용 중인 공정은 삭제할 수 없습니다."}
+
+        cursor.execute(
+            "DELETE FROM processes WHERE process_code = %s",
+            (process_code,),
+        )
+        if cursor.rowcount == 0:
+            return {"error": "공정을 찾을 수 없습니다."}
+        conn.commit()
+        cursor.close()
+        return {"success": True, "deleted": process_code}
+    except Exception:
+        if conn:
+            conn.rollback()
+        return {"error": "공정 삭제 중 오류가 발생했습니다."}
     finally:
         if conn:
             release_conn(conn)

@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
     name       VARCHAR(100) NOT NULL,
     email      VARCHAR(200),
     role       VARCHAR(20) NOT NULL DEFAULT 'worker'
-                   CHECK (role IN ('admin','worker','viewer')),
+                   CHECK (role IN ('admin','manager','worker','viewer')),
+    is_approved BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT NOW()
 );
 

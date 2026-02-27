@@ -110,38 +110,141 @@ async def bom_summary() -> dict:
             release_conn(conn)
 
 
+def _check_circular(cursor, parent: str, child: str) -> bool:
+    """Recursive circular reference check: A→B→C→A detection."""
+    visited = set()
+
+    def _walk(current):
+        if current == parent:
+            return True
+        if current in visited:
+            return False
+        visited.add(current)
+        cursor.execute(
+            "SELECT child_item FROM bom WHERE parent_item = %s",
+            (current,),
+        )
+        for (next_child,) in cursor.fetchall():
+            if _walk(next_child):
+                return True
+        return False
+
+    return _walk(child)
+
+
 async def create_bom(data: dict) -> dict:
-    """FN-008: Register a BOM entry."""
+    """FN-008: Register a BOM entry with recursive circular reference check."""
     conn = None
     try:
         conn = get_conn()
         if not conn:
-            return {"error": "Database connection failed."}
+            return {"error": "데이터베이스 연결에 실패했습니다."}
 
         cursor = conn.cursor()
 
-        parent = data["parent_item"]
-        child = data["child_item"]
+        parent = data.get("parent_item", "").strip()
+        child = data.get("child_item", "").strip()
 
-        # Circular reference check
+        if not parent or not child:
+            return {"error": "모품목과 자품목 코드는 필수입니다."}
+
+        # Direct circular reference check
         if parent == child:
-            return {"error": "Parent and child cannot be the same."}
+            return {"error": "모품목과 자품목이 동일할 수 없습니다."}
+
+        # Recursive circular reference check (A→B→C→A)
+        if _check_circular(cursor, parent, child):
+            return {"error": f"순환참조가 감지되었습니다. {child}의 하위에 이미 {parent}가 존재합니다."}
+
+        qty = data.get("qty_per_unit", 1)
+        loss = data.get("loss_rate", 0)
+        if qty <= 0:
+            return {"error": "소요량은 0보다 커야 합니다."}
 
         cursor.execute(
             "INSERT INTO bom (parent_item, child_item, qty_per_unit, loss_rate) "
             "VALUES (%s, %s, %s, %s) RETURNING bom_id",
-            (parent, child,
-             data.get("qty_per_unit", 1),
-             data.get("loss_rate", 0)),
+            (parent, child, qty, loss),
         )
         bom_id = cursor.fetchone()[0]
         conn.commit()
         cursor.close()
         return {"bom_id": bom_id, "success": True}
-    except Exception as e:
+    except Exception:
         if conn:
             conn.rollback()
-        return {"error": str(e)}
+        return {"error": "BOM 등록 중 오류가 발생했습니다."}
+    finally:
+        if conn:
+            release_conn(conn)
+
+
+async def update_bom(bom_id: int, data: dict) -> dict:
+    """FN-008: Update a BOM entry."""
+    conn = None
+    try:
+        conn = get_conn()
+        if not conn:
+            return {"error": "데이터베이스 연결에 실패했습니다."}
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT parent_item, child_item FROM bom WHERE bom_id = %s", (bom_id,))
+        row = cursor.fetchone()
+        if not row:
+            return {"error": "BOM 항목을 찾을 수 없습니다."}
+
+        new_child = data.get("child_item", row[1]).strip()
+        parent = row[0]
+
+        if parent == new_child:
+            return {"error": "모품목과 자품목이 동일할 수 없습니다."}
+
+        if new_child != row[1] and _check_circular(cursor, parent, new_child):
+            return {"error": f"순환참조가 감지되었습니다."}
+
+        sets = []
+        params = []
+        for field, col in [("child_item", "child_item"), ("qty_per_unit", "qty_per_unit"),
+                           ("loss_rate", "loss_rate")]:
+            if field in data:
+                sets.append(f"{col} = %s")
+                params.append(data[field])
+
+        if not sets:
+            return {"error": "수정할 항목이 없습니다."}
+
+        params.append(bom_id)
+        cursor.execute(f"UPDATE bom SET {', '.join(sets)} WHERE bom_id = %s", params)
+        conn.commit()
+        cursor.close()
+        return {"success": True, "bom_id": bom_id}
+    except Exception:
+        if conn:
+            conn.rollback()
+        return {"error": "BOM 수정 중 오류가 발생했습니다."}
+    finally:
+        if conn:
+            release_conn(conn)
+
+
+async def delete_bom(bom_id: int) -> dict:
+    """FN-008: Delete a BOM entry."""
+    conn = None
+    try:
+        conn = get_conn()
+        if not conn:
+            return {"error": "데이터베이스 연결에 실패했습니다."}
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM bom WHERE bom_id = %s", (bom_id,))
+        if cursor.rowcount == 0:
+            return {"error": "BOM 항목을 찾을 수 없습니다."}
+        conn.commit()
+        cursor.close()
+        return {"success": True, "deleted": bom_id}
+    except Exception:
+        if conn:
+            conn.rollback()
+        return {"error": "BOM 삭제 중 오류가 발생했습니다."}
     finally:
         if conn:
             release_conn(conn)

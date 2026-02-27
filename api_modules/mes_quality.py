@@ -60,12 +60,38 @@ async def create_inspection(data: dict) -> dict:
             name = r["check_name"]
             value = r.get("value")
             j = "PASS"
-            if name in stds and stds[name][1] == "NUMERIC" and value is not None:
+            if name in stds:
+                check_type = stds[name][1]
                 mn, mx = stds[name][2], stds[name][3]
-                if mn is not None and float(value) < float(mn):
-                    j = "FAIL"
-                if mx is not None and float(value) > float(mx):
-                    j = "FAIL"
+                if check_type == "NUMERIC" and value is not None:
+                    # 수치형: min/max 범위 검사
+                    if mn is not None and float(value) < float(mn):
+                        j = "FAIL"
+                    if mx is not None and float(value) > float(mx):
+                        j = "FAIL"
+                elif check_type == "TEXT":
+                    # 텍스트형: 기준값과 일치 검사
+                    std_val = stds[name][2]  # min_value에 기준텍스트 저장
+                    if std_val is not None and value is not None:
+                        if str(value).strip().upper() != str(std_val).strip().upper():
+                            j = "FAIL"
+                elif check_type == "VISUAL":
+                    # 외관검사: value가 'PASS'/'OK'/'합격'이 아니면 FAIL
+                    if value is not None:
+                        pass_values = {"PASS", "OK", "합격", "양호", "정상"}
+                        if str(value).strip().upper() not in pass_values:
+                            j = "FAIL"
+                    # value가 None이면 검사자가 별도 판정 → details의 judgment 사용
+                    elif r.get("judgment"):
+                        j = r["judgment"].upper()
+                else:
+                    # 기타 타입: value 있으면 PASS, 명시적 judgment 우선
+                    if r.get("judgment"):
+                        j = r["judgment"].upper()
+            else:
+                # 기준 미등록 항목은 명시적 judgment 사용
+                if r.get("judgment"):
+                    j = r["judgment"].upper()
             if j == "FAIL":
                 overall = "FAIL"
                 fail_items.append(name)

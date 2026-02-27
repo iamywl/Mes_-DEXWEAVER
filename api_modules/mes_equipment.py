@@ -27,10 +27,10 @@ async def create_equipment(data: dict) -> dict:
 
         cursor = conn.cursor()
 
-        # Auto-generate equip_code
+        # Auto-generate equip_code (numeric sort to avoid EQP-010 < EQP-9 bug)
         cursor.execute(
             "SELECT equip_code FROM equipments "
-            "ORDER BY equip_code DESC LIMIT 1"
+            "ORDER BY CAST(SUBSTRING(equip_code FROM 5) AS INTEGER) DESC LIMIT 1"
         )
         row = cursor.fetchone()
         if row:

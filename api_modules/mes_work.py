@@ -190,16 +190,78 @@ async def get_work_order_detail(wo_id: str) -> dict:
             release_conn(conn)
 
 
-async def create_work_result(data: dict) -> dict:
-    """FN-023: Register work result."""
+async def update_work_order_status(wo_id: str, data: dict) -> dict:
+    """FN-022: Explicit work order status change with transition validation."""
+    VALID_TRANSITIONS = {
+        "WAIT": ["WORKING"],
+        "WORKING": ["DONE", "HOLD"],
+        "HOLD": ["WORKING"],
+        "DONE": [],
+    }
     conn = None
     try:
         conn = get_conn()
         if not conn:
-            return {"error": "Database connection failed."}
+            return {"error": "데이터베이스 연결에 실패했습니다."}
+        cursor = conn.cursor()
+
+        new_status = data.get("status", "").upper()
+        cursor.execute("SELECT status FROM work_orders WHERE wo_id = %s", (wo_id,))
+        row = cursor.fetchone()
+        if not row:
+            return {"error": "작업지시를 찾을 수 없습니다."}
+
+        current = row[0]
+        allowed = VALID_TRANSITIONS.get(current, [])
+        if new_status not in allowed:
+            return {"error": f"상태 전이 불가: {current} → {new_status}. 허용: {allowed}"}
+
+        cursor.execute(
+            "UPDATE work_orders SET status = %s WHERE wo_id = %s",
+            (new_status, wo_id),
+        )
+        conn.commit()
+        cursor.close()
+        return {"success": True, "wo_id": wo_id, "status": new_status}
+    except Exception:
+        if conn:
+            conn.rollback()
+        return {"error": "상태 변경 중 오류가 발생했습니다."}
+    finally:
+        if conn:
+            release_conn(conn)
+
+
+async def create_work_result(data: dict) -> dict:
+    """FN-023: Register work result with proper state transition."""
+    conn = None
+    try:
+        conn = get_conn()
+        if not conn:
+            return {"error": "데이터베이스 연결에 실패했습니다."}
 
         cursor = conn.cursor()
-        wo_id = data["wo_id"]
+        wo_id = data.get("wo_id", "")
+        if not wo_id:
+            return {"error": "작업지시 ID는 필수입니다."}
+
+        # Validate WO exists and check current status
+        cursor.execute(
+            "SELECT status, plan_qty FROM work_orders WHERE wo_id = %s",
+            (wo_id,),
+        )
+        wo_row = cursor.fetchone()
+        if not wo_row:
+            return {"error": "작업지시를 찾을 수 없습니다."}
+        if wo_row[0] == "DONE":
+            return {"error": "이미 완료된 작업지시입니다."}
+
+        # Step 1: WAIT → WORKING transition first (before any DONE check)
+        if wo_row[0] == "WAIT":
+            cursor.execute(
+                "UPDATE work_orders SET status = 'WORKING' WHERE wo_id = %s",
+                (wo_id,),
+            )
 
         cursor.execute(
             "INSERT INTO work_results "
@@ -218,7 +280,7 @@ async def create_work_result(data: dict) -> dict:
         )
         result_id = cursor.fetchone()[0]
 
-        # Calculate progress and update work order status
+        # Step 2: Check if total good_qty >= plan_qty → WORKING → DONE
         cursor.execute(
             "SELECT wo.plan_qty, COALESCE(SUM(wr.good_qty), 0) "
             "FROM work_orders wo "
@@ -231,18 +293,12 @@ async def create_work_result(data: dict) -> dict:
         if row:
             progress = round(row[1] / row[0] * 100, 1) if row[0] > 0 else 0
             if row[1] >= row[0]:
+                # Only WORKING → DONE (never WAIT → DONE)
                 cursor.execute(
                     "UPDATE work_orders SET status = 'DONE' "
-                    "WHERE wo_id = %s",
+                    "WHERE wo_id = %s AND status = 'WORKING'",
                     (wo_id,),
                 )
-
-        # Update work order to WORKING if still WAIT
-        cursor.execute(
-            "UPDATE work_orders SET status = 'WORKING' "
-            "WHERE wo_id = %s AND status = 'WAIT'",
-            (wo_id,),
-        )
 
         conn.commit()
         cursor.close()
@@ -251,10 +307,10 @@ async def create_work_result(data: dict) -> dict:
             "progress_pct": progress,
             "success": True,
         }
-    except Exception as e:
+    except Exception:
         if conn:
             conn.rollback()
-        return {"error": str(e)}
+        return {"error": "실적 등록 중 오류가 발생했습니다."}
     finally:
         if conn:
             release_conn(conn)
