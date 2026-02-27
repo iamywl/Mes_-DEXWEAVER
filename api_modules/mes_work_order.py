@@ -1,9 +1,18 @@
+"""REQ-017: Work order creation module.
+
+Creates work orders from production plans with auto-generated IDs
+and initial WAIT status.
+"""
+
 from datetime import date
-from api_modules.database import get_db, release_conn
+
 import psycopg2.extras
 
+from api_modules.database import get_db, release_conn
+
+
 async def create_work_order(
-    plan_id: str, work_date: date, equip_code: str # equip_code는 라인 ID 역할
+    plan_id: str, work_date: date, equip_code: str
 ):
     """
     REQ-017: 생산 계획 기반으로 작업 지시를 생성합니다.
@@ -23,7 +32,7 @@ async def create_work_order(
 
         item_code = plan_data['item_code']
         plan_qty = plan_data['plan_qty']
-        
+
         # 2. 작업지시 ID 생성 (WO-YYYYMMDD-PLAN_ID 형식)
         wo_id = f"WO-{work_date.strftime('%Y%m%d')}-{plan_id}"
 
@@ -38,11 +47,12 @@ async def create_work_order(
 
         conn.commit()
         cursor.close()
-        release_conn(conn)
         return {"wo_id": created_wo_id, "message": "Work order created successfully."}
 
     except Exception as e:
         if conn:
             conn.rollback()
-            release_conn(conn)
         return {"error": str(e)}
+    finally:
+        if conn:
+            release_conn(conn)

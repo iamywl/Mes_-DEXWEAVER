@@ -1,5 +1,17 @@
-from api_modules.database import get_db, release_conn
+"""REQ-026: Real-time inventory status module.
+
+Provides inventory status queries including item code,
+lot number, warehouse, location and current stock quantities.
+"""
+
+import logging
+
 import psycopg2.extras
+
+from api_modules.database import get_conn, release_conn
+
+log = logging.getLogger(__name__)
+
 
 async def get_inventory_status(item_code: str = None):
     """
@@ -8,7 +20,9 @@ async def get_inventory_status(item_code: str = None):
     """
     conn = None
     try:
-        conn = get_db()
+        conn = get_conn()
+        if not conn:
+            return []
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         query = """
@@ -22,16 +36,16 @@ async def get_inventory_status(item_code: str = None):
         if item_code:
             query += " WHERE item_code = %s"
             params.append(item_code)
-        
+
         query += " ORDER BY item_code, lot_no;"
 
         cursor.execute(query, tuple(params))
         results = cursor.fetchall()
         cursor.close()
-        release_conn(conn)
         return results
     except Exception as e:
-        print(f"Database error in get_inventory_status: {e}")
+        log.error("Database error in get_inventory_status: %s", e)
+        return []
+    finally:
         if conn:
             release_conn(conn)
-        return []

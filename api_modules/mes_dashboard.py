@@ -1,6 +1,18 @@
+"""REQ-020: Production dashboard data module.
+
+Provides real-time production status dashboard data including
+daily target vs actual quantities and line-level achievement rates.
+"""
+
+import logging
 from datetime import date
-from api_modules.database import get_db, release_conn
+
 import psycopg2.extras
+
+from api_modules.database import get_conn, release_conn
+
+log = logging.getLogger(__name__)
+
 
 async def get_production_dashboard_data():
     """
@@ -9,7 +21,9 @@ async def get_production_dashboard_data():
     """
     conn = None
     try:
-        conn = get_db()
+        conn = get_conn()
+        if not conn:
+            return []
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         today = date.today().isoformat()
 
@@ -39,10 +53,10 @@ async def get_production_dashboard_data():
         cursor.execute(query, (today,))
         results = cursor.fetchall()
         cursor.close()
-        release_conn(conn)
         return results
     except Exception as e:
-        print(f"Database error in get_production_dashboard_data: {e}")
+        log.error("Database error in get_production_dashboard_data: %s", e)
+        return []
+    finally:
         if conn:
             release_conn(conn)
-        return []

@@ -5,12 +5,15 @@ and db_connection() context manager. Reads DATABASE_URL from
 environment variable with fallback to default.
 """
 
+import logging
 import os
 from contextlib import contextmanager
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import ThreadedConnectionPool
+
+log = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -38,7 +41,7 @@ def get_conn():
     try:
         return _get_pool().getconn()
     except Exception as e:
-        print(f"DB Connection Error: {e}")
+        log.error("DB Connection Error: %s", e)
         return None
 
 
@@ -87,7 +90,7 @@ def query_db(sql, params=None, fetch=True):
             conn.commit()
             return True
     except Exception as e:
-        print(f"SQL Error: {e}")
+        log.error("SQL Error: %s", e)
         if not fetch:
             conn.rollback()
         return []

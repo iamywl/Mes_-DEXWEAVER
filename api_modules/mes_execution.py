@@ -1,5 +1,12 @@
+"""REQ-019: Work performance registration module.
+
+Registers work results and updates work order status to DONE.
+"""
+
 from datetime import datetime
+
 from api_modules.database import get_db, release_conn
+
 
 async def register_work_performance(
     wo_id: str,
@@ -12,6 +19,7 @@ async def register_work_performance(
     """
     REQ-019: 작업 실적을 등록하고 작업 지시의 상태를 업데이트합니다.
     """
+    conn = None
     try:
         conn = get_db()
         cursor = conn.cursor()
@@ -35,11 +43,12 @@ async def register_work_performance(
 
         conn.commit()
         cursor.close()
-        release_conn(conn)
         return {"result_id": result_id, "message": "Work performance registered and work order updated successfully."}
 
     except Exception as e:
-        if 'conn' in locals() and conn:
+        if conn:
             conn.rollback()
-            release_conn(conn)
         return {"error": str(e)}
+    finally:
+        if conn:
+            release_conn(conn)

@@ -32,7 +32,7 @@ const Badge = ({v}) => {
     : 'bg-amber-500/20 text-amber-400';
   return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${c}`}>{v}</span>;
 };
-const Input = (props) => <input {...props} className={`bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs ${props.className||''}`} />;
+const Input = React.forwardRef((props, ref) => <input ref={ref} {...props} className={`bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs ${props.className||''}`} />);
 const Btn = ({children,...p}) => <button {...p} className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-xs ${p.className||''}`}>{children}</button>;
 const FilterBar = ({children}) => (
   <div className="flex items-center gap-3 mb-3 flex-wrap bg-[#0f172a]/60 px-3 py-2 rounded-xl border border-slate-800/50">
@@ -155,6 +155,19 @@ const App = () => {
   const [modalPerms, setModalPerms] = useState([]);
   const [modalSchedule, setModalSchedule] = useState(null);
   const [modalSelPlans, setModalSelPlans] = useState([]);
+
+  /* ── AI Center input refs (avoid document.getElementById) ── */
+  const aiDemandRef = useRef(null);
+  const aiDefTempRef = useRef(null);
+  const aiDefPresRef = useRef(null);
+  const aiDefSpeedRef = useRef(null);
+  const aiDefHumRef = useRef(null);
+  const aiFailEqRef = useRef(null);
+  const aiFailVibRef = useRef(null);
+  const aiFailTempRef = useRef(null);
+  const aiFailCurRef = useRef(null);
+  const lotTraceRef = useRef(null);
+
   const refreshPage = async (m) => {
     try {
       if (m==='ITEMS') { const r=await axios.get('/api/items?size=100'); setExtra(p=>({...p, itemList:r.data.items||[]})); }
@@ -1278,9 +1291,9 @@ const App = () => {
             {/* Demand Forecast */}
             <div className="bg-[#1e293b]/30 p-4 rounded-2xl border border-slate-800 space-y-3">
               <h3 className="text-white font-bold">Demand Forecast</h3>
-              <Input placeholder="Item code (e.g. ITEM003)" id="ai-demand-item" className="w-full" />
+              <Input placeholder="Item code (e.g. ITEM003)" ref={aiDemandRef} className="w-full" />
               <Btn onClick={async()=>{
-                const code = document.getElementById('ai-demand-item').value;
+                const code = aiDemandRef.current?.value || '';
                 if(!code) return;
                 const r = await axios.get(`/api/ai/demand-prediction/${code}`);
                 setExtra(prev=>({...prev, aiDemand:r.data}));
@@ -1301,16 +1314,16 @@ const App = () => {
             {/* Defect Prediction */}
             <div className="bg-[#1e293b]/30 p-4 rounded-2xl border border-slate-800 space-y-3">
               <h3 className="text-white font-bold">Defect Prediction</h3>
-              <Input placeholder="Temp" id="ai-def-temp" className="w-full" type="number" />
-              <Input placeholder="Pressure" id="ai-def-pres" className="w-full" type="number" />
-              <Input placeholder="Speed" id="ai-def-speed" className="w-full" type="number" />
-              <Input placeholder="Humidity" id="ai-def-hum" className="w-full" type="number" />
+              <Input placeholder="Temp" ref={aiDefTempRef} className="w-full" type="number" />
+              <Input placeholder="Pressure" ref={aiDefPresRef} className="w-full" type="number" />
+              <Input placeholder="Speed" ref={aiDefSpeedRef} className="w-full" type="number" />
+              <Input placeholder="Humidity" ref={aiDefHumRef} className="w-full" type="number" />
               <Btn onClick={async()=>{
                 const r = await axios.post('/api/ai/defect-prediction', {
-                  temperature: +document.getElementById('ai-def-temp').value,
-                  pressure: +document.getElementById('ai-def-pres').value,
-                  speed: +document.getElementById('ai-def-speed').value,
-                  humidity: +document.getElementById('ai-def-hum').value,
+                  temperature: +(aiDefTempRef.current?.value || 0),
+                  pressure: +(aiDefPresRef.current?.value || 0),
+                  speed: +(aiDefSpeedRef.current?.value || 0),
+                  humidity: +(aiDefHumRef.current?.value || 0),
                 });
                 setExtra(prev=>({...prev, aiDefect:r.data}));
               }}>Predict</Btn>
@@ -1328,17 +1341,17 @@ const App = () => {
             {/* Failure Prediction */}
             <div className="bg-[#1e293b]/30 p-4 rounded-2xl border border-slate-800 space-y-3">
               <h3 className="text-white font-bold">Failure Prediction</h3>
-              <Input placeholder="Equip code (e.g. EQP-003)" id="ai-fail-eq" className="w-full" />
-              <Input placeholder="Vibration" id="ai-fail-vib" className="w-full" type="number" />
-              <Input placeholder="Temperature" id="ai-fail-temp" className="w-full" type="number" />
-              <Input placeholder="Current (A)" id="ai-fail-cur" className="w-full" type="number" />
+              <Input placeholder="Equip code (e.g. EQP-003)" ref={aiFailEqRef} className="w-full" />
+              <Input placeholder="Vibration" ref={aiFailVibRef} className="w-full" type="number" />
+              <Input placeholder="Temperature" ref={aiFailTempRef} className="w-full" type="number" />
+              <Input placeholder="Current (A)" ref={aiFailCurRef} className="w-full" type="number" />
               <Btn onClick={async()=>{
                 const r = await axios.post('/api/ai/failure-predict', {
-                  equip_code: document.getElementById('ai-fail-eq').value,
+                  equip_code: aiFailEqRef.current?.value || '',
                   sensor: {
-                    vibration: +document.getElementById('ai-fail-vib').value,
-                    temperature: +document.getElementById('ai-fail-temp').value,
-                    current: +document.getElementById('ai-fail-cur').value,
+                    vibration: +(aiFailVibRef.current?.value || 0),
+                    temperature: +(aiFailTempRef.current?.value || 0),
+                    current: +(aiFailCurRef.current?.value || 0),
                   }
                 });
                 setExtra(prev=>({...prev, aiFailure:r.data}));
@@ -2575,9 +2588,9 @@ const App = () => {
       <Modal open={modal.type==='lot_trace'} onClose={closeModal} title="LOT Traceability (추적)">
         <div className="space-y-4">
           <div className="flex gap-2">
-            <Input id="lot-trace-input" className="flex-1" placeholder="Enter LOT No (e.g. LOT-20260101-001)"/>
+            <Input ref={lotTraceRef} className="flex-1" placeholder="Enter LOT No (e.g. LOT-20260101-001)"/>
             <BtnSuccess onClick={async()=>{
-              const lotNo=document.getElementById('lot-trace-input').value.trim();
+              const lotNo=(lotTraceRef.current?.value || '').trim();
               if(!lotNo){showToast('LOT번호를 입력하세요',false);return;}
               try{
                 const r=await axios.get(`/api/lot/trace/${lotNo}`);

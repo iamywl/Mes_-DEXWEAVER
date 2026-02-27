@@ -1,5 +1,13 @@
-from api_modules.database import get_db, release_conn
+"""REQ-028: Inventory movement module.
+
+Provides warehouse-to-warehouse inventory transfer functionality
+within a single transaction for data integrity.
+"""
+
 import psycopg2.extras
+
+from api_modules.database import get_db, release_conn
+
 
 async def move_inventory(
     item_code: str, lot_no: str, qty: int, from_location: str, to_location: str
@@ -35,11 +43,12 @@ async def move_inventory(
 
         conn.commit()
         cursor.close()
-        release_conn(conn)
         return {"message": f"Inventory of {item_code} (Lot: {lot_no}) moved from {from_location} to {to_location}."}
 
     except Exception as e:
         if conn:
             conn.rollback()
-            release_conn(conn)
         return {"error": str(e)}
+    finally:
+        if conn:
+            release_conn(conn)

@@ -226,7 +226,8 @@ async def quality_report(start_date: str = None, end_date: str = None,
                         "values": [round(v, 4) for v in values],
                     }
 
-        # Fallback if no inspection data available
+        # Fallback: estimate Cpk from defect rate when no inspection measurement data exists.
+        # Real Cpk = min((USL-μ), (μ-LSL)) / 3σ is computed above when inspection data is available.
         if cpk is None:
             cpk = round(max(0, (1 - defect_rate * 10) * 1.33), 2)
 

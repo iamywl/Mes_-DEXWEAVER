@@ -1,6 +1,13 @@
+"""Work performance registration and inventory update module."""
+
+import logging
 from datetime import datetime
-from api_modules.database import get_db, release_conn
+
 import psycopg2.extras
+
+from api_modules.database import get_db, release_conn
+
+log = logging.getLogger(__name__)
 
 async def register_work_performance_and_update_inventory(
     wo_id: str, good_qty: int, defect_qty: int, worker_id: str, start_time: datetime, end_time: datetime
@@ -35,7 +42,7 @@ async def register_work_performance_and_update_inventory(
 
     except Exception as e:
         if conn: conn.rollback()
-        print(f"Error in mes_performance.py: {e}")
+        log.error("Error in register_work_performance: %s", e)
         return {"error": str(e)}
     finally:
         if conn: release_conn(conn)

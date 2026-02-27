@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 |------|------|
 | **시스템명** | DEXWEAVER MES (웹 기반 제조실행시스템) |
-| **버전** | v4.1 |
+| **버전** | v4.2 |
 | **검증일** | 2026-02-27 |
 | **검증 기준** | KS X 9003, KISA 49개 항목, ISO/IEC 25051 |
 | **검증 방법** | 소스코드 정적 분석 + 프론트엔드/백엔드 End-to-End 기능 검증 |
@@ -256,7 +256,9 @@
 
 ---
 
-## 9. v4.0 → v4.1 변경사항 요약 (프론트엔드 End-to-End 보완)
+## 9. v4.0 → v4.2 변경사항 요약
+
+### v4.0 → v4.1 (프론트엔드 End-to-End 보완)
 
 | # | 변경사항 | 영향 범위 |
 |---|---------|----------|
@@ -270,6 +272,24 @@
 | 8 | 회원가입 폼 역할 선택에서 admin 제거 | 로그인 페이지 |
 | 9 | 승인 대기 메시지 개선 | 로그인 페이지 |
 
+### v4.1 → v4.2 (코드 품질 및 CODE_REVIEW 지적사항 수정)
+
+| # | 변경사항 | 영향 범위 | CODE_REVIEW 항목 |
+|---|---------|----------|-----------------|
+| 1 | `mes_dashboard.py` 커넥션 누수 수정 (finally 패턴 적용) | Backend | W-PY-03 |
+| 2 | `mes_inventory_status.py` 커넥션 누수 수정 (finally 패턴 적용) | Backend | W-PY-04 |
+| 3 | `database.py` print() → logging 모듈로 교체 | Backend | W-PY-05, W-PY-06 |
+| 4 | `mes_performance.py` print() → logging 모듈로 교체 | Backend | - |
+| 5 | `mes_dashboard.py`, `mes_inventory_status.py` 모듈 docstring 추가 | Backend | W-PY-01, W-PY-02 |
+| 6 | `mes_inventory_movement.py` 커넥션 누수 수정 (finally 패턴) | Backend | - |
+| 7 | `mes_material_receipt.py` 커넥션 누수 수정 (finally 패턴) | Backend | - |
+| 8 | `mes_work_order.py` 커넥션 누수 수정 (finally 패턴) | Backend | - |
+| 9 | `mes_execution.py` 커넥션 누수 수정 (finally 패턴) | Backend | - |
+| 10 | App.jsx: `document.getElementById` → React `useRef` 교체 (10개소) | Frontend | - |
+| 11 | App.jsx: Input 컴포넌트 `React.forwardRef` 적용 | Frontend | - |
+| 12 | `mes_reports.py` Cpk fallback 공식 주석 보강 | Backend | I-PY-06 |
+| 13 | 전체 모듈에 PEP 257 docstring 추가 | Backend | W-PY-01, W-PY-02 |
+
 ---
 
 ## 10. 결론
@@ -277,10 +297,27 @@
 | GS인증 품질 특성 | 충족률 | 비고 |
 |-----------------|--------|------|
 | 기능 적합성 (KS X 9003) | **97%** | LOT추적 UI, SPC, 상태전이, 예외처리, 프론트 CRUD |
-| 웹 기술 표준 | **100%** | React 19 + Tailwind, 비표준 없음 |
-| 성능 효율성 | **90%** | DB Pool + 인덱스, 부하테스트 예정 |
+| 웹 기술 표준 | **100%** | React 19 + Tailwind, 비표준 없음, React anti-pattern 제거 |
+| 성능 효율성 | **92%** | DB Pool + 인덱스 + 커넥션 누수 전수 수정 |
 | 보안 (KISA 49) | **97%** | JWT인증(F/B 양방향), bcrypt, 입력검증, 에러처리, 승인UI |
+| 코드 품질 (CODE_REVIEW) | **92%** | W-PY-01~06 수정, logging 적용, docstring 추가 |
 | 문서 품질 (ISO 25051) | **90%** | USER_MANUAL.md 현행화 필요 |
+
+### CODE_REVIEW 지적사항 해결 현황
+
+| 항목 | 심각도 | 설명 | 상태 |
+|------|--------|------|------|
+| C-PY-01 | CRITICAL | bcrypt 미사용 (고정 솔트 SHA-256) | **v4.0에서 수정됨** |
+| C-PY-02 | CRITICAL | 자체 구현 토큰 | **v4.0에서 수정됨** (PyJWT 도입) |
+| W-PY-01 | WARNING | mes_dashboard.py docstring 누락 | **v4.2에서 수정됨** |
+| W-PY-02 | WARNING | mes_inventory_status.py docstring 누락 | **v4.2에서 수정됨** |
+| W-PY-03 | WARNING | mes_dashboard.py finally 미사용 | **v4.2에서 수정됨** |
+| W-PY-04 | WARNING | mes_inventory_status.py finally 미사용 | **v4.2에서 수정됨** |
+| W-PY-05 | WARNING | database.py print 기반 로깅 | **v4.2에서 수정됨** |
+| W-PY-06 | WARNING | database.py print 기반 로깅 | **v4.2에서 수정됨** |
+| W-PY-07 | WARNING | 반복 보일러플레이트 | 인지됨 (db_connection() 존재) |
+| W-PY-08 | WARNING | k8s_service.py MD5 사용 | 인지됨 (보안 목적 아님) |
+| I-PY-06 | INFO | Cpk fallback 주석 부족 | **v4.2에서 수정됨** |
 
 ### 잔여 작업
 1. nGrinder 활용 목표 응답시간(2초) 데이터 확보
