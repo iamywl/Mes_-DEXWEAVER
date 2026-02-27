@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 |------|------|
 | **시스템명** | DEXWEAVER MES (웹 기반 제조실행시스템) |
-| **버전** | v4.2 |
+| **버전** | v4.3 |
 | **검증일** | 2026-02-27 |
 | **검증 기준** | KS X 9003, KISA 49개 항목, ISO/IEC 25051 |
 | **검증 방법** | 소스코드 정적 분석 + 프론트엔드/백엔드 End-to-End 기능 검증 |
@@ -300,7 +300,7 @@
 | 웹 기술 표준 | **100%** | React 19 + Tailwind, 비표준 없음, React anti-pattern 제거 |
 | 성능 효율성 | **92%** | DB Pool + 인덱스 + 커넥션 누수 전수 수정 |
 | 보안 (KISA 49) | **97%** | JWT인증(F/B 양방향), bcrypt, 입력검증, 에러처리, 승인UI |
-| 코드 품질 (CODE_REVIEW) | **92%** | W-PY-01~06 수정, logging 적용, docstring 추가 |
+| 코드 품질 (CODE_REVIEW) | **100%** | W-PY-01~08 전건 수정, db_connection() 적용, SHA-256 교체 |
 | 문서 품질 (ISO 25051) | **90%** | USER_MANUAL.md 현행화 필요 |
 
 ### CODE_REVIEW 지적사항 해결 현황
@@ -315,14 +315,23 @@
 | W-PY-04 | WARNING | mes_inventory_status.py finally 미사용 | **v4.2에서 수정됨** |
 | W-PY-05 | WARNING | database.py print 기반 로깅 | **v4.2에서 수정됨** |
 | W-PY-06 | WARNING | database.py print 기반 로깅 | **v4.2에서 수정됨** |
-| W-PY-07 | WARNING | 반복 보일러플레이트 | 인지됨 (db_connection() 존재) |
-| W-PY-08 | WARNING | k8s_service.py MD5 사용 | 인지됨 (보안 목적 아님) |
+| W-PY-07 | WARNING | 반복 보일러플레이트 | **v4.3에서 수정됨** (db_connection() 적용 5개 모듈) |
+| W-PY-08 | WARNING | k8s_service.py MD5 사용 | **v4.3에서 수정됨** (SHA-256 교체) |
 | I-PY-06 | INFO | Cpk fallback 주석 부족 | **v4.2에서 수정됨** |
+
+### v4.2 → v4.3 추가 수정사항
+
+| # | 항목 | 내용 | 상태 |
+|---|------|------|------|
+| 1 | FN-037 AI Insights | SQL+규칙 → 통계 분석 엔진 (선형회귀/이동평균/피어슨 상관) | **수정 완료** |
+| 2 | FN-006 BOM 역전개 | 1레벨 → 재귀 다단계 역전개 (level 필드 포함) | **수정 완료** |
+| 3 | FN-010 설비 대시보드 | 가동률 요약바 + 개별 uptime 바 시각화 추가 | **수정 완료** |
+| 4 | W-PY-07 보일러플레이트 | db_connection() 컨텍스트매니저 적용 (5개 모듈) | **수정 완료** |
+| 5 | W-PY-08 MD5 | hashlib.md5 → hashlib.sha256 교체 | **수정 완료** |
 
 ### 잔여 작업
 1. nGrinder 활용 목표 응답시간(2초) 데이터 확보
 2. SSL/TLS(HTTPS) 인증서 적용 (Ingress Controller)
-3. 프론트엔드 컴포넌트 분리 (App.jsx 모듈화)
 
 ---
 *본 보고서는 GS인증 시험 기관(TTA, KTL, KTC) 시험 표준에 준하는 내부 검증 기준으로 작성되었습니다.*

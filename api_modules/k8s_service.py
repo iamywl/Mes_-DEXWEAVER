@@ -122,7 +122,7 @@ def _make_flow(template, ts):
     dst_ip = dst_svc["ip"] if dst_svc else f"10.244.0.{random.randint(30,50)}"
     src_port = random.randint(32000, 65000)
 
-    flow_id = hashlib.md5(
+    flow_id = hashlib.sha256(
         f"{ts}{template['src']}{template['dst']}{random.random()}".encode()
     ).hexdigest()[:16]
 

@@ -1,113 +1,116 @@
 """FN-008~009: BOM (Bill of Materials) management module."""
 
-from api_modules.database import get_conn, release_conn
+from api_modules.database import db_connection, get_conn, release_conn
 
 
 async def list_bom() -> dict:
     """List all BOM entries with parent/child item details."""
-    conn = None
     try:
-        conn = get_conn()
-        if not conn:
-            return {"error": "Database connection failed."}
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT b.bom_id, b.parent_item, p.name AS parent_name, "
-            "b.child_item, c.name AS child_name, c.category AS child_category, "
-            "b.qty_per_unit, b.loss_rate "
-            "FROM bom b "
-            "JOIN items p ON b.parent_item = p.item_code "
-            "JOIN items c ON b.child_item = c.item_code "
-            "ORDER BY b.parent_item, b.child_item"
-        )
-        rows = cursor.fetchall()
-        cursor.close()
-        entries = [
-            {
-                "bom_id": r[0], "parent_item": r[1], "parent_name": r[2],
-                "child_item": r[3], "child_name": r[4], "child_category": r[5],
-                "qty_per_unit": float(r[6]), "loss_rate": float(r[7]),
-            }
-            for r in rows
-        ]
-        return {"entries": entries, "total": len(entries)}
+        with db_connection() as conn:
+            if not conn:
+                return {"error": "Database connection failed."}
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT b.bom_id, b.parent_item, p.name AS parent_name, "
+                "b.child_item, c.name AS child_name, c.category AS child_category, "
+                "b.qty_per_unit, b.loss_rate "
+                "FROM bom b "
+                "JOIN items p ON b.parent_item = p.item_code "
+                "JOIN items c ON b.child_item = c.item_code "
+                "ORDER BY b.parent_item, b.child_item"
+            )
+            rows = cursor.fetchall()
+            cursor.close()
+            entries = [
+                {
+                    "bom_id": r[0], "parent_item": r[1], "parent_name": r[2],
+                    "child_item": r[3], "child_name": r[4], "child_category": r[5],
+                    "qty_per_unit": float(r[6]), "loss_rate": float(r[7]),
+                }
+                for r in rows
+            ]
+            return {"entries": entries, "total": len(entries)}
     except Exception as e:
         return {"error": str(e), "entries": [], "total": 0}
-    finally:
-        if conn:
-            release_conn(conn)
 
 
 async def where_used(item_code: str) -> dict:
-    """Find all parent items that use the given item as a component."""
-    conn = None
+    """FN-006: Recursive reverse BOM explosion (역전개).
+
+    Walks up the BOM tree to find all ancestor items that directly
+    or indirectly use the given item as a component.
+    Each result includes a 'level' field (1 = direct parent, 2+ = grandparent).
+    """
     try:
-        conn = get_conn()
-        if not conn:
-            return {"error": "Database connection failed."}
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT b.bom_id, b.parent_item, p.name AS parent_name, "
-            "p.category AS parent_category, b.qty_per_unit, b.loss_rate "
-            "FROM bom b "
-            "JOIN items p ON b.parent_item = p.item_code "
-            "WHERE b.child_item = %s "
-            "ORDER BY b.parent_item",
-            (item_code,),
-        )
-        rows = cursor.fetchall()
-        cursor.close()
-        parents = [
-            {
-                "bom_id": r[0], "parent_item": r[1], "parent_name": r[2],
-                "parent_category": r[3], "qty_per_unit": float(r[4]),
-                "loss_rate": float(r[5]),
-            }
-            for r in rows
-        ]
-        return {"item_code": item_code, "used_in": parents, "count": len(parents)}
+        with db_connection() as conn:
+            if not conn:
+                return {"error": "Database connection failed."}
+            cursor = conn.cursor()
+
+            all_parents = []
+            visited = set()
+
+            def _walk_up(code, level):
+                cursor.execute(
+                    "SELECT b.bom_id, b.parent_item, p.name AS parent_name, "
+                    "p.category AS parent_category, b.qty_per_unit, b.loss_rate "
+                    "FROM bom b "
+                    "JOIN items p ON b.parent_item = p.item_code "
+                    "WHERE b.child_item = %s "
+                    "ORDER BY b.parent_item",
+                    (code,),
+                )
+                rows = cursor.fetchall()
+                for r in rows:
+                    parent = r[1]
+                    if parent in visited:
+                        continue
+                    visited.add(parent)
+                    all_parents.append({
+                        "bom_id": r[0], "parent_item": parent, "parent_name": r[2],
+                        "parent_category": r[3], "qty_per_unit": float(r[4]),
+                        "loss_rate": float(r[5]), "level": level,
+                    })
+                    _walk_up(parent, level + 1)
+
+            _walk_up(item_code, 1)
+            cursor.close()
+            return {"item_code": item_code, "used_in": all_parents, "count": len(all_parents)}
     except Exception as e:
         return {"error": str(e), "used_in": [], "count": 0}
-    finally:
-        if conn:
-            release_conn(conn)
 
 
 async def bom_summary() -> dict:
     """Summary statistics for BOM data."""
-    conn = None
     try:
-        conn = get_conn()
-        if not conn:
-            return {"error": "Database connection failed."}
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM bom")
-        total_entries = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(DISTINCT parent_item) FROM bom")
-        parent_count = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(DISTINCT child_item) FROM bom")
-        child_count = cursor.fetchone()[0]
-        cursor.execute(
-            "SELECT b.parent_item, p.name, COUNT(*) AS comp_count "
-            "FROM bom b JOIN items p ON b.parent_item = p.item_code "
-            "GROUP BY b.parent_item, p.name ORDER BY comp_count DESC LIMIT 10"
-        )
-        top_parents = [
-            {"item_code": r[0], "name": r[1], "component_count": r[2]}
-            for r in cursor.fetchall()
-        ]
-        cursor.close()
-        return {
-            "total_entries": total_entries,
-            "parent_count": parent_count,
-            "child_count": child_count,
-            "top_parents": top_parents,
-        }
+        with db_connection() as conn:
+            if not conn:
+                return {"error": "Database connection failed."}
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM bom")
+            total_entries = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(DISTINCT parent_item) FROM bom")
+            parent_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(DISTINCT child_item) FROM bom")
+            child_count = cursor.fetchone()[0]
+            cursor.execute(
+                "SELECT b.parent_item, p.name, COUNT(*) AS comp_count "
+                "FROM bom b JOIN items p ON b.parent_item = p.item_code "
+                "GROUP BY b.parent_item, p.name ORDER BY comp_count DESC LIMIT 10"
+            )
+            top_parents = [
+                {"item_code": r[0], "name": r[1], "component_count": r[2]}
+                for r in cursor.fetchall()
+            ]
+            cursor.close()
+            return {
+                "total_entries": total_entries,
+                "parent_count": parent_count,
+                "child_count": child_count,
+                "top_parents": top_parents,
+            }
     except Exception as e:
         return {"error": str(e)}
-    finally:
-        if conn:
-            release_conn(conn)
 
 
 def _check_circular(cursor, parent: str, child: str) -> bool:
@@ -252,42 +255,38 @@ async def delete_bom(bom_id: int) -> dict:
 
 async def explode_bom(item_code: str, qty: float = 1) -> dict:
     """FN-009: Explode BOM tree recursively."""
-    conn = None
     try:
-        conn = get_conn()
-        if not conn:
-            return {"error": "Database connection failed."}
+        with db_connection() as conn:
+            if not conn:
+                return {"error": "Database connection failed."}
 
-        cursor = conn.cursor()
+            cursor = conn.cursor()
 
-        def _explode(parent, parent_qty, level):
-            cursor.execute(
-                "SELECT b.child_item, i.name, b.qty_per_unit, b.loss_rate "
-                "FROM bom b JOIN items i ON b.child_item = i.item_code "
-                "WHERE b.parent_item = %s",
-                (parent,),
-            )
-            rows = cursor.fetchall()
-            children = []
-            for r in rows:
-                required = float(r[2]) * parent_qty * (1 + float(r[3]) / 100)
-                node = {
-                    "level": level,
-                    "item_code": r[0],
-                    "item_name": r[1],
-                    "qty_per_unit": float(r[2]),
-                    "loss_rate": float(r[3]),
-                    "required_qty": round(required, 2),
-                    "children": _explode(r[0], required, level + 1),
-                }
-                children.append(node)
-            return children
+            def _explode(parent, parent_qty, level):
+                cursor.execute(
+                    "SELECT b.child_item, i.name, b.qty_per_unit, b.loss_rate "
+                    "FROM bom b JOIN items i ON b.child_item = i.item_code "
+                    "WHERE b.parent_item = %s",
+                    (parent,),
+                )
+                rows = cursor.fetchall()
+                children = []
+                for r in rows:
+                    required = float(r[2]) * parent_qty * (1 + float(r[3]) / 100)
+                    node = {
+                        "level": level,
+                        "item_code": r[0],
+                        "item_name": r[1],
+                        "qty_per_unit": float(r[2]),
+                        "loss_rate": float(r[3]),
+                        "required_qty": round(required, 2),
+                        "children": _explode(r[0], required, level + 1),
+                    }
+                    children.append(node)
+                return children
 
-        tree = _explode(item_code, qty, 1)
-        cursor.close()
-        return {"item_code": item_code, "qty": qty, "tree": tree}
+            tree = _explode(item_code, qty, 1)
+            cursor.close()
+            return {"item_code": item_code, "qty": qty, "tree": tree}
     except Exception as e:
         return {"error": str(e)}
-    finally:
-        if conn:
-            release_conn(conn)

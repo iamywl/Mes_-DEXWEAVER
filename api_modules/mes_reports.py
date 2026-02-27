@@ -1,7 +1,10 @@
-"""FN-035~037: Reports and AI insights module."""
+"""FN-035~037: Reports and statistical analysis insights module."""
 
+import logging
 import math
 from api_modules.database import get_conn, release_conn
+
+log = logging.getLogger(__name__)
 
 
 async def production_report(start_date: str = None, end_date: str = None,
@@ -247,8 +250,57 @@ async def quality_report(start_date: str = None, end_date: str = None,
             release_conn(conn)
 
 
+def _linear_trend(values):
+    """Compute linear regression slope and R² for a numeric series.
+
+    Uses ordinary least squares: y = a + b*x.
+    Returns (slope, r_squared, direction) where direction is UP/DOWN/STABLE.
+    """
+    n = len(values)
+    if n < 2:
+        return 0, 0, "STABLE"
+    xs = list(range(n))
+    x_mean = sum(xs) / n
+    y_mean = sum(values) / n
+    ss_xy = sum((xs[i] - x_mean) * (values[i] - y_mean) for i in range(n))
+    ss_xx = sum((xs[i] - x_mean) ** 2 for i in range(n))
+    ss_yy = sum((values[i] - y_mean) ** 2 for i in range(n))
+    if ss_xx == 0:
+        return 0, 0, "STABLE"
+    slope = ss_xy / ss_xx
+    r_sq = (ss_xy ** 2) / (ss_xx * ss_yy) if ss_yy > 0 else 0
+    direction = "UP" if slope > 0 else "DOWN" if slope < 0 else "STABLE"
+    return round(slope, 4), round(r_sq, 4), direction
+
+
+def _moving_avg_anomaly(values, window=3, threshold=2.0):
+    """Detect anomalies using moving average ± threshold*σ.
+
+    Returns list of (index, value, z_score) for outlier points.
+    """
+    if len(values) < window + 1:
+        return []
+    anomalies = []
+    for i in range(window, len(values)):
+        win = values[i - window:i]
+        mu = sum(win) / window
+        sigma = math.sqrt(sum((v - mu) ** 2 for v in win) / window) if window > 1 else 0
+        if sigma > 0:
+            z = (values[i] - mu) / sigma
+            if abs(z) > threshold:
+                anomalies.append((i, values[i], round(z, 2)))
+    return anomalies
+
+
 async def ai_insights(data: dict) -> dict:
-    """FN-037: AI-generated comprehensive insights from production/quality/equipment data."""
+    """FN-037: Statistical analysis engine for production/quality/equipment/inventory.
+
+    Analysis methods:
+    - Linear regression trend detection (slope + R²)
+    - Moving average anomaly detection (z-score)
+    - Threshold-based KPI monitoring
+    - Cross-metric correlation analysis
+    """
     conn = None
     try:
         conn = get_conn()
@@ -256,11 +308,11 @@ async def ai_insights(data: dict) -> dict:
             return {"error": "DB connection failed."}
         cur = conn.cursor()
         focus = data.get("focus_area", "all")
-        period = data.get("period")
 
         issues = []
         recommendations = []
         kpis = {}
+        analysis_methods = []
 
         # ── 1. Production Analysis ──────────────────────────
         if focus in ("all", "production"):
@@ -296,23 +348,43 @@ async def ai_insights(data: dict) -> dict:
                     "detail": f"미달 품목 {len(underperforming)}건 중 최저 달성률 품목 우선 개선",
                 })
 
-            # Production trend analysis
+            # Linear regression trend on daily production (last 14 days)
             cur.execute(
-                "SELECT date_trunc('week', wr.start_time)::date, SUM(wr.good_qty) "
+                "SELECT wr.start_time::date, SUM(wr.good_qty) "
                 "FROM work_results wr "
-                "GROUP BY 1 ORDER BY 1 DESC LIMIT 4"
+                "WHERE wr.start_time >= NOW() - INTERVAL '14 days' "
+                "GROUP BY 1 ORDER BY 1"
             )
-            weekly = cur.fetchall()
-            if len(weekly) >= 2:
-                recent = weekly[0][1] or 0
-                prev = weekly[1][1] or 0
-                if prev > 0:
-                    trend_pct = ((recent - prev) / prev) * 100
-                    kpis["weekly_trend"] = round(trend_pct, 1)
-                    if trend_pct < -10:
+            daily_prod = cur.fetchall()
+            if len(daily_prod) >= 3:
+                prod_values = [float(r[1] or 0) for r in daily_prod]
+                slope, r_sq, direction = _linear_trend(prod_values)
+                kpis["production_trend_slope"] = slope
+                kpis["production_trend_r2"] = r_sq
+                kpis["production_trend_direction"] = direction
+                analysis_methods.append("linear_regression_production")
+
+                if direction == "DOWN" and r_sq > 0.3:
+                    issues.append({
+                        "area": "production", "severity": "MEDIUM",
+                        "desc": f"일간 생산량 하락 추세 (기울기={slope:.1f}, R²={r_sq:.2f})",
+                    })
+                    recommendations.append({
+                        "area": "production", "priority": "MEDIUM",
+                        "action": "생산량 감소 원인 분석 (설비 점검, 자재 부족 확인)",
+                        "expected_impact": "하락 추세 반전 기대",
+                        "detail": f"14일간 선형회귀 분석: 기울기 {slope:.1f}, 결정계수 R²={r_sq:.2f}",
+                    })
+
+                # Moving average anomaly detection on daily production
+                anomalies = _moving_avg_anomaly(prod_values, window=3, threshold=2.0)
+                if anomalies:
+                    analysis_methods.append("moving_avg_anomaly_production")
+                    for idx, val, z in anomalies:
+                        date_str = str(daily_prod[idx][0])
                         issues.append({
                             "area": "production", "severity": "MEDIUM",
-                            "desc": f"주간 생산량 {trend_pct:.1f}% 감소 추세",
+                            "desc": f"{date_str} 생산량 이상치 감지 ({val:.0f}개, z-score={z:.1f})",
                         })
 
         # ── 2. Equipment Analysis ───────────────────────────
@@ -331,7 +403,6 @@ async def ai_insights(data: dict) -> dict:
             kpis["equipment_down"] = len(down_equips)
 
             for r in down_equips:
-                # Check how long it's been down
                 cur.execute(
                     "SELECT changed_at FROM equip_status_log "
                     "WHERE equip_code = %s AND status = 'DOWN' "
@@ -357,28 +428,44 @@ async def ai_insights(data: dict) -> dict:
                     "detail": f"고장 발생 후 {down_hours:.0f}시간 경과",
                 })
 
-            # Sensor anomaly check
+            # Sensor trend analysis per equipment (vibration/temperature)
             cur.execute(
                 "SELECT es.equip_code, e.name, "
-                "AVG(es.vibration), MAX(es.vibration), "
-                "AVG(es.temperature), MAX(es.temperature) "
+                "AVG(es.vibration), STDDEV(es.vibration), MAX(es.vibration), "
+                "AVG(es.temperature), STDDEV(es.temperature), MAX(es.temperature), "
+                "COUNT(*) "
                 "FROM equip_sensors es "
                 "JOIN equipments e ON es.equip_code = e.equip_code "
                 "WHERE es.recorded_at >= NOW() - INTERVAL '7 days' "
                 "GROUP BY es.equip_code, e.name "
-                "HAVING MAX(es.vibration) > 3.0 OR MAX(es.temperature) > 60"
+                "HAVING COUNT(*) >= 3"
             )
-            for r in cur.fetchall():
-                issues.append({
-                    "area": "equipment", "severity": "MEDIUM",
-                    "desc": f"{r[1]}({r[0]}) 센서 이상 징후 - 진동max:{r[3]:.1f} 온도max:{r[5]:.1f}",
-                })
-                recommendations.append({
-                    "area": "equipment", "priority": "HIGH",
-                    "action": f"{r[1]} 예방정비 스케줄 앞당김 권장",
-                    "expected_impact": "예기치 않은 고장 방지",
-                    "detail": f"최근 7일 진동 최대 {r[3]:.1f}, 온도 최대 {r[5]:.1f}",
-                })
+            sensor_rows = cur.fetchall()
+            for r in sensor_rows:
+                vib_avg, vib_std, vib_max = float(r[2] or 0), float(r[3] or 0), float(r[4] or 0)
+                temp_avg, temp_std, temp_max = float(r[5] or 0), float(r[6] or 0), float(r[7] or 0)
+                analysis_methods.append("sensor_statistical_analysis")
+
+                # Z-score based anomaly: max > avg + 2σ
+                vib_anomaly = vib_std > 0 and vib_max > vib_avg + 2 * vib_std
+                temp_anomaly = temp_std > 0 and temp_max > temp_avg + 2 * temp_std
+
+                if vib_anomaly or temp_anomaly or vib_max > 3.0 or temp_max > 60:
+                    details = []
+                    if vib_anomaly or vib_max > 3.0:
+                        details.append(f"진동 max={vib_max:.1f} (μ={vib_avg:.1f}±{vib_std:.1f}σ)")
+                    if temp_anomaly or temp_max > 60:
+                        details.append(f"온도 max={temp_max:.1f}°C (μ={temp_avg:.1f}±{temp_std:.1f}σ)")
+                    issues.append({
+                        "area": "equipment", "severity": "MEDIUM",
+                        "desc": f"{r[1]}({r[0]}) 센서 이상 - {', '.join(details)}",
+                    })
+                    recommendations.append({
+                        "area": "equipment", "priority": "HIGH",
+                        "action": f"{r[1]} 예방정비 스케줄 앞당김 권장",
+                        "expected_impact": "예기치 않은 고장 방지",
+                        "detail": f"7일간 센서 통계: {', '.join(details)} (데이터포인트: {r[8]}건)",
+                    })
 
         # ── 3. Quality Analysis ─────────────────────────────
         if focus in ("all", "quality"):
@@ -411,20 +498,45 @@ async def ai_insights(data: dict) -> dict:
                     "detail": f"총 불량 {total_defects}건 / 생산 {total_produced}건",
                 })
 
-            # Quality trend (weekly)
+            # Linear regression on daily defect rate (last 14 days)
             cur.execute(
-                "SELECT date_trunc('week', wr.start_time)::date, "
+                "SELECT wr.start_time::date, "
                 "SUM(wr.defect_qty)::float / NULLIF(SUM(wr.good_qty + wr.defect_qty), 0) "
                 "FROM work_results wr "
-                "GROUP BY 1 ORDER BY 1 DESC LIMIT 4"
+                "WHERE wr.start_time >= NOW() - INTERVAL '14 days' "
+                "GROUP BY 1 ORDER BY 1"
             )
-            q_weekly = cur.fetchall()
-            if len(q_weekly) >= 2 and q_weekly[0][1] and q_weekly[1][1]:
-                if q_weekly[0][1] > q_weekly[1][1] * 1.2:
+            daily_defect = cur.fetchall()
+            if len(daily_defect) >= 3:
+                defect_values = [float(r[1] or 0) for r in daily_defect]
+                slope, r_sq, direction = _linear_trend(defect_values)
+                kpis["defect_trend_slope"] = slope
+                kpis["defect_trend_r2"] = r_sq
+                kpis["defect_trend_direction"] = direction
+                analysis_methods.append("linear_regression_quality")
+
+                if direction == "UP" and r_sq > 0.3:
                     issues.append({
                         "area": "quality", "severity": "MEDIUM",
-                        "desc": f"불량률 증가 추세 ({q_weekly[1][1]*100:.1f}% → {q_weekly[0][1]*100:.1f}%)",
+                        "desc": f"불량률 상승 추세 (기울기={slope:.4f}, R²={r_sq:.2f})",
                     })
+                    recommendations.append({
+                        "area": "quality", "priority": "HIGH",
+                        "action": "불량률 상승 원인 분석 (공정 파라미터 변동, 자재 품질 점검)",
+                        "expected_impact": "불량률 추세 반전",
+                        "detail": f"14일간 선형회귀: 기울기 {slope:.4f}, R²={r_sq:.2f}",
+                    })
+
+                # Moving average anomaly on defect rate
+                anomalies = _moving_avg_anomaly(defect_values, window=3, threshold=2.0)
+                if anomalies:
+                    analysis_methods.append("moving_avg_anomaly_quality")
+                    for idx, val, z in anomalies:
+                        date_str = str(daily_defect[idx][0])
+                        issues.append({
+                            "area": "quality", "severity": "MEDIUM",
+                            "desc": f"{date_str} 불량률 이상치 ({val*100:.1f}%, z-score={z:.1f})",
+                        })
 
         # ── 4. Inventory Analysis ───────────────────────────
         if focus in ("all", "inventory"):
@@ -441,9 +553,10 @@ async def ai_insights(data: dict) -> dict:
             if low_stock:
                 kpis["low_stock_items"] = len(low_stock)
                 for r in low_stock:
+                    shortage_ratio = round((1 - float(r[2]) / float(r[3])) * 100, 1)
                     issues.append({
-                        "area": "inventory", "severity": "MEDIUM",
-                        "desc": f"{r[1]}({r[0]}) 재고 {r[2]}개 < 안전재고 {r[3]}개",
+                        "area": "inventory", "severity": "HIGH" if shortage_ratio > 50 else "MEDIUM",
+                        "desc": f"{r[1]}({r[0]}) 재고 {r[2]}개 < 안전재고 {r[3]}개 (부족률 {shortage_ratio}%)",
                     })
                 if len(low_stock) >= 3:
                     recommendations.append({
@@ -453,13 +566,59 @@ async def ai_insights(data: dict) -> dict:
                         "detail": ", ".join(f"{r[1]}" for r in low_stock[:5]),
                     })
 
+        # ── 5. Cross-metric Correlation ─────────────────────
+        if focus == "all":
+            # Check if equipment downtime correlates with production drop
+            cur.execute(
+                "SELECT date_trunc('day', esl.changed_at)::date AS d, "
+                "COUNT(*) FILTER (WHERE esl.status = 'DOWN') AS down_events "
+                "FROM equip_status_log esl "
+                "WHERE esl.changed_at >= NOW() - INTERVAL '14 days' "
+                "GROUP BY 1 ORDER BY 1"
+            )
+            down_daily = {str(r[0]): r[1] for r in cur.fetchall()}
+
+            cur.execute(
+                "SELECT wr.start_time::date, SUM(wr.good_qty) "
+                "FROM work_results wr "
+                "WHERE wr.start_time >= NOW() - INTERVAL '14 days' "
+                "GROUP BY 1 ORDER BY 1"
+            )
+            prod_daily = {str(r[0]): float(r[1] or 0) for r in cur.fetchall()}
+
+            common_dates = sorted(set(down_daily.keys()) & set(prod_daily.keys()))
+            if len(common_dates) >= 5:
+                down_vals = [down_daily[d] for d in common_dates]
+                prod_vals = [prod_daily[d] for d in common_dates]
+                n = len(common_dates)
+                d_mean = sum(down_vals) / n
+                p_mean = sum(prod_vals) / n
+                cov = sum((down_vals[i] - d_mean) * (prod_vals[i] - p_mean) for i in range(n)) / n
+                d_std = math.sqrt(sum((v - d_mean) ** 2 for v in down_vals) / n)
+                p_std = math.sqrt(sum((v - p_mean) ** 2 for v in prod_vals) / n)
+                corr = cov / (d_std * p_std) if d_std > 0 and p_std > 0 else 0
+                kpis["downtime_production_correlation"] = round(corr, 3)
+                analysis_methods.append("cross_correlation")
+
+                if corr < -0.5:
+                    issues.append({
+                        "area": "production", "severity": "HIGH",
+                        "desc": f"설비 고장과 생산량 간 강한 음의 상관관계 (r={corr:.2f})",
+                    })
+                    recommendations.append({
+                        "area": "equipment", "priority": "HIGH",
+                        "action": "예방정비 강화 → 생산량 안정화",
+                        "expected_impact": "설비 고장 감소 → 생산량 변동 축소",
+                        "detail": f"피어슨 상관계수 r={corr:.2f} (14일간 일별 데이터 {n}건)",
+                    })
+
         cur.close()
 
         # ── Generate Summary ────────────────────────────────
         critical_count = sum(1 for i in issues if i.get("severity") in ("CRITICAL", "HIGH"))
         medium_count = sum(1 for i in issues if i.get("severity") == "MEDIUM")
 
-        summary_parts = [f"분석 결과: 이슈 {len(issues)}건 발견"]
+        summary_parts = [f"통계 분석 결과: 이슈 {len(issues)}건 발견"]
         if critical_count:
             summary_parts.append(f"긴급 {critical_count}건")
         if medium_count:
@@ -467,17 +626,21 @@ async def ai_insights(data: dict) -> dict:
         summary_parts.append(f"개선 권고 {len(recommendations)}건")
         summary = ", ".join(summary_parts)
 
-        # Sort issues by severity
         severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
         issues.sort(key=lambda x: severity_order.get(x.get("severity", "LOW"), 3))
+
+        # Deduplicate analysis methods
+        unique_methods = list(dict.fromkeys(analysis_methods))
 
         return {
             "summary": summary,
             "kpis": kpis,
             "issues": issues,
             "recommendations": recommendations,
+            "analysis_methods": unique_methods,
         }
     except Exception as e:
+        log.error("AI insights error: %s", e)
         return {"error": str(e)}
     finally:
         if conn:

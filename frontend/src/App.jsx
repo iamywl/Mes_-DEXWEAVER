@@ -346,8 +346,13 @@ const App = () => {
           }));
         }
         if (menu==='EQUIPMENT') {
-          const r = await axios.get('/api/equipments');
-          setExtra(prev=>({...prev, equips: r.data.equipments||[]}));
+          const [r, st] = await Promise.all([
+            axios.get('/api/equipments'),
+            axios.get('/api/equipments/status').catch(()=>({data:{equipments:[]}})),
+          ]);
+          const equips = r.data.equipments||[];
+          const statusMap = Object.fromEntries((st.data.equipments||[]).map(s=>[s.equip_code, s]));
+          setExtra(prev=>({...prev, equips: equips.map(e=>({...e, uptime_today: (statusMap[e.equip_code]||{}).uptime_today||0, current_job: (statusMap[e.equip_code]||{}).current_job||null}))}));
         }
         if (menu==='PLANS') {
           const r = await axios.get('/api/plans');
@@ -1058,8 +1063,33 @@ const App = () => {
                 <FilterSearch value={tf.equips.search} onChange={v=>setFilter('equips','search',v)} placeholder="Search name, code..." />
                 <FilterCount total={allEquips.length} filtered={filtered.length} />
               </FilterBar>
+              {/* ── Availability Summary ── */}
+              {(() => {
+                const running = allEquips.filter(e=>e.status==='RUNNING').length;
+                const down = allEquips.filter(e=>e.status==='DOWN').length;
+                const stop = allEquips.filter(e=>e.status==='STOP').length;
+                const total = allEquips.length||1;
+                const avgUptime = allEquips.length ? Math.round(allEquips.reduce((s,e)=>s+(e.uptime_today||0)*100,0)/allEquips.length) : 0;
+                return (
+                  <div className="bg-[#1e293b]/50 rounded-2xl border border-slate-800 p-4 grid grid-cols-5 gap-4">
+                    <div className="text-center"><div className="text-2xl font-bold text-white">{total}</div><div className="text-[10px] text-slate-500">Total</div></div>
+                    <div className="text-center"><div className="text-2xl font-bold text-emerald-400">{running}</div><div className="text-[10px] text-slate-500">Running</div></div>
+                    <div className="text-center"><div className="text-2xl font-bold text-red-400">{down}</div><div className="text-[10px] text-slate-500">Down</div></div>
+                    <div className="text-center"><div className="text-2xl font-bold text-amber-400">{stop}</div><div className="text-[10px] text-slate-500">Stopped</div></div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-cyan-400">{avgUptime}%</div>
+                      <div className="text-[10px] text-slate-500">Avg Uptime</div>
+                      <div className="mt-1 w-full bg-slate-700 rounded-full h-2">
+                        <div className={`h-2 rounded-full ${avgUptime>=80?'bg-emerald-500':avgUptime>=50?'bg-amber-500':'bg-red-500'}`} style={{width:`${avgUptime}%`}}/>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-5 gap-3">
-                {filtered.map(e=>(
+                {filtered.map(e=>{
+                  const upt = Math.round((e.uptime_today||0)*100);
+                  return (
                   <div key={e.equip_code} className="bg-[#1e293b]/30 p-4 rounded-2xl border border-slate-800">
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-white font-bold text-xs">{e.name}</span>
@@ -1069,9 +1099,20 @@ const App = () => {
                       <div>Code: {e.equip_code}</div>
                       <div>Process: {e.process_code}</div>
                       <div>Capacity: {e.capacity_per_hour}/hr</div>
+                      {e.current_job && <div className="text-cyan-400">Job: {e.current_job}</div>}
+                    </div>
+                    <div className="mt-2">
+                      <div className="flex justify-between text-[10px] mb-0.5">
+                        <span className="text-slate-500">Uptime</span>
+                        <span className={upt>=80?'text-emerald-400':upt>=50?'text-amber-400':'text-red-400'}>{upt}%</span>
+                      </div>
+                      <div className="w-full bg-slate-700 rounded-full h-1.5">
+                        <div className={`h-1.5 rounded-full ${upt>=80?'bg-emerald-500':upt>=50?'bg-amber-500':'bg-red-500'}`} style={{width:`${upt}%`}}/>
+                      </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
