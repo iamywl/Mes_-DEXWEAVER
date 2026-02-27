@@ -703,6 +703,6 @@ sudo bash /home/c1_master1/MES_PROJECT/init.sh
 
 ---
 
-**KNU Smart Factory MES v5.5**
+**DEXWEAVER MES v4.0**
 **경북대학교 컴퓨터학부 클라우드컴퓨팅 연구실**
-**최종 업데이트: 2026-02-24**
+**최종 업데이트: 2026-02-27**

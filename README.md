@@ -44,7 +44,7 @@ bash /root/MES_PROJECT/init.sh
 
 ## 시스템 개요
 
-14개 메뉴, 37+ API 엔드포인트로 구성된 통합 제조 실행 시스템입니다.
+14개 메뉴, 46개 API 엔드포인트로 구성된 통합 제조 실행 시스템입니다.
 
 | 영역 | 메뉴 | 주요 기능 |
 |------|------|-----------|
@@ -69,7 +69,7 @@ bash /root/MES_PROJECT/init.sh
 | 백엔드 | Python FastAPI | 0.109+ |
 | 프론트엔드 | React 19 + Vite + Tailwind CSS 4 | 최신 |
 | 프론트엔드 서빙 | nginx:alpine | 최신 |
-| 인증 | Keycloak (OIDC/PKCE) | 24.0.5 |
+| 인증 | JWT (PyJWT + bcrypt) | 커스텀 |
 | CI/CD | Jenkins (Jenkinsfile) | - |
 | 배포 방식 | ConfigMap 기반 (Docker 빌드 불필요) | - |
 
@@ -103,7 +103,7 @@ MES_PROJECT/
 ├── init.sh                     # 통합 초기화 스크립트 (최적화 버전)
 ├── env.sh                      # 환경 변수 + 프로그레스 바 유틸
 ├── setup-keycloak.sh           # Keycloak Realm/Client/사용자 자동 설정
-├── app.py                      # FastAPI 메인 라우터 (37+ 엔드포인트)
+├── app.py                      # FastAPI 메인 라우터 (46개 엔드포인트)
 ├── api_modules/                # 백엔드 비즈니스 로직 모듈
 ├── frontend/
 │   └── src/App.jsx             # React 단일 페이지 (14개 메뉴)
@@ -147,7 +147,7 @@ MES_PROJECT/
 | 인프라 | GET | /api/infra/status | CPU/메모리 상태 |
 | K8s | GET | /api/k8s/pods | Pod 목록 |
 
-Swagger UI: `http://<IP>:30461/docs` — 전체 37+ 엔드포인트 목록은 [doc/ARCH.md](doc/ARCH.md#4-백엔드-아키텍처) 참조
+Swagger UI: `http://<IP>:30461/api/docs` — 전체 46개 엔드포인트 목록은 [doc/ARCH.md](doc/ARCH.md#4-백엔드-아키텍처) 참조
 
 ---
 

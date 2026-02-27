@@ -1,10 +1,10 @@
-# DEXWEAVER MES v4.3 설치/운영/성능 적격성 평가 보고서 (IQ/OQ/PQ Report)
+# DEXWEAVER MES v4.0 설치/운영/성능 적격성 평가 보고서 (IQ/OQ/PQ Report)
 
 | 항목 | 내용 |
 |------|------|
 | **문서 번호** | DW-MES-VAL-IQ-OQ-PQ-2026-001 |
 | **시스템명** | DEXWEAVER Manufacturing Execution System |
-| **대상 버전** | v4.3 |
+| **대상 버전** | v4.0 |
 | **평가일시** | 2026-02-27 15:44 KST |
 | **평가 기준** | CSV (Computer System Validation) 3Q Model, GAMP 5, ISPE Baseline Guide |
 | **평가 환경** | Ubuntu 24.04 LTS / Docker 29.2.1 / PostgreSQL 15 / Python 3.12.3 / Node.js v20.20.0 |
@@ -69,7 +69,7 @@
 
 ### 1.1 목적 (Purpose)
 
-본 보고서는 DEXWEAVER MES v4.3 시스템이 사전 정의된 사용자 요구사항(URS) 및 기능 명세서(FS)에
+본 보고서는 DEXWEAVER MES v4.0 시스템이 사전 정의된 사용자 요구사항(URS) 및 기능 명세서(FS)에
 따라 올바르게 설치, 운영, 성능을 발휘하는지를 CSV(Computer System Validation) 3Q 모델에 따라
 체계적으로 검증한 결과를 기록합니다.
 
@@ -505,7 +505,7 @@ PQ는 시스템이 실제 운영 조건과 동일하거나 유사한 환경에�
 
 ### 8.1 결론 (Conclusion)
 
-DEXWEAVER MES v4.3 시스템은 CSV(Computer System Validation) 3Q 모델에 따른 설치 적격성(IQ),
+DEXWEAVER MES v4.0 시스템은 CSV(Computer System Validation) 3Q 모델에 따른 설치 적격성(IQ),
 운영 적격성(OQ), 성능 적격성(PQ) 평가를 **모두 통과**하였습니다.
 
 - **IQ**: 운영체제, 런타임, 데이터베이스, 필수 파일 등 14개 설치 항목이 모두 사양에 부합합니다.

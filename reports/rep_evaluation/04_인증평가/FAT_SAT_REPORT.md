@@ -1,10 +1,10 @@
-# DEXWEAVER MES v4.3 공장/현장 인수시험 보고서 (FAT/SAT Report)
+# DEXWEAVER MES v4.0 공장/현장 인수시험 보고서 (FAT/SAT Report)
 
 | 항목 | 내용 |
 |------|------|
 | **문서 번호** | DW-MES-VAL-FAT-SAT-2026-001 |
 | **시스템명** | DEXWEAVER Manufacturing Execution System |
-| **대상 버전** | v4.3 |
+| **대상 버전** | v4.0 |
 | **시험일시** | 2026-02-27 15:44 KST |
 | **시험 기준** | IEC 62381 (FAT/SAT), GAMP 5 Appendix D9/D10, ISA-88 |
 | **시험 환경** | Ubuntu 24.04 LTS / Docker 29.2.1 / PostgreSQL 15 / Python 3.12.3 / Node.js v20.20.0 |
@@ -72,7 +72,7 @@
 
 ### 1.1 목적 (Purpose)
 
-본 보고서는 DEXWEAVER MES v4.3 시스템의 인수시험 결과를 기록합니다.
+본 보고서는 DEXWEAVER MES v4.0 시스템의 인수시험 결과를 기록합니다.
 FAT(Factory Acceptance Testing)는 개발 완료 후 출하 전 단계에서 시스템이 요구사항을 충족하는지
 검증하며, SAT(Site Acceptance Testing)는 실제 운영 환경(현장)에 배포한 후 정상 작동을 확인합니다.
 
@@ -471,7 +471,7 @@ SAT는 시스템이 실제 운영 현장(Production Site)에 배포된 후, 현�
 
 ### 7.1 결론 (Conclusion)
 
-DEXWEAVER MES v4.3 시스템은 FAT(공장 인수시험) 및 SAT(현장 인수시험)를 **모두 통과**하였습니다.
+DEXWEAVER MES v4.0 시스템은 FAT(공장 인수시험) 및 SAT(현장 인수시험)를 **모두 통과**하였습니다.
 
 **FAT 결과:**
 - E2E 업무 시나리오 12단계를 Login부터 Reports까지 순차적으로 수행하여 전체 업무 흐름의

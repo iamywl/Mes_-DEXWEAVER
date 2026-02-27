@@ -1,4 +1,4 @@
-# DEXWEAVER MES v4.3 소프트웨어 테스트 계획서 (Software Test Plan)
+# DEXWEAVER MES v4.0 소프트웨어 테스트 계획서 (Software Test Plan)
 
 | 항목 | 내용 |
 |------|------|
@@ -48,12 +48,12 @@
 |------|------|
 | **문서 ID** | TP-DEXWEAVER-MES-2026-001 |
 | **대상 시스템** | DEXWEAVER Manufacturing Execution System (MES) |
-| **대상 버전** | v4.3 |
+| **대상 버전** | v4.0 |
 | **적용 표준** | IEEE 829-2008 (Standard for Software and System Test Documentation) |
 | **테스트 수준** | 단위(Unit) / 통합(Integration) / 시스템(System) / 인수(Acceptance) |
 | **형상 관리** | Git (main 브랜치 기준, 커밋 2882674) |
 
-본 문서는 IEEE 829-2008 표준에 따라 작성된 마스터 테스트 계획서(MTP)로서, DEXWEAVER MES v4.3의 전체 소프트웨어 검증 활동을 정의한다.
+본 문서는 IEEE 829-2008 표준에 따라 작성된 마스터 테스트 계획서(MTP)로서, DEXWEAVER MES v4.0의 전체 소프트웨어 검증 활동을 정의한다.
 
 ---
 
@@ -86,7 +86,7 @@
 | BBT-001 | 블랙박스 테스트 결과 보고서 | 50건 API 테스트 결과 |
 | SQV-001 | 소프트웨어 품질 검증 보고서 | ISO 25010 기반 86건 검증 |
 | SRS-001 | 소프트웨어 요구사항 명세서 | FN-001~FN-038 정의 |
-| DBS-001 | 데이터베이스 스키마 설계서 | 19개 테이블 + 시드 데이터 |
+| DBS-001 | 데이터베이스 스키마 설계서 | 21개 테이블 + 시드 데이터 |
 
 ---
 
@@ -94,7 +94,7 @@
 
 ### 3.1 목적 (Purpose)
 
-본 테스트 계획서는 DEXWEAVER MES v4.3 시스템의 소프트웨어 품질을 체계적으로 검증하기 위한 마스터 테스트 계획을 정의한다. 본 계획은 다음 목표를 달성한다:
+본 테스트 계획서는 DEXWEAVER MES v4.0 시스템의 소프트웨어 품질을 체계적으로 검증하기 위한 마스터 테스트 계획을 정의한다. 본 계획은 다음 목표를 달성한다:
 
 1. 62건의 요구사항(기능 38건, 비기능 12건, 보안 12건)에 대한 완전한 테스트 커버리지 확보
 2. V-Model 기반 4단계 테스트(단위, 통합, 시스템, 인수)의 체계적 수행
@@ -134,7 +134,7 @@
 | WSGI/ASGI 서버 | uvicorn | 0.24+ | 프로덕션 서버 |
 | 데이터베이스 드라이버 | psycopg2-binary | 2.9+ | ThreadedConnectionPool |
 | 인증 라이브러리 | PyJWT + bcrypt | 2.8+ / 4.1+ | HS256, bcrypt 해싱 |
-| API 모듈 (18개) | `mes_auth`, `mes_items`, `mes_bom`, `mes_process`, `mes_equipment`, `mes_plan`, `mes_work`, `mes_quality`, `mes_inventory`, `mes_reports`, `mes_dashboard`, `mes_ai_prediction`, `mes_defect_predict`, `mes_inventory_status`, `mes_inventory_movement`, `mes_execution`, `k8s_service`, `sys_logic` | - | 총 4,726줄 |
+| API 모듈 (18개) | `mes_auth`, `mes_items`, `mes_bom`, `mes_process`, `mes_equipment`, `mes_plan`, `mes_work`, `mes_quality`, `mes_inventory`, `mes_reports`, `mes_dashboard`, `mes_ai_prediction`, `mes_defect_predict`, `mes_inventory_status`, `mes_inventory_movement`, `mes_execution`, `k8s_service`, `sys_logic` | - | 총 4,780줄 |
 
 ### 4.2 프론트엔드 SPA
 
@@ -635,7 +635,7 @@
 | 교육 항목 | 대상 | 시간 | 내용 |
 |-----------|------|------|------|
 | MES 업무 프로세스 | QA팀 전원 | 4시간 | 품목/BOM/공정/작업지시/품질/재고 업무 흐름 |
-| DEXWEAVER MES v4.3 아키텍처 | QA팀 전원 | 2시간 | FastAPI 모듈 구조, DB 스키마, AI 엔진 구성 |
+| DEXWEAVER MES v4.0 아키텍처 | QA팀 전원 | 2시간 | FastAPI 모듈 구조, DB 스키마, AI 엔진 구성 |
 | IEEE 829 테스트 문서 표준 | 테스트 관리자, QA | 2시간 | 테스트 계획/설계/결과 문서 작성법 |
 | KISA 49 보안 테스트 | 보안 담당 | 4시간 | 49개 보안약점 진단 기법 |
 | pytest + FastAPI TestClient | 개발팀 + QA | 2시간 | 자동화 테스트 작성 및 실행 |
@@ -782,7 +782,7 @@ TC-[수준]-[요구사항ID]-[순번]
 
 ---
 
-> 본 문서는 IEEE 829-2008 표준에 따라 작성되었으며, DEXWEAVER MES v4.3의 전체 테스트 활동을 계획하고 관리하기 위한 마스터 테스트 계획서입니다.
+> 본 문서는 IEEE 829-2008 표준에 따라 작성되었으며, DEXWEAVER MES v4.0의 전체 테스트 활동을 계획하고 관리하기 위한 마스터 테스트 계획서입니다.
 > 모든 테스트 활동은 본 계획에 정의된 절차와 기준에 따라 수행되어야 합니다.
 
 **문서 끝 (End of Document)**

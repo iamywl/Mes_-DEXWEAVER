@@ -6,10 +6,10 @@
 | 항목 (Field)        | 내용 (Value)                                              |
 |---------------------|----------------------------------------------------------|
 | 문서 ID             | MES-ISO25010-RPT-20260227-001                            |
-| 시스템명            | Smart Factory MES (Manufacturing Execution System) v4.3  |
+| 시스템명            | DEXWEAVER MES (Manufacturing Execution System) v4.0      |
 | 검증 기준 표준      | ISO/IEC 25010:2023, GS인증(TTA), KISA 보안 49항          |
 | 검증 일시           | 2026-02-27T15:44:52 KST                                 |
-| 검증 환경           | Linux 6.8.0-100-generic / Python 3.12.3 / PostgreSQL 17 |
+| 검증 환경           | Linux 6.8.0-100-generic / Python 3.12.3 / PostgreSQL 15 |
 | 검증 도구           | pytest, custom comprehensive_test.py, ab (ApacheBench)   |
 | 총 테스트 수        | 199 tests                                                |
 | 총 합격 / 불합격    | 197 PASS / 2 FAIL                                        |
@@ -123,7 +123,7 @@
 ```
 [React Frontend] --> [FastAPI Backend (app.py + 28 modules)]
                           |
-                    [PostgreSQL 17 (21 tables)]
+                    [PostgreSQL 15 (21 tables)]
                           |
                     [AI Engine (Prophet + XGBoost + OR-Tools)]
                           |
@@ -133,7 +133,7 @@
 **구성 요약:**
 - **Backend**: FastAPI 0.109.0, Python 3.12.3, 28 API modules, 4,780 lines
 - **Frontend**: React + Vite, 빌드된 dist/ 배포
-- **Database**: PostgreSQL 17, 21 tables, 1,068-line init.sql schema
+- **Database**: PostgreSQL 15, 21 tables, 1,068-line init.sql schema
 - **AI Engines**: Prophet (수요예측), XGBoost (불량예측), OR-Tools (일정최적화)
 - **Infrastructure**: Docker, docker-compose, Kubernetes (7 manifests)
 - **Git History**: 40 commits on main branch
@@ -925,7 +925,7 @@ First quartile 40ms -> Last quartile 42ms로 시간 경과에 따른 성능 저�
   ║    종합 점수:  99.0%                                      ║
   ║    판    정:  합 격 (PASS)                                ║
   ║                                                          ║
-  ║    GS인증 기준(95%) ............ 충족                      ║
+  ║    GS인증 1등급 기준(95%) ...... 충족 (자체평가)            ║
   ║    치명적 결함 ................. 0건                       ║
   ║    보안 취약점(KISA 49항) ...... 미검출                    ║
   ║                                                          ║
@@ -938,7 +938,7 @@ First quartile 40ms -> Last quartile 42ms로 시간 경과에 따른 성능 저�
 
 ### 15.1 결론 (Conclusion)
 
-Smart Factory MES v4.3 시스템은 ISO/IEC 25010:2023 국제 표준의 **8대 주특성, 31개 부특성** 기준으로
+Smart Factory MES v4.0 시스템은 ISO/IEC 25010:2023 국제 표준의 **8대 주특성, 31개 부특성** 기준으로
 검증한 결과, **199개 테스트 중 197개 합격(99.0%)** 의 우수한 품질 수준을 달성하였다.
 
 **주요 성과:**
@@ -982,4 +982,4 @@ Smart Factory MES v4.3 시스템은 ISO/IEC 25010:2023 국제 표준의 **8대 �
 > 본 보고서는 ISO/IEC 25010:2023 표준에 근거하여 작성되었으며,
 > `/tmp/mes_comprehensive_results.json`의 실측 데이터를 기반으로 한다.
 >
-> 검증일: 2026-02-27 | 시스템 버전: v4.3 | 보고서 버전: 1.0
+> 검증일: 2026-02-27 | 시스템 버전: v4.0 | 보고서 버전: 1.0
