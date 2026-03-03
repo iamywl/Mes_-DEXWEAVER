@@ -1,4 +1,14 @@
-|   DB   |   모듈   |     기능명     |             API Endpoint            | Method |                                                                 요청파라미터(JSON)                                                                 |                                                                                      응답(JSON)                                                                                      |               DB테이블              |                                  처리로직                                 |
+# DEXWEAVER MES v4.0 — 기능명세서 (Functional Specification)
+
+> **버전**: v4.0 (FN-001 ~ FN-037, 총 37개)
+> **작성일**: 2025-12-01
+> **설명**: 초기 MES 시스템 기능명세서
+
+---
+
+## 기능명세 목록 (FN-001 ~ FN-037)
+
+|   ID   |   모듈   |     기능명     |             API Endpoint            | Method |                                                                 요청파라미터(JSON)                                                                 |                                                                                      응답(JSON)                                                                                      |               DB테이블              |                                  처리로직                                 |
 |:------:|:--------:|:--------------:|:-----------------------------------:|:------:|:--------------------------------------------------------------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------:|:-------------------------------------------------------------------------:|
 | FN-001 |  시스템  | 로그인         | /api/auth/login                     |  POST  | {"user_id":"string","password":"string"}                                                                                                           | {"token":"jwt_string","user":{"id","name","role"}}                                                                                                                                   | users                               | 1.ID/PW검증 2.JWT생성(24h) 3.로그인이력저장                               |
 | FN-002 |  시스템  | 회원가입       | /api/auth/register                  |  POST  | {"user_id":"string","password":"string","name":"string","email":"string","role":"worker\|admin"}                                                   | {"success":true,"user_id":"string"}                                                                                                                                                  | users                               | 1.ID중복체크 2.PW암호화(bcrypt) 3.DB저장                                  |
@@ -37,3 +47,30 @@
 | FN-035 |   통계   | 생산실적분석   | /api/reports/production             |   GET  | query: start_date, end_date, group_by(day\|week\|month)                                                                                            | {"summary":{"total_qty":10000,"achieve_rate":0.92},"trend":[{"period":"2024-01","qty":3000}],"by_item":[{"item","qty","rate"}]}                                                      | work_results, production_plans      | 1.기간별집계 2.품목별집계 3.달성률계산                                    |
 | FN-036 |   통계   | 품질리포트     | /api/reports/quality                |   GET  | query: start_date, end_date, item_code                                                                                                             | {"defect_rate":0.02,"trend":[...],"cpk":1.33,"control_chart":{"ucl":10.2,"lcl":9.8,"values":[...]}}                                                                                  | inspections, work_results           | 1.불량률계산 2.Cpk=(USL-LSL)/6σ 3.관리도데이터                            |
 | FN-037 |   통계   | AI인사이트     | /api/ai/insights                    |  POST  | {"period":"2024-01","focus_area":"production\|quality\|equipment"}                                                                                 | {"summary":"1월 생산성 5% 하락...","issues":[{"area":"설비","desc":"EQP-003 고장빈도 증가"}],"recommendations":[{"action":"예방정비 주기 단축","expected_impact":"가동률 3% 향상"}]} | all tables                          | 1.기간데이터수집 2.GPT API호출(프롬프트엔지니어링) 3.구조화된인사이트반환 |
+
+---
+
+## 모듈별 요약
+
+| 모듈 | 기능 수 | 범위 | API 수 |
+|:----:|:------:|:----:|:------:|
+| 시스템 | 3 | FN-001~003 | 3 |
+| 기준정보 | 11 | FN-004~014 | 11 |
+| 생산계획 | 5 | FN-015~019 | 5 |
+| 생산실행 | 5 | FN-020~024 | 5 |
+| 품질 | 4 | FN-025~028 | 4 |
+| 재고 | 3 | FN-029~031 | 3 |
+| 설비 | 3 | FN-032~034 | 3 |
+| 통계 | 3 | FN-035~037 | 3 |
+| **합계** | **37** | | **37** |
+
+---
+
+## API 엔드포인트 요약
+
+| Method | 수 | 비율 |
+|:------:|:--:|:----:|
+| GET | 18 | 48.6% |
+| POST | 16 | 43.2% |
+| PUT | 3 | 8.1% |
+| **합계** | **37** | **100%** |

@@ -5,3 +5,10 @@ build/
 *.log
 venv/
 __pycache__/
+.coverage
+*.pyc
+.pytest_cache/
+tmp/
+reports/
+frontend/node_modules/
+*.lock
