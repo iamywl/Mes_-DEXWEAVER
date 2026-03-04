@@ -1,9 +1,30 @@
+/**
+ * Disposition page — Quality disposition decisions list.
+ * Columns: ID, LOT, Decision, Date
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-const cols = ['처리ID','NCR ID','처분유형','수량','승인자','상태'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.disposition_id}</td><td className="p-2">{r.ncr_id}</td><td className="p-2">{r.disposition_type}</td><td className="p-2">{r.qty}</td><td className="p-2">{r.approved_by||"-"}</td><td className="p-2">{r.status}</td></tr>;
+const columns = ['ID', 'LOT', 'Decision', 'Date'];
 
-export default function Disposition() {
-  return <GenericListPage title="부적합 처리 (Disposition)" apiPath="/api/quality/disposition" columns={cols} renderRow={renderRow} searchFields={['disposition_id','ncr_id']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.disposition_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.disposition_id || '-'}</td>
+    <td className="p-3 font-mono">{row.lot || row.lot_no || '-'}</td>
+    <td className="p-3"><Badge v={row.decision || row.disposition || row.disposition_type || 'PENDING'} /></td>
+    <td className="p-3">{row.date || row.decision_date || row.created_at || '-'}</td>
+  </tr>
+);
+
+const Disposition = () => (
+  <GenericListPage
+    title="Disposition"
+    apiPath="/api/quality/disposition"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['id', 'disposition_id', 'lot', 'lot_no', 'decision', 'disposition', 'disposition_type']}
+  />
+);
+
+export default Disposition;

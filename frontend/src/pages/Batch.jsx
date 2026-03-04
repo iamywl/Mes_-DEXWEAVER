@@ -1,9 +1,31 @@
+/**
+ * Batch page — Batch manufacturing management.
+ * Columns: ID, Recipe, Status, Start, End
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-const cols = ['배치ID','품목','배치크기','상태','시작일','종료일'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.batch_id}</td><td className="p-2">{r.item_code}</td><td className="p-2">{r.batch_size}</td><td className="p-2">{r.status}</td><td className="p-2">{r.start_date}</td><td className="p-2">{r.end_date||"-"}</td></tr>;
+const columns = ['ID', 'Recipe', 'Status', 'Start', 'End'];
 
-export default function Batch() {
-  return <GenericListPage title="배치 관리" apiPath="/api/batch" columns={cols} renderRow={renderRow} searchFields={['batch_id','item_code']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.batch_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.batch_id || '-'}</td>
+    <td className="p-3">{row.recipe || row.recipe_id || row.item_code || '-'}</td>
+    <td className="p-3"><Badge v={row.status || 'PENDING'} /></td>
+    <td className="p-3">{row.start || row.start_date || row.started_at || '-'}</td>
+    <td className="p-3">{row.end || row.end_date || row.ended_at || '-'}</td>
+  </tr>
+);
+
+const Batch = () => (
+  <GenericListPage
+    title="Batch Management"
+    apiPath="/api/batch"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['id', 'batch_id', 'recipe', 'recipe_id', 'item_code', 'status']}
+  />
+);
+
+export default Batch;

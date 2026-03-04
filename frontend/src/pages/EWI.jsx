@@ -1,9 +1,30 @@
+/**
+ * EWI page — Electronic Work Instructions list.
+ * Columns: ID, WO, Status, Steps
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-const cols = ['지시서ID','제목','품목','공정','버전','상태'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.wi_id}</td><td className="p-2">{r.title}</td><td className="p-2">{r.item_code}</td><td className="p-2">{r.process_code}</td><td className="p-2">v{r.version}</td><td className="p-2">{r.status}</td></tr>;
+const columns = ['ID', 'WO', 'Status', 'Steps'];
 
-export default function EWI() {
-  return <GenericListPage title="전자 작업 지시서 (EWI)" apiPath="/api/work-instructions" columns={cols} renderRow={renderRow} searchFields={['wi_id','title','item_code']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.wi_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.wi_id || '-'}</td>
+    <td className="p-3">{row.wo || row.work_order_id || row.wo_code || '-'}</td>
+    <td className="p-3"><Badge v={row.status || 'NORMAL'} /></td>
+    <td className="p-3">{row.steps != null ? (Array.isArray(row.steps) ? row.steps.length : row.steps) : '-'}</td>
+  </tr>
+);
+
+const EWI = () => (
+  <GenericListPage
+    title="Electronic Work Instructions (EWI)"
+    apiPath="/api/work-instructions"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['id', 'wi_id', 'wo', 'work_order_id', 'wo_code', 'status']}
+  />
+);
+
+export default EWI;

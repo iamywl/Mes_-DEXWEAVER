@@ -1,9 +1,29 @@
+/**
+ * ComplexRouting page — Complex routing management.
+ * Columns: Code, Item, Steps, Type
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
 
-const cols = ['라우팅ID','품목','유형','노드수','상태'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.routing_id}</td><td className="p-2">{r.item_code}</td><td className="p-2">{r.routing_type}</td><td className="p-2">{r.nodes?.length||r.node_count||0}</td><td className="p-2">{r.status||"ACTIVE"}</td></tr>;
+const columns = ['Code', 'Item', 'Steps', 'Type'];
 
-export default function ComplexRouting() {
-  return <GenericListPage title="복합 라우팅" apiPath="/api/complex-routing" columns={cols} renderRow={renderRow} searchFields={['routing_id','item_code']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.routing_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.code || row.routing_id || row.routing_code || '-'}</td>
+    <td className="p-3">{row.item || row.item_code || row.item_name || '-'}</td>
+    <td className="p-3">{row.steps != null ? (Array.isArray(row.steps) ? row.steps.length : row.steps) : (row.nodes?.length ?? row.node_count ?? '-')}</td>
+    <td className="p-3">{row.type || row.routing_type || '-'}</td>
+  </tr>
+);
+
+const ComplexRouting = () => (
+  <GenericListPage
+    title="Complex Routing"
+    apiPath="/api/complex-routing"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['code', 'routing_id', 'routing_code', 'item', 'item_code', 'type', 'routing_type']}
+  />
+);
+
+export default ComplexRouting;

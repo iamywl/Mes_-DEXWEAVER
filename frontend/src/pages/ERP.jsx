@@ -1,15 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+/**
+ * ERP page — ERP sync configuration.
+ * Columns: ID, Name, Direction, Status
+ */
+import React from 'react';
 import GenericListPage from './GenericListPage';
-import { PageHeader, Card, LoadingSpinner } from '../components/ui';
+import { Badge } from '../components/ui';
 
-const cols = ['설정ID','시스템','방향','테이블','주기','상태'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50">
-  <td className="p-2">{r.config_id}</td><td className="p-2">{r.erp_system}</td>
-  <td className="p-2">{r.direction}</td><td className="p-2">{r.table_name}</td>
-  <td className="p-2">{r.sync_interval}</td><td className="p-2">{r.status}</td>
-</tr>;
+const columns = ['ID', 'Name', 'Direction', 'Status'];
 
-export default function ERP() {
-  return <GenericListPage title="ERP 연동" apiPath="/api/erp/sync-config" columns={cols} renderRow={renderRow} searchFields={['config_id','erp_system']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.config_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.config_id || '-'}</td>
+    <td className="p-3">{row.name || row.erp_system || row.table_name || '-'}</td>
+    <td className="p-3">{row.direction || '-'}</td>
+    <td className="p-3"><Badge v={row.status || 'NORMAL'} /></td>
+  </tr>
+);
+
+const ERP = () => (
+  <GenericListPage
+    title="ERP Integration"
+    apiPath="/api/erp/sync-config"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['id', 'config_id', 'name', 'erp_system', 'table_name', 'direction', 'status']}
+  />
+);
+
+export default ERP;

@@ -1,31 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import api from '../services/api';
-import { PageHeader, Card, LoadingSpinner, EmptyState } from '../components/ui';
+/**
+ * OPCUA page — OPC-UA connection configuration.
+ * Columns: ID, URL, Status
+ */
+import React from 'react';
+import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-export default function OPCUA() {
-  const [configs, setConfigs] = useState([]);
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
+const columns = ['ID', 'URL', 'Status'];
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [c, s] = await Promise.all([api.get('/api/opcua/config'), api.get('/api/opcua/status')]);
-        setConfigs(c.data.configs || []);
-        setStatus(s.data);
-      } catch {}
-      setLoading(false);
-    })();
-  }, []);
+const renderRow = (row, i) => (
+  <tr key={row.id || row.config_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.config_id || '-'}</td>
+    <td className="p-3 font-mono text-[10px]">{row.url || row.server_url || '-'}</td>
+    <td className="p-3"><Badge v={row.status || 'NORMAL'} /></td>
+  </tr>
+);
 
-  if (loading) return <LoadingSpinner />;
-  return (
-    <div className="space-y-4">
-      <PageHeader title="OPC-UA 연결" />
-      {status && <Card><h3 className="font-bold mb-2">연결 상태</h3><pre className="text-xs">{JSON.stringify(status, null, 2)}</pre></Card>}
-      {configs.length > 0 ? configs.map((c,i) => (
-        <Card key={i}><h4 className="font-bold">{c.config_id}</h4><p className="text-sm">{c.server_url} — {c.status}</p></Card>
-      )) : <EmptyState message="OPC-UA 설정 없음" />}
-    </div>
-  );
-}
+const OPCUA = () => (
+  <GenericListPage
+    title="OPC-UA Configuration"
+    apiPath="/api/opcua/config"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['id', 'config_id', 'url', 'server_url', 'status']}
+  />
+);
+
+export default OPCUA;

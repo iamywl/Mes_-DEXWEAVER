@@ -1,9 +1,31 @@
+/**
+ * Notification page — Notification list.
+ * Columns: ID, Type, Message, Time, Read
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-const cols = ['ID','유형','메시지','읽음','시간'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.notification_id}</td><td className="p-2">{r.noti_type}</td><td className="p-2">{r.message}</td><td className="p-2">{r.is_read?"✓":"−"}</td><td className="p-2">{r.created_at}</td></tr>;
+const columns = ['ID', 'Type', 'Message', 'Time', 'Read'];
 
-export default function Notification() {
-  return <GenericListPage title="알림" apiPath="/api/notifications" columns={cols} renderRow={renderRow} searchFields={['message','noti_type']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.notification_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.notification_id || '-'}</td>
+    <td className="p-3">{row.type || row.noti_type || '-'}</td>
+    <td className="p-3 max-w-xs truncate">{row.message || '-'}</td>
+    <td className="p-3">{row.time || row.created_at || '-'}</td>
+    <td className="p-3"><Badge v={row.read || row.is_read ? 'DONE' : 'PENDING'} /></td>
+  </tr>
+);
+
+const Notification = () => (
+  <GenericListPage
+    title="Notifications"
+    apiPath="/api/notifications"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['type', 'noti_type', 'message']}
+  />
+);
+
+export default Notification;

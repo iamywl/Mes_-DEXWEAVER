@@ -1,9 +1,30 @@
+/**
+ * ECM page — Engineering Change Management.
+ * Columns: ID, Title, Type, Status
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-const cols = ['ECR ID','제목','유형','영향도','상태','요청자'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.ecr_id}</td><td className="p-2">{r.title}</td><td className="p-2">{r.change_type}</td><td className="p-2">{r.impact_level}</td><td className="p-2">{r.status}</td><td className="p-2">{r.requested_by}</td></tr>;
+const columns = ['ID', 'Title', 'Type', 'Status'];
 
-export default function ECM() {
-  return <GenericListPage title="설계 변경 관리 (ECM)" apiPath="/api/ecm" columns={cols} renderRow={renderRow} searchFields={['ecr_id','title']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.ecr_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.ecr_id || '-'}</td>
+    <td className="p-3">{row.title || '-'}</td>
+    <td className="p-3">{row.type || row.change_type || '-'}</td>
+    <td className="p-3"><Badge v={row.status || 'OPEN'} /></td>
+  </tr>
+);
+
+const ECM = () => (
+  <GenericListPage
+    title="Engineering Change Management (ECM)"
+    apiPath="/api/ecm"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['id', 'ecr_id', 'title', 'type', 'change_type', 'status']}
+  />
+);
+
+export default ECM;

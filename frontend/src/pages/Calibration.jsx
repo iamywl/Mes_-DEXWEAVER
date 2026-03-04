@@ -1,9 +1,30 @@
+/**
+ * Calibration page — Gauge calibration management.
+ * Columns: ID, Code, Status, Next Cal
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-const cols = ['교정ID','게이지ID','이름','주기(일)','다음교정일','상태'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.calibration_id}</td><td className="p-2">{r.gauge_id}</td><td className="p-2">{r.gauge_name}</td><td className="p-2">{r.interval_days}</td><td className="p-2">{r.next_cal_date}</td><td className="p-2">{r.status}</td></tr>;
+const columns = ['ID', 'Code', 'Status', 'Next Cal'];
 
-export default function Calibration() {
-  return <GenericListPage title="교정 관리 (Calibration)" apiPath="/api/calibration/gauges" columns={cols} renderRow={renderRow} searchFields={['calibration_id','gauge_id','gauge_name']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.calibration_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.calibration_id || '-'}</td>
+    <td className="p-3 font-mono">{row.code || row.gauge_id || row.gauge_code || '-'}</td>
+    <td className="p-3"><Badge v={row.status || 'NORMAL'} /></td>
+    <td className="p-3">{row.next_cal || row.next_cal_date || row.next_calibration_date || '-'}</td>
+  </tr>
+);
+
+const Calibration = () => (
+  <GenericListPage
+    title="Calibration Management"
+    apiPath="/api/calibration/gauges"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['id', 'calibration_id', 'code', 'gauge_id', 'gauge_code', 'gauge_name', 'status']}
+  />
+);
+
+export default Calibration;

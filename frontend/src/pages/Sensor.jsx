@@ -1,28 +1,29 @@
-import React, { useState } from 'react';
-import api from '../services/api';
-import { PageHeader, Card, LoadingSpinner } from '../components/ui';
+/**
+ * Sensor page — MQTT sensor data collection config.
+ * Columns: Topic, Equipment, Status
+ */
+import React from 'react';
+import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-export default function Sensor() {
-  const [equip, setEquip] = useState('');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
+const columns = ['Topic', 'Equipment', 'Status'];
 
-  const load = async () => {
-    if (!equip) return;
-    setLoading(true);
-    try { const r = await api.get(`/api/datacollect/realtime/${equip}`); setData(r.data); } catch {}
-    setLoading(false);
-  };
+const renderRow = (row, i) => (
+  <tr key={row.id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.topic || row.mqtt_topic || '-'}</td>
+    <td className="p-3">{row.equipment || row.equipment_code || row.equip_code || '-'}</td>
+    <td className="p-3"><Badge v={row.status || 'NORMAL'} /></td>
+  </tr>
+);
 
-  return (
-    <div className="space-y-4">
-      <PageHeader title="센서 데이터 수집" />
-      <div className="flex gap-2">
-        <input value={equip} onChange={e=>setEquip(e.target.value)} placeholder="설비코드" className="border rounded px-3 py-1" />
-        <button onClick={load} className="px-4 py-1 bg-blue-600 text-white rounded">조회</button>
-      </div>
-      {loading && <LoadingSpinner />}
-      {data && <Card><pre className="text-xs overflow-auto max-h-96">{JSON.stringify(data, null, 2)}</pre></Card>}
-    </div>
-  );
-}
+const Sensor = () => (
+  <GenericListPage
+    title="Sensor Data Collection (MQTT)"
+    apiPath="/api/datacollect/mqtt/config"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['topic', 'mqtt_topic', 'equipment', 'equipment_code', 'equip_code']}
+  />
+);
+
+export default Sensor;

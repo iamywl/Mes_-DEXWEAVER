@@ -1,9 +1,30 @@
+/**
+ * SQM page — Supplier Quality Management.
+ * Columns: ID, Name, ASL Status, Score
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-const cols = ['공급업체ID','이름','등급','점수','상태'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.supplier_id}</td><td className="p-2">{r.name}</td><td className="p-2">{r.grade}</td><td className="p-2">{r.score}</td><td className="p-2">{r.status}</td></tr>;
+const columns = ['ID', 'Name', 'ASL Status', 'Score'];
 
-export default function SQM() {
-  return <GenericListPage title="공급업체 품질 관리 (SQM)" apiPath="/api/sqm/suppliers" columns={cols} renderRow={renderRow} searchFields={['supplier_id','name']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.supplier_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.supplier_id || '-'}</td>
+    <td className="p-3">{row.name || row.supplier_name || '-'}</td>
+    <td className="p-3"><Badge v={row.asl_status || row.grade || row.status || 'NORMAL'} /></td>
+    <td className="p-3">{row.score ?? '-'}</td>
+  </tr>
+);
+
+const SQM = () => (
+  <GenericListPage
+    title="SQM (Supplier Quality Management)"
+    apiPath="/api/sqm/suppliers"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['id', 'supplier_id', 'name', 'supplier_name', 'asl_status', 'grade', 'status']}
+  />
+);
+
+export default SQM;

@@ -1,9 +1,30 @@
+/**
+ * Multisite page — Multi-site management.
+ * Columns: Code, Name, Type, Timezone
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-const cols = ['사이트ID','이름','위치','유형','상태'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.site_id}</td><td className="p-2">{r.name}</td><td className="p-2">{r.location}</td><td className="p-2">{r.site_type}</td><td className="p-2">{r.status}</td></tr>;
+const columns = ['Code', 'Name', 'Type', 'Timezone'];
 
-export default function Multisite() {
-  return <GenericListPage title="다중 사이트 관리" apiPath="/api/sites" columns={cols} renderRow={renderRow} searchFields={['site_id','name','location']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.site_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.code || row.site_id || row.site_code || '-'}</td>
+    <td className="p-3">{row.name || '-'}</td>
+    <td className="p-3">{row.type || row.site_type || '-'}</td>
+    <td className="p-3">{row.timezone || row.location || '-'}</td>
+  </tr>
+);
+
+const Multisite = () => (
+  <GenericListPage
+    title="Multi-Site Management"
+    apiPath="/api/sites"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['code', 'site_id', 'site_code', 'name', 'type', 'site_type', 'timezone', 'location']}
+  />
+);
+
+export default Multisite;

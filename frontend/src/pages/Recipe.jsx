@@ -1,9 +1,31 @@
+/**
+ * Recipe page — Manufacturing recipe list.
+ * Columns: ID, Item, Process, Version, Status
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-const cols = ['레시피ID','품목','버전','상태','승인자'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.recipe_id}</td><td className="p-2">{r.item_code}</td><td className="p-2">v{r.version}</td><td className="p-2">{r.status}</td><td className="p-2">{r.approved_by||"-"}</td></tr>;
+const columns = ['ID', 'Item', 'Process', 'Version', 'Status'];
 
-export default function Recipe() {
-  return <GenericListPage title="레시피 관리" apiPath="/api/recipes" columns={cols} renderRow={renderRow} searchFields={['recipe_id','item_code']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.recipe_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.recipe_id || '-'}</td>
+    <td className="p-3">{row.item || row.item_code || row.item_name || '-'}</td>
+    <td className="p-3">{row.process || row.process_code || row.process_name || '-'}</td>
+    <td className="p-3">{row.version != null ? `v${row.version}` : '-'}</td>
+    <td className="p-3"><Badge v={row.status || 'NORMAL'} /></td>
+  </tr>
+);
+
+const Recipe = () => (
+  <GenericListPage
+    title="Recipe Management"
+    apiPath="/api/recipes"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['id', 'recipe_id', 'item', 'item_code', 'item_name', 'process', 'process_code']}
+  />
+);
+
+export default Recipe;

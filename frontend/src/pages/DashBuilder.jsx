@@ -1,9 +1,28 @@
+/**
+ * DashBuilder page — Dashboard layout builder.
+ * Columns: ID, Name, Created
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
 
-const cols = ['레이아웃ID','이름','위젯수','작성자','수정일'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.layout_id}</td><td className="p-2">{r.name}</td><td className="p-2">{r.widgets?.length||0}</td><td className="p-2">{r.created_by}</td><td className="p-2">{r.updated_at}</td></tr>;
+const columns = ['ID', 'Name', 'Created'];
 
-export default function DashBuilder() {
-  return <GenericListPage title="대시보드 빌더" apiPath="/api/dashboard-builder/layouts" columns={cols} renderRow={renderRow} searchFields={['layout_id','name']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.layout_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.layout_id || '-'}</td>
+    <td className="p-3">{row.name || '-'}</td>
+    <td className="p-3">{row.created || row.created_at || row.updated_at || '-'}</td>
+  </tr>
+);
+
+const DashBuilder = () => (
+  <GenericListPage
+    title="Dashboard Builder"
+    apiPath="/api/dashboard-builder/layouts"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['id', 'layout_id', 'name', 'created_by']}
+  />
+);
+
+export default DashBuilder;

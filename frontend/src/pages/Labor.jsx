@@ -1,9 +1,29 @@
+/**
+ * Labor page — Worker skill management.
+ * Columns: Worker, Process, Skill Level
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-const cols = ['작업자ID','이름','스킬','등급','인증일'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.worker_id}</td><td className="p-2">{r.worker_name}</td><td className="p-2">{r.skill_type}</td><td className="p-2">{r.skill_level}</td><td className="p-2">{r.certified_date}</td></tr>;
+const columns = ['Worker', 'Process', 'Skill Level'];
 
-export default function Labor() {
-  return <GenericListPage title="인력 관리" apiPath="/api/labor/skills" columns={cols} renderRow={renderRow} searchFields={['worker_id','worker_name','skill_type']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.worker_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3">{row.worker || row.worker_name || row.worker_id || '-'}</td>
+    <td className="p-3">{row.process || row.process_code || row.skill_type || '-'}</td>
+    <td className="p-3"><Badge v={row.skill_level || row.level || 'NORMAL'} /></td>
+  </tr>
+);
+
+const Labor = () => (
+  <GenericListPage
+    title="Labor & Skill Management"
+    apiPath="/api/labor/skills"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['worker', 'worker_name', 'worker_id', 'process', 'process_code', 'skill_type']}
+  />
+);
+
+export default Labor;

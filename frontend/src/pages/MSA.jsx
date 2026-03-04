@@ -1,9 +1,30 @@
+/**
+ * MSA page — Measurement System Analysis studies.
+ * Columns: ID, Gauge, Type, Status
+ */
 import React from 'react';
 import GenericListPage from './GenericListPage';
+import { Badge } from '../components/ui';
 
-const cols = ['Study ID','이름','게이지','유형','상태'];
-const renderRow = (r,i) => <tr key={i} className="border-b hover:bg-gray-50"><td className="p-2">{r.study_id}</td><td className="p-2">{r.study_name}</td><td className="p-2">{r.gauge_id}</td><td className="p-2">{r.study_type}</td><td className="p-2">{r.status}</td></tr>;
+const columns = ['ID', 'Gauge', 'Type', 'Status'];
 
-export default function MSA() {
-  return <GenericListPage title="측정시스템분석 (MSA)" apiPath="/api/msa/studies" columns={cols} renderRow={renderRow} searchFields={['study_id','study_name']} />;
-}
+const renderRow = (row, i) => (
+  <tr key={row.id || row.study_id || i} className="text-xs text-slate-300 hover:bg-slate-800/40">
+    <td className="p-3 font-mono">{row.id || row.study_id || '-'}</td>
+    <td className="p-3">{row.gauge || row.gauge_id || row.gauge_name || '-'}</td>
+    <td className="p-3">{row.type || row.study_type || '-'}</td>
+    <td className="p-3"><Badge v={row.status || 'NORMAL'} /></td>
+  </tr>
+);
+
+const MSA = () => (
+  <GenericListPage
+    title="MSA (Measurement System Analysis)"
+    apiPath="/api/msa/studies"
+    columns={columns}
+    renderRow={renderRow}
+    searchFields={['id', 'study_id', 'gauge', 'gauge_id', 'gauge_name', 'type', 'study_type']}
+  />
+);
+
+export default MSA;
