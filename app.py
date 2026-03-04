@@ -13,16 +13,23 @@ import os
 import logging
 import traceback
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 import uvicorn
+
+from fastapi import WebSocket, WebSocketDisconnect
+
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from api_modules import (
     k8s_service,
     mes_ai_prediction,
     mes_auth,
     mes_bom,
+    mes_capa,
     mes_dashboard,
     mes_defect_predict,
     mes_equipment,
@@ -30,18 +37,38 @@ from api_modules import (
     mes_inventory_movement,
     mes_inventory_status,
     mes_items,
+    mes_lot_trace,
+    mes_notification,
+    mes_oee,
     mes_plan,
     mes_process,
     mes_quality,
     mes_reports,
+    mes_spc,
     mes_work,
     sys_logic,
 )
+from api_modules import security
+from api_modules import mes_barcode
+from api_modules import mes_ewi
+from api_modules import mes_ncr
+from api_modules import mes_disposition
+from api_modules import mes_kpi
+from api_modules import mes_maintenance
+from api_modules import mes_recipe
+from api_modules import mes_datacollect
+from api_modules import mes_document
+from api_modules import mes_labor
 
 log = logging.getLogger(__name__)
 
-app = FastAPI(title="DEXWEAVER MES API", version="4.0",
+# ── Rate Limiter (NFR-007) ────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+
+app = FastAPI(title="DEXWEAVER MES API", version="6.0",
               docs_url="/api/docs", redoc_url="/api/redoc")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 _cors_env = os.getenv("CORS_ORIGINS", "")
 _allowed_origins = (
@@ -77,32 +104,56 @@ async def not_found_handler(request: Request, exc):
     )
 
 
-# ── Auth Helper: extract token or return None ────────────────
-async def _auth(request: Request):
-    """Verify JWT from request. Returns payload or None."""
-    return await mes_auth.verify_request(request)
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(status_code=exc.status_code,
+                        content={"error": exc.detail})
 
 
-async def _require_auth(request: Request):
-    """Require JWT auth - returns payload or error dict."""
-    return await mes_auth.require_auth(request)
+# ── Auth Dependencies (Depends 기반) ─────────────────────────
+async def auth_required(request: Request):
+    """기존 require_auth 래핑 — dict 에러 반환 시 HTTPException으로 변환."""
+    result = await mes_auth.require_auth(request)
+    if isinstance(result, dict) and "error" in result:
+        status = result.pop("_status", 401)
+        raise HTTPException(status_code=status, detail=result["error"])
+    return result
 
 
-async def _require_admin(request: Request):
-    """Require admin role."""
-    return await mes_auth.require_admin(request)
+async def admin_required(request: Request):
+    """기존 require_admin 래핑."""
+    result = await mes_auth.require_admin(request)
+    if isinstance(result, dict) and "error" in result:
+        status = result.pop("_status", 403)
+        raise HTTPException(status_code=status, detail=result["error"])
+    return result
 
 
 # ── FN-001~003: Auth (public endpoints) ─────────────────────
 
 @app.post("/api/auth/login")
+@limiter.limit("5/minute")
 async def login(request: Request):
     body = await request.json()
     uid = body.get("user_id", "")
     pw = body.get("password", "")
     if not uid or not pw:
         return {"error": "아이디와 비밀번호를 입력해주세요."}
-    return await mes_auth.login(uid, pw)
+    # NFR-012: 로그인 잠금 확인
+    lock_msg = security.check_login_lock(uid)
+    if lock_msg:
+        security.log_security_event("LOGIN_BLOCKED", lock_msg, user_id=uid,
+                                    ip=request.client.host if request.client else None)
+        return {"error": lock_msg}
+    result = await mes_auth.login(uid, pw)
+    ip = request.client.host if request.client else None
+    if isinstance(result, dict) and "error" in result:
+        security.record_login_failure(uid)
+        security.log_security_event("LOGIN_FAIL", result["error"], user_id=uid, ip=ip)
+    else:
+        security.record_login_success(uid)
+        security.log_security_event("LOGIN_OK", "로그인 성공", user_id=uid, ip=ip)
+    return result
 
 
 @app.post("/api/auth/register")
@@ -111,34 +162,25 @@ async def register(request: Request):
 
 
 @app.get("/api/auth/permissions/{user_id}")
-async def get_permissions(user_id: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_permissions(user_id: str, request: Request,
+                          user=Depends(auth_required)):
     return await mes_auth.get_permissions(user_id)
 
 
 @app.put("/api/auth/permissions/{user_id}")
-async def update_permissions(user_id: str, request: Request):
-    auth = await _require_admin(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def update_permissions(user_id: str, request: Request,
+                             user=Depends(admin_required)):
     return await mes_auth.update_permissions(user_id, await request.json())
 
 
 @app.get("/api/auth/users")
-async def list_users(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def list_users(request: Request, user=Depends(auth_required)):
     return await mes_auth.list_users()
 
 
 @app.put("/api/auth/approve/{user_id}")
-async def approve_user(user_id: str, request: Request):
-    auth = await _require_admin(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def approve_user(user_id: str, request: Request,
+                       user=Depends(admin_required)):
     body = await request.json()
     return await mes_auth.approve_user(user_id, body.get("approved", True))
 
@@ -146,215 +188,163 @@ async def approve_user(user_id: str, request: Request):
 # ── FN-004~007: Items ────────────────────────────────────────
 
 @app.post("/api/items")
-async def create_item(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def create_item(request: Request, user=Depends(auth_required)):
     return await mes_items.create_item(await request.json())
 
 
 @app.get("/api/items")
 async def list_items(keyword: str = None, category: str = None,
-                     page: int = 1, size: int = 20, request: Request = None):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+                     page: int = 1, size: int = 20, request: Request = None,
+                     user=Depends(auth_required)):
     return await mes_items.get_items(keyword, category, page, size)
 
 
 @app.get("/api/items/{item_code}")
-async def get_item(item_code: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_item(item_code: str, request: Request,
+                   user=Depends(auth_required)):
     return await mes_items.get_item_detail(item_code)
 
 
 @app.put("/api/items/{item_code}")
-async def update_item(item_code: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def update_item(item_code: str, request: Request,
+                      user=Depends(auth_required)):
     return await mes_items.update_item(item_code, await request.json())
 
 
 @app.delete("/api/items/{item_code}")
-async def delete_item(item_code: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def delete_item(item_code: str, request: Request,
+                      user=Depends(auth_required)):
     return await mes_items.delete_item(item_code)
 
 
 # ── FN-008~009: BOM ──────────────────────────────────────────
 
 @app.post("/api/bom")
-async def create_bom(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def create_bom(request: Request, user=Depends(auth_required)):
     return await mes_bom.create_bom(await request.json())
 
 
 @app.get("/api/bom")
-async def list_bom(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def list_bom(request: Request,
+                     user=Depends(auth_required)):
     return await mes_bom.list_bom()
 
 
 @app.put("/api/bom/{bom_id}")
-async def update_bom(bom_id: int, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def update_bom(bom_id: int, request: Request,
+                     user=Depends(auth_required)):
     return await mes_bom.update_bom(bom_id, await request.json())
 
 
 @app.delete("/api/bom/{bom_id}")
-async def delete_bom(bom_id: int, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def delete_bom(bom_id: int, request: Request,
+                     user=Depends(auth_required)):
     return await mes_bom.delete_bom(bom_id)
 
 
 @app.get("/api/bom/summary")
-async def bom_summary(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def bom_summary(request: Request,
+                     user=Depends(auth_required)):
     return await mes_bom.bom_summary()
 
 
 @app.get("/api/bom/where-used/{item_code}")
-async def bom_where_used(item_code: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def bom_where_used(item_code: str, request: Request,
+                     user=Depends(auth_required)):
     return await mes_bom.where_used(item_code)
 
 
 @app.get("/api/bom/explode/{item_code}")
-async def explode_bom(item_code: str, qty: float = 1, request: Request = None):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def explode_bom(item_code: str, qty: float = 1, request: Request = None,
+                     user=Depends(auth_required)):
     return await mes_bom.explode_bom(item_code, qty)
 
 
 # ── FN-010~012: Process & Routing ────────────────────────────
 
 @app.get("/api/processes")
-async def list_processes(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def list_processes(request: Request,
+                     user=Depends(auth_required)):
     return await mes_process.list_processes()
 
 
 @app.post("/api/processes")
-async def create_process(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def create_process(request: Request,
+                     user=Depends(auth_required)):
     return await mes_process.create_process(await request.json())
 
 
 @app.put("/api/processes/{process_code}")
-async def update_process(process_code: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def update_process(process_code: str, request: Request,
+                     user=Depends(auth_required)):
     return await mes_process.update_process(process_code, await request.json())
 
 
 @app.delete("/api/processes/{process_code}")
-async def delete_process(process_code: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def delete_process(process_code: str, request: Request,
+                     user=Depends(auth_required)):
     return await mes_process.delete_process(process_code)
 
 
 @app.get("/api/routings")
-async def list_routings_summary(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def list_routings_summary(request: Request,
+                     user=Depends(auth_required)):
     return await mes_process.list_routings_summary()
 
 
 @app.post("/api/routings")
-async def create_routing(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def create_routing(request: Request,
+                     user=Depends(auth_required)):
     return await mes_process.create_routing(await request.json())
 
 
 @app.get("/api/routings/{item_code}")
-async def get_routing(item_code: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_routing(item_code: str, request: Request,
+                     user=Depends(auth_required)):
     return await mes_process.get_routing(item_code)
 
 
 # ── FN-013~014: Equipment ────────────────────────────────────
 
 @app.post("/api/equipments")
-async def create_equipment(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def create_equipment(request: Request,
+                     user=Depends(auth_required)):
     return await mes_equipment.create_equipment(await request.json())
 
 
 @app.get("/api/equipments")
 async def list_equipments(process_code: str = None, status: str = None,
-                          request: Request = None):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+                          request: Request = None,
+                     user=Depends(auth_required)):
     return await mes_equipment.get_equipments(process_code, status)
 
 
 # ── FN-015~017: Plans ────────────────────────────────────────
 
 @app.post("/api/plans")
-async def create_plan(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def create_plan(request: Request,
+                     user=Depends(auth_required)):
     return await mes_plan.create_plan(await request.json())
 
 
 @app.get("/api/plans")
 async def list_plans(start_date: str = None, end_date: str = None,
-                     status: str = None, page: int = 1, request: Request = None):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+                     status: str = None, page: int = 1, request: Request = None,
+                     user=Depends(auth_required)):
     return await mes_plan.get_plans(start_date, end_date, status, page)
 
 
 @app.get("/api/plans/{plan_id}")
-async def get_plan(plan_id: int, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_plan(plan_id: int, request: Request,
+                     user=Depends(auth_required)):
     return await mes_plan.get_plan_detail(plan_id)
 
 
 # ── FN-018~019: AI Planning ──────────────────────────────────
 
 @app.post("/api/ai/demand-forecast")
-async def demand_forecast(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def demand_forecast(request: Request,
+                     user=Depends(auth_required)):
     body = await request.json()
     return await mes_ai_prediction.predict_demand(
         body["item_code"],
@@ -364,116 +354,90 @@ async def demand_forecast(request: Request):
 
 
 @app.get("/api/ai/demand-prediction/{item_code}")
-async def demand_prediction(item_code: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def demand_prediction(item_code: str, request: Request,
+                     user=Depends(auth_required)):
     return await mes_ai_prediction.predict_demand(item_code)
 
 
 @app.post("/api/ai/schedule-optimize")
-async def schedule_optimize(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def schedule_optimize(request: Request,
+                     user=Depends(auth_required)):
     return await mes_plan.schedule_optimize(await request.json())
 
 
 # ── FN-020~024: Work Orders & Results ────────────────────────
 
 @app.post("/api/work-orders")
-async def create_work_order(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def create_work_order(request: Request,
+                     user=Depends(auth_required)):
     return await mes_work.create_work_order(await request.json())
 
 
 @app.get("/api/work-orders")
 async def list_work_orders(work_date: str = None, line_id: str = None,
-                           status: str = None, request: Request = None):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+                           status: str = None, request: Request = None,
+                     user=Depends(auth_required)):
     return await mes_work.get_work_orders(work_date, line_id, status)
 
 
 @app.get("/api/work-orders/{wo_id}")
-async def get_work_order(wo_id: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_work_order(wo_id: str, request: Request,
+                     user=Depends(auth_required)):
     return await mes_work.get_work_order_detail(wo_id)
 
 
 @app.put("/api/work-orders/{wo_id}/status")
-async def update_wo_status(wo_id: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def update_wo_status(wo_id: str, request: Request,
+                     user=Depends(auth_required)):
     return await mes_work.update_work_order_status(wo_id, await request.json())
 
 
 @app.post("/api/work-results")
-async def create_work_result(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def create_work_result(request: Request,
+                     user=Depends(auth_required)):
     return await mes_work.create_work_result(await request.json())
 
 
 @app.get("/api/dashboard/production")
-async def production_dashboard(date: str = None, request: Request = None):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def production_dashboard(date: str = None, request: Request = None,
+                     user=Depends(auth_required)):
     return await mes_work.get_dashboard(date)
 
 
 # ── FN-025~027: Quality ──────────────────────────────────────
 
 @app.post("/api/quality/standards")
-async def create_quality_standard(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def create_quality_standard(request: Request,
+                     user=Depends(auth_required)):
     return await mes_quality.create_standard(await request.json())
 
 
 @app.post("/api/quality/inspections")
-async def create_inspection(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def create_inspection(request: Request,
+                     user=Depends(auth_required)):
     return await mes_quality.create_inspection(await request.json())
 
 
 @app.get("/api/quality/defects")
 async def get_defects(start_date: str = None, end_date: str = None,
-                      item_code: str = None, request: Request = None):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+                      item_code: str = None, request: Request = None,
+                     user=Depends(auth_required)):
     return await mes_quality.get_defects(start_date, end_date, item_code)
 
 
 # ── FN-028: AI Defect Prediction ─────────────────────────────
 
 @app.post("/api/ai/defect-predict")
-async def ai_defect_predict(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def ai_defect_predict(request: Request,
+                     user=Depends(auth_required)):
     return await mes_defect_predict.predict_defect_probability(
         await request.json()
     )
 
 
 @app.post("/api/ai/defect-prediction")
-async def defect_prediction(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def defect_prediction(request: Request,
+                     user=Depends(auth_required)):
     body = await request.json()
     return await mes_defect_predict.predict_defect_probability(body)
 
@@ -481,35 +445,27 @@ async def defect_prediction(request: Request):
 # ── FN-029~031: Inventory ────────────────────────────────────
 
 @app.post("/api/inventory/in")
-async def inventory_in(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def inventory_in(request: Request,
+                     user=Depends(auth_required)):
     return await mes_inventory.inventory_in(await request.json())
 
 
 @app.post("/api/inventory/out")
-async def inventory_out(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def inventory_out(request: Request,
+                     user=Depends(auth_required)):
     return await mes_inventory.inventory_out(await request.json())
 
 
 @app.get("/api/inventory")
 async def get_inventory(warehouse: str = None, category: str = None,
-                        request: Request = None):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+                        request: Request = None,
+                     user=Depends(auth_required)):
     return await mes_inventory.get_inventory(warehouse, category)
 
 
 @app.post("/api/inventory/move")
-async def inventory_move(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def inventory_move(request: Request,
+                     user=Depends(auth_required)):
     body = await request.json()
     return await mes_inventory_movement.move_inventory(
         body["item_code"], body["lot_no"], body["qty"],
@@ -520,26 +476,20 @@ async def inventory_move(request: Request):
 # ── FN-032~034: Equipment Status & AI ────────────────────────
 
 @app.put("/api/equipments/{equip_code}/status")
-async def update_equip_status(equip_code: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def update_equip_status(equip_code: str, request: Request,
+                     user=Depends(auth_required)):
     return await mes_equipment.update_status(equip_code, await request.json())
 
 
 @app.get("/api/equipments/status")
-async def equip_status_dashboard(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def equip_status_dashboard(request: Request,
+                     user=Depends(auth_required)):
     return await mes_equipment.get_equipment_status()
 
 
 @app.post("/api/ai/failure-predict")
-async def ai_failure_predict(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def ai_failure_predict(request: Request,
+                     user=Depends(auth_required)):
     return await mes_equipment.predict_failure(await request.json())
 
 
@@ -547,27 +497,21 @@ async def ai_failure_predict(request: Request):
 
 @app.get("/api/reports/production")
 async def report_production(start_date: str = None, end_date: str = None,
-                            group_by: str = "day", request: Request = None):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+                            group_by: str = "day", request: Request = None,
+                     user=Depends(auth_required)):
     return await mes_reports.production_report(start_date, end_date, group_by)
 
 
 @app.get("/api/reports/quality")
 async def report_quality(start_date: str = None, end_date: str = None,
-                         item_code: str = None, request: Request = None):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+                         item_code: str = None, request: Request = None,
+                     user=Depends(auth_required)):
     return await mes_reports.quality_report(start_date, end_date, item_code)
 
 
 @app.post("/api/ai/insights")
-async def analysis_insights(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def analysis_insights(request: Request,
+                     user=Depends(auth_required)):
     try:
         data = await request.json()
     except Exception:
@@ -578,28 +522,22 @@ async def analysis_insights(request: Request):
 # ── LOT Traceability (GS: KS X 9003) ────────────────────────
 
 @app.get("/api/lot/trace/{lot_no}")
-async def lot_trace(lot_no: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def lot_trace(lot_no: str, request: Request,
+                     user=Depends(auth_required)):
     return await mes_inventory.trace_lot(lot_no)
 
 
 # ── Legacy / Infrastructure ──────────────────────────────────
 
 @app.get("/api/mes/data")
-async def get_mes_data(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_mes_data(request: Request,
+                     user=Depends(auth_required)):
     return await mes_dashboard.get_production_dashboard_data()
 
 
 @app.get("/api/network/flows")
-async def get_flows(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_flows(request: Request,
+                     user=Depends(auth_required)):
     try:
         flows = k8s_service.get_flows()
         return {"status": "success", "flows": flows}
@@ -608,10 +546,8 @@ async def get_flows(request: Request):
 
 
 @app.get("/api/network/topology")
-async def get_topology(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_topology(request: Request,
+                     user=Depends(auth_required)):
     try:
         flows = k8s_service.get_flows()
     except Exception:
@@ -643,10 +579,8 @@ async def get_topology(request: Request):
 
 
 @app.get("/api/network/hubble-flows")
-async def get_hubble_flows(last: int = 50, request: Request = None):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_hubble_flows(last: int = 50, request: Request = None,
+                     user=Depends(auth_required)):
     try:
         flows = k8s_service.get_hubble_flows(min(last, 200))
         return {"status": "success", "flows": flows, "total": len(flows)}
@@ -655,10 +589,8 @@ async def get_hubble_flows(last: int = 50, request: Request = None):
 
 
 @app.get("/api/network/service-map")
-async def get_service_map(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_service_map(request: Request,
+                     user=Depends(auth_required)):
     try:
         smap = k8s_service.get_service_map()
         return {"status": "success", **smap}
@@ -667,10 +599,8 @@ async def get_service_map(request: Request):
 
 
 @app.get("/api/infra/status")
-async def get_infra(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_infra(request: Request,
+                     user=Depends(auth_required)):
     try:
         infra = await sys_logic.get_infra() if callable(
             getattr(sys_logic, "get_infra", None)
@@ -698,29 +628,349 @@ async def get_infra(request: Request):
 
 
 @app.get("/api/k8s/pods")
-async def get_pods(request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_pods(request: Request,
+                     user=Depends(auth_required)):
     return sys_logic.get_pods()
 
 
 @app.get("/api/k8s/logs/{name}")
-async def get_pod_logs(name: str, request: Request):
-    auth = await _require_auth(request)
-    if isinstance(auth, dict) and "error" in auth:
-        return auth
+async def get_pod_logs(name: str, request: Request,
+                     user=Depends(auth_required)):
     try:
         return PlainTextResponse(str(k8s_service.get_logs(name)))
     except Exception:
         return PlainTextResponse("Logs Unavailable")
 
 
+# ── FN-038~040: SPC ──────────────────────────────────────────
+
+@app.get("/api/quality/spc/{item_code}")
+async def spc_chart(item_code: str, check_name: str = None,
+                    request: Request = None, user=Depends(auth_required)):
+    return await mes_spc.get_spc_chart(item_code, check_name)
+
+
+@app.post("/api/quality/spc/rules")
+async def create_spc_rule(request: Request, user=Depends(auth_required)):
+    return await mes_spc.create_spc_rule(await request.json())
+
+
+@app.get("/api/quality/cpk/{item_code}")
+async def cpk_analysis(item_code: str, check_name: str = None,
+                       request: Request = None, user=Depends(auth_required)):
+    return await mes_spc.get_cpk(item_code, check_name)
+
+
+# ── FN-041~043: CAPA ─────────────────────────────────────────
+
+@app.post("/api/quality/capa")
+async def create_capa(request: Request, user=Depends(auth_required)):
+    return await mes_capa.create_capa(await request.json())
+
+
+@app.put("/api/quality/capa/{capa_id}/status")
+async def update_capa_status(capa_id: str, request: Request,
+                             user=Depends(auth_required)):
+    return await mes_capa.update_capa_status(capa_id, await request.json())
+
+
+@app.get("/api/quality/capa")
+async def list_capa(status: str = None, capa_type: str = None,
+                    assigned_to: str = None, request: Request = None,
+                    user=Depends(auth_required)):
+    return await mes_capa.get_capa_list(status, capa_type, assigned_to)
+
+
+# ── FN-044~045: OEE ──────────────────────────────────────────
+
+@app.get("/api/equipment/oee/{equip_code}")
+async def equip_oee(equip_code: str, start_date: str = None,
+                    end_date: str = None, request: Request = None,
+                    user=Depends(auth_required)):
+    return await mes_oee.get_oee(equip_code, start_date, end_date)
+
+
+@app.get("/api/equipment/oee/dashboard")
+async def oee_dashboard(request: Request, user=Depends(auth_required)):
+    return await mes_oee.get_oee_dashboard()
+
+
+# ── FN-046~047: Notifications ────────────────────────────────
+
+@app.websocket("/ws/notifications")
+async def ws_notifications(websocket: WebSocket):
+    # JWT에서 user_id 추출
+    token = websocket.query_params.get("token", "")
+    user_payload = await mes_auth.verify_token(token) if token else None
+    user_id = user_payload.get("user_id", "anonymous") if isinstance(user_payload, dict) else "anonymous"
+
+    await mes_notification.manager.connect(websocket, user_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # 클라이언트 메시지 처리 (ping/pong 등)
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        mes_notification.manager.disconnect(websocket, user_id)
+
+
+@app.get("/api/notifications")
+async def list_notifications(unread_only: bool = False, limit: int = 50,
+                             request: Request = None, user=Depends(auth_required)):
+    user_id = user.get("user_id", "") if isinstance(user, dict) else ""
+    return await mes_notification.get_notifications(user_id, unread_only, limit)
+
+
+@app.put("/api/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: int, request: Request,
+                                  user=Depends(auth_required)):
+    return await mes_notification.mark_read(notification_id)
+
+
+@app.get("/api/notifications/settings")
+async def get_notif_settings(request: Request, user=Depends(auth_required)):
+    user_id = user.get("user_id", "") if isinstance(user, dict) else ""
+    return await mes_notification.get_notification_settings(user_id)
+
+
+@app.post("/api/notifications/settings")
+async def update_notif_settings(request: Request, user=Depends(auth_required)):
+    user_id = user.get("user_id", "") if isinstance(user, dict) else ""
+    return await mes_notification.update_notification_settings(user_id, await request.json())
+
+
+# ── FN-048: LOT Genealogy ────────────────────────────────────
+
+@app.get("/api/lot/genealogy/{lot_no}")
+async def lot_genealogy(lot_no: str, direction: str = "both",
+                        request: Request = None, user=Depends(auth_required)):
+    return await mes_lot_trace.trace_genealogy(lot_no, direction)
+
+
+# ── REQ-052: Barcode/QR ──────────────────────────────────────
+
+@app.post("/api/barcode/generate")
+async def barcode_generate(request: Request, user=Depends(auth_required)):
+    return await mes_barcode.generate_barcode(await request.json())
+
+
+@app.post("/api/barcode/scan")
+async def barcode_scan(request: Request, user=Depends(auth_required)):
+    return await mes_barcode.scan_barcode(await request.json())
+
+
+# ── REQ-053: Electronic Work Instructions ────────────────────
+
+@app.post("/api/work-instructions")
+async def create_wi(request: Request, user=Depends(auth_required)):
+    return await mes_ewi.create_work_instruction(await request.json())
+
+
+@app.get("/api/work-instructions")
+async def list_wi(wo_no: str = None, status: str = None,
+                  request: Request = None, user=Depends(auth_required)):
+    return await mes_ewi.get_work_instructions(wo_no, status)
+
+
+@app.get("/api/work-instructions/{wi_id}")
+async def get_wi(wi_id: str, request: Request = None,
+                 user=Depends(auth_required)):
+    return await mes_ewi.get_work_instruction_detail(wi_id)
+
+
+@app.post("/api/work-instructions/{wi_id}/steps/{step_no}/sign")
+async def sign_wi_step(wi_id: str, step_no: int, request: Request,
+                       user=Depends(auth_required)):
+    user_id = user.get("user_id", "") if isinstance(user, dict) else ""
+    return await mes_ewi.sign_step(wi_id, step_no, user_id)
+
+
+# ── REQ-054: NCR (부적합품 관리) ─────────────────────────────
+
+@app.post("/api/quality/ncr")
+async def create_ncr(request: Request, user=Depends(auth_required)):
+    user_id = user.get("user_id", "") if isinstance(user, dict) else ""
+    return await mes_ncr.create_ncr(await request.json(), user_id)
+
+
+@app.get("/api/quality/ncr")
+async def list_ncr(status: str = None, lot_no: str = None,
+                   request: Request = None, user=Depends(auth_required)):
+    return await mes_ncr.get_ncr_list(status, lot_no)
+
+
+@app.put("/api/quality/ncr/{ncr_id}/disposition")
+async def ncr_disposition(ncr_id: str, request: Request,
+                          user=Depends(auth_required)):
+    return await mes_ncr.update_ncr_disposition(ncr_id, await request.json())
+
+
+# ── REQ-055: SPC Auto-Actions ────────────────────────────────
+
+@app.post("/api/quality/spc/auto-actions")
+async def spc_auto_act(request: Request, user=Depends(auth_required)):
+    return await mes_spc.spc_auto_actions(await request.json())
+
+
+# ── REQ-056: Shipment Disposition ────────────────────────────
+
+@app.post("/api/quality/disposition")
+async def create_disp(request: Request, user=Depends(auth_required)):
+    user_id = user.get("user_id", "") if isinstance(user, dict) else ""
+    return await mes_disposition.create_disposition(await request.json(), user_id)
+
+
+@app.get("/api/quality/disposition")
+async def list_disp(lot_no: str = None, decision: str = None,
+                    request: Request = None, user=Depends(auth_required)):
+    return await mes_disposition.get_dispositions(lot_no, decision)
+
+
+# ── REQ-057: FPY ─────────────────────────────────────────────
+
+@app.get("/api/kpi/fpy")
+async def kpi_fpy(process_code: str = None, item_code: str = None,
+                  start_date: str = None, end_date: str = None,
+                  request: Request = None, user=Depends(auth_required)):
+    return await mes_kpi.get_fpy(process_code, item_code, start_date, end_date)
+
+
+# ── REQ-058: Maintenance KPI (MTTF/MTTR/MTBF) ───────────────
+
+@app.get("/api/kpi/maintenance/{equip_code}")
+async def kpi_maintenance(equip_code: str,
+                          start_date: str = None, end_date: str = None,
+                          request: Request = None,
+                          user=Depends(auth_required)):
+    return await mes_kpi.get_maintenance_kpi(equip_code, start_date, end_date)
+
+
+# ── FN-049~051: CMMS 유지보전 ────────────────────────────────
+
+@app.post("/api/maintenance/pm")
+async def create_pm(request: Request, user=Depends(auth_required)):
+    return await mes_maintenance.create_pm_schedule(await request.json())
+
+
+@app.get("/api/maintenance/pm")
+async def list_pm(equip_code: str = None, status: str = None,
+                  request: Request = None, user=Depends(auth_required)):
+    return await mes_maintenance.get_pm_schedules(equip_code, status)
+
+
+@app.post("/api/maintenance/work-orders")
+async def create_mwo(request: Request, user=Depends(auth_required)):
+    return await mes_maintenance.create_maintenance_order(await request.json())
+
+
+@app.put("/api/maintenance/work-orders/{mo_id}")
+async def update_mwo(mo_id: str, request: Request, user=Depends(auth_required)):
+    return await mes_maintenance.update_maintenance_order(mo_id, await request.json())
+
+
+@app.get("/api/maintenance/history/{equip_code}")
+async def maint_history(equip_code: str, mo_type: str = None,
+                        start_date: str = None, end_date: str = None,
+                        request: Request = None, user=Depends(auth_required)):
+    return await mes_maintenance.get_maintenance_history(
+        equip_code, mo_type, start_date, end_date)
+
+
+# ── FN-052~053: 레시피 관리 ──────────────────────────────────
+
+@app.post("/api/recipes")
+async def create_recipe(request: Request, user=Depends(auth_required)):
+    return await mes_recipe.create_recipe(await request.json())
+
+
+@app.get("/api/recipes")
+async def list_recipes(item_code: str = None, process_code: str = None,
+                       status: str = None, request: Request = None,
+                       user=Depends(auth_required)):
+    return await mes_recipe.get_recipes(item_code, process_code, status)
+
+
+@app.get("/api/recipes/{recipe_id}")
+async def get_recipe(recipe_id: int, compare_version: int = None,
+                     request: Request = None, user=Depends(auth_required)):
+    return await mes_recipe.get_recipe_detail(recipe_id, compare_version)
+
+
+@app.put("/api/recipes/{recipe_id}/approve")
+async def approve_recipe(recipe_id: int, request: Request,
+                         user=Depends(auth_required)):
+    user_id = user.get("user_id", "") if isinstance(user, dict) else ""
+    return await mes_recipe.approve_recipe(recipe_id, user_id)
+
+
+# ── FN-054~055: MQTT / 센서 데이터 ──────────────────────────
+
+@app.post("/api/datacollect/mqtt/config")
+async def save_mqtt(request: Request, user=Depends(admin_required)):
+    return await mes_datacollect.save_mqtt_config(await request.json())
+
+
+@app.get("/api/datacollect/mqtt/config")
+async def list_mqtt(request: Request = None, user=Depends(auth_required)):
+    return await mes_datacollect.get_mqtt_configs()
+
+
+@app.get("/api/datacollect/realtime/{equip_code}")
+async def realtime_sensor(equip_code: str, sensor_type: str = None,
+                          minutes: int = 30, interval: str = "raw",
+                          request: Request = None, user=Depends(auth_required)):
+    return await mes_datacollect.get_realtime_sensor(
+        equip_code, sensor_type, minutes, interval)
+
+
+@app.post("/api/datacollect/sensor")
+async def insert_sensor(request: Request, user=Depends(auth_required)):
+    return await mes_datacollect.insert_sensor_data(await request.json())
+
+
+# ── FN-056~057: 문서 관리 DMS ────────────────────────────────
+
+@app.post("/api/documents")
+async def create_doc(request: Request, user=Depends(auth_required)):
+    user_id = user.get("user_id", "") if isinstance(user, dict) else ""
+    return await mes_document.create_document(await request.json(), user_id)
+
+
+@app.get("/api/documents")
+async def list_docs(doc_type: str = None, item_code: str = None,
+                    process_code: str = None, keyword: str = None,
+                    status: str = None, request: Request = None,
+                    user=Depends(auth_required)):
+    return await mes_document.get_documents(
+        doc_type, item_code, process_code, keyword, status)
+
+
+@app.put("/api/documents/{doc_id}/approve")
+async def approve_doc(doc_id: int, request: Request,
+                      user=Depends(admin_required)):
+    return await mes_document.approve_document(doc_id)
+
+
+# ── FN-058: 노동 관리 / 스킬 매트릭스 ───────────────────────
+
+@app.get("/api/labor/skills")
+async def get_skills(process_code: str = None, skill_level: str = None,
+                     worker_id: str = None, request: Request = None,
+                     user=Depends(auth_required)):
+    return await mes_labor.get_worker_skills(process_code, skill_level, worker_id)
+
+
+@app.post("/api/labor/skills")
+async def upsert_skill(request: Request, user=Depends(admin_required)):
+    return await mes_labor.upsert_worker_skill(await request.json())
+
+
 # ── Health Check (no auth) ───────────────────────────────────
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "version": "4.0"}
+    return {"status": "ok", "version": "6.0"}
 
 
 if __name__ == "__main__":

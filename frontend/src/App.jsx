@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from './services/api';
 import Keycloak from 'keycloak-js';
-
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
 
 /* ── Keycloak 설정 ───────────────────────────────────────── */
 const KC_URL = import.meta.env.VITE_KC_URL || `http://${window.location.hostname}:30080`;
@@ -134,13 +132,13 @@ const App = () => {
         quality_std:['items'], inspection:['items'], inv_in:['inv'], inv_out:['inv'], inv_move:['inv'],
         schedule_optimize:['plans'], permissions:['users'] };
       const n = needs[type]||[];
-      if (n.includes('items') && !(extra.itemList||[]).length) { const r=await axios.get('/api/items?size=100'); setExtra(p=>({...p,itemList:r.data.items||[]})); }
-      if (n.includes('procs') && !(extra.processList||[]).length) { const r=await axios.get('/api/processes'); setExtra(p=>({...p,processList:r.data.processes||[]})); }
-      if (n.includes('equips') && !(extra.equips||[]).length) { const r=await axios.get('/api/equipments'); setExtra(p=>({...p,equips:r.data.equipments||[]})); }
-      if (n.includes('plans') && !(extra.planList||[]).length) { const r=await axios.get('/api/plans'); setExtra(p=>({...p,planList:r.data.plans||[]})); }
-      if (n.includes('wo') && !(extra.woList||[]).length) { const r=await axios.get('/api/work-orders'); setExtra(p=>({...p,woList:r.data.orders||[]})); }
-      if (n.includes('inv') && !(extra.invItems||[]).length) { const r=await axios.get('/api/inventory'); setExtra(p=>({...p,invItems:r.data.items||[]})); }
-      if (n.includes('users') && !(extra.userList||[]).length) { const r=await axios.get('/api/auth/users'); setExtra(p=>({...p,userList:r.data.users||[]})); }
+      if (n.includes('items') && !(extra.itemList||[]).length) { const r=await api.get('/api/items?size=100'); setExtra(p=>({...p,itemList:r.data.items||[]})); }
+      if (n.includes('procs') && !(extra.processList||[]).length) { const r=await api.get('/api/processes'); setExtra(p=>({...p,processList:r.data.processes||[]})); }
+      if (n.includes('equips') && !(extra.equips||[]).length) { const r=await api.get('/api/equipments'); setExtra(p=>({...p,equips:r.data.equipments||[]})); }
+      if (n.includes('plans') && !(extra.planList||[]).length) { const r=await api.get('/api/plans'); setExtra(p=>({...p,planList:r.data.plans||[]})); }
+      if (n.includes('wo') && !(extra.woList||[]).length) { const r=await api.get('/api/work-orders'); setExtra(p=>({...p,woList:r.data.orders||[]})); }
+      if (n.includes('inv') && !(extra.invItems||[]).length) { const r=await api.get('/api/inventory'); setExtra(p=>({...p,invItems:r.data.items||[]})); }
+      if (n.includes('users') && !(extra.userList||[]).length) { const r=await api.get('/api/auth/users'); setExtra(p=>({...p,userList:r.data.users||[]})); }
     } catch(e) { console.error('Modal data load error',e); }
   };
   const closeModal = () => setModal({ type: null, data: {} });
@@ -170,14 +168,14 @@ const App = () => {
 
   const refreshPage = async (m) => {
     try {
-      if (m==='ITEMS') { const r=await axios.get('/api/items?size=100'); setExtra(p=>({...p, itemList:r.data.items||[]})); }
-      if (m==='BOM') { const [i,b,s]=await Promise.all([axios.get('/api/items?size=100'),axios.get('/api/bom'),axios.get('/api/bom/summary')]); setExtra(p=>({...p, itemList:i.data.items||[], bomEntries:b.data.entries||[], bomSummary:s.data||{}})); }
-      if (m==='PROCESS') { const [i,pr,rs]=await Promise.all([axios.get('/api/items?size=100'),axios.get('/api/processes'),axios.get('/api/routings')]); setExtra(p=>({...p, itemList:i.data.items||[], processList:pr.data.processes||[], routingSummary:rs.data.routings||[]})); }
-      if (m==='EQUIPMENT') { const r=await axios.get('/api/equipments'); setExtra(p=>({...p, equips:r.data.equipments||[]})); }
-      if (m==='PLANS') { const r=await axios.get('/api/plans'); setExtra(p=>({...p, planList:r.data.plans||[]})); }
-      if (m==='WORK_ORDER') { const r=await axios.get('/api/work-orders'); setExtra(p=>({...p, woList:r.data.orders||[]})); }
-      if (m==='QUALITY') { const r=await axios.get('/api/quality/defects'); setExtra(p=>({...p, defects:r.data})); }
-      if (m==='INVENTORY') { const r=await axios.get('/api/inventory'); setExtra(p=>({...p, invItems:r.data.items||[]})); }
+      if (m==='ITEMS') { const r=await api.get('/api/items?size=100'); setExtra(p=>({...p, itemList:r.data.items||[]})); }
+      if (m==='BOM') { const [i,b,s]=await Promise.all([api.get('/api/items?size=100'),api.get('/api/bom'),api.get('/api/bom/summary')]); setExtra(p=>({...p, itemList:i.data.items||[], bomEntries:b.data.entries||[], bomSummary:s.data||{}})); }
+      if (m==='PROCESS') { const [i,pr,rs]=await Promise.all([api.get('/api/items?size=100'),api.get('/api/processes'),api.get('/api/routings')]); setExtra(p=>({...p, itemList:i.data.items||[], processList:pr.data.processes||[], routingSummary:rs.data.routings||[]})); }
+      if (m==='EQUIPMENT') { const r=await api.get('/api/equipments'); setExtra(p=>({...p, equips:r.data.equipments||[]})); }
+      if (m==='PLANS') { const r=await api.get('/api/plans'); setExtra(p=>({...p, planList:r.data.plans||[]})); }
+      if (m==='WORK_ORDER') { const r=await api.get('/api/work-orders'); setExtra(p=>({...p, woList:r.data.orders||[]})); }
+      if (m==='QUALITY') { const r=await api.get('/api/quality/defects'); setExtra(p=>({...p, defects:r.data})); }
+      if (m==='INVENTORY') { const r=await api.get('/api/inventory'); setExtra(p=>({...p, invItems:r.data.items||[]})); }
     } catch(e) { console.error(e); }
   };
 
@@ -200,17 +198,11 @@ const App = () => {
   const handleLogin = async (userId, password) => {
     setAuthLoading(true); setAuthError('');
     try {
-      const r = await axios.post('/api/auth/login', { user_id: userId, password });
+      const r = await api.post('/api/auth/login', { user_id: userId, password });
       if (r.data.error) { setAuthError(r.data.error); setAuthLoading(false); return; }
       const user = { id: r.data.user.id, name: r.data.user.name, role: r.data.user.role, token: r.data.token };
       setAuthUser(user);
       localStorage.setItem('mes_user', JSON.stringify(user));
-      // 토큰 인터셉터 설정
-      if (interceptorId.current !== null) axios.interceptors.request.eject(interceptorId.current);
-      interceptorId.current = axios.interceptors.request.use(config => {
-        config.headers.Authorization = `Bearer ${user.token}`;
-        return config;
-      });
       setAuthReady(true);
       loadUserPerms(user.id);
     } catch (e) { setAuthError('Login failed. Check server connection.'); }
@@ -221,7 +213,7 @@ const App = () => {
   const handleRegister = async (formData) => {
     setAuthLoading(true); setAuthError('');
     try {
-      const r = await axios.post('/api/auth/register', formData);
+      const r = await api.post('/api/auth/register', formData);
       if (r.data.error) { setAuthError(r.data.error); setAuthLoading(false); return; }
       setAuthError(''); setAuthMode('login');
       setAuthError(r.data.message || 'Registration successful! Admin approval required before login.');
@@ -233,7 +225,6 @@ const App = () => {
   const handleLogout = () => {
     setAuthUser(null); setAuthReady(false); setAuthMode('login'); setAuthError('');
     localStorage.removeItem('mes_user');
-    if (interceptorId.current !== null) { axios.interceptors.request.eject(interceptorId.current); interceptorId.current = null; }
     const kc = kcRef.current;
     if (kc?.authenticated) { try { kc.logout({ redirectUri: window.location.origin }); } catch {} }
   };
@@ -245,14 +236,9 @@ const App = () => {
       try {
         const user = JSON.parse(saved);
         setAuthUser(user);
-        if (interceptorId.current !== null) axios.interceptors.request.eject(interceptorId.current);
-        interceptorId.current = axios.interceptors.request.use(config => {
-          config.headers.Authorization = `Bearer ${user.token}`;
-          return config;
-        });
         setAuthReady(true);
         // Load permissions for restored session
-        axios.get(`/api/auth/permissions/${user.id}`).then(r => setUserPerms(r.data.permissions || [])).catch(() => setUserPerms([]));
+        api.get(`/api/auth/permissions/${user.id}`).then(r => setUserPerms(r.data.permissions || [])).catch(() => setUserPerms([]));
         return;
       } catch {}
     }
@@ -270,8 +256,8 @@ const App = () => {
               token: kc.token,
             };
             setAuthUser(user);
-            if (interceptorId.current !== null) axios.interceptors.request.eject(interceptorId.current);
-            interceptorId.current = axios.interceptors.request.use(async config => {
+            if (interceptorId.current !== null) api.interceptors.request.eject(interceptorId.current);
+            interceptorId.current = api.interceptors.request.use(async config => {
               try { await kc.updateToken(30); } catch {}
               config.headers.Authorization = `Bearer ${kc.token}`;
               return config;
@@ -292,16 +278,16 @@ const App = () => {
   const fetchCore = async () => {
     try {
       const [m, f, n, p] = await Promise.all([
-        axios.get('/api/mes/data'), axios.get('/api/network/flows'),
-        axios.get('/api/infra/status'), axios.get('/api/k8s/pods')
+        api.get('/api/mes/data'), api.get('/api/network/flows'),
+        api.get('/api/infra/status'), api.get('/api/k8s/pods')
       ]);
       let flowsData = [];
       if (f?.data) { flowsData = Array.isArray(f.data) ? f.data : (f.data.flows||[]); }
       setDb(prev => ({ ...prev, ...m.data, flows: flowsData, infra: n.data, pods: Array.isArray(p.data)?p.data:[] }));
-      axios.get('/api/network/topology').then(r => {
+      api.get('/api/network/topology').then(r => {
         if (r?.data?.status==='success') setTopology({ nodes:r.data.nodes||[], edges:r.data.edges||[] });
       }).catch(()=>{});
-      if (selPod) { const l = await axios.get(`/api/k8s/logs/${selPod}`); setDb(prev=>({...prev,logs:l.data})); }
+      if (selPod) { const l = await api.get(`/api/k8s/logs/${selPod}`); setDb(prev=>({...prev,logs:l.data})); }
     } catch(e) { console.error('Sync Error',e); }
   };
 
@@ -312,18 +298,18 @@ const App = () => {
     const load = async () => {
       try {
         if (menu==='DASHBOARD') {
-          const r = await axios.get('/api/dashboard/production');
+          const r = await api.get('/api/dashboard/production');
           setExtra(prev=>({...prev, prodDashboard: r.data}));
         }
         if (menu==='ITEMS') {
-          const r = await axios.get('/api/items?size=100');
+          const r = await api.get('/api/items?size=100');
           setExtra(prev=>({...prev, itemList: r.data.items||[]}));
         }
         if (menu==='BOM') {
           const [items, bomList, bomSummary] = await Promise.all([
-            axios.get('/api/items?size=100'),
-            axios.get('/api/bom'),
-            axios.get('/api/bom/summary'),
+            api.get('/api/items?size=100'),
+            api.get('/api/bom'),
+            api.get('/api/bom/summary'),
           ]);
           setExtra(prev=>({...prev,
             itemList: items.data.items||[],
@@ -334,9 +320,9 @@ const App = () => {
         }
         if (menu==='PROCESS') {
           const [items, procs, routingSummary] = await Promise.all([
-            axios.get('/api/items?size=100'),
-            axios.get('/api/processes'),
-            axios.get('/api/routings'),
+            api.get('/api/items?size=100'),
+            api.get('/api/processes'),
+            api.get('/api/routings'),
           ]);
           setExtra(prev=>({...prev,
             itemList: items.data.items||[],
@@ -347,27 +333,27 @@ const App = () => {
         }
         if (menu==='EQUIPMENT') {
           const [r, st] = await Promise.all([
-            axios.get('/api/equipments'),
-            axios.get('/api/equipments/status').catch(()=>({data:{equipments:[]}})),
+            api.get('/api/equipments'),
+            api.get('/api/equipments/status').catch(()=>({data:{equipments:[]}})),
           ]);
           const equips = r.data.equipments||[];
           const statusMap = Object.fromEntries((st.data.equipments||[]).map(s=>[s.equip_code, s]));
           setExtra(prev=>({...prev, equips: equips.map(e=>({...e, uptime_today: (statusMap[e.equip_code]||{}).uptime_today||0, current_job: (statusMap[e.equip_code]||{}).current_job||null}))}));
         }
         if (menu==='PLANS') {
-          const r = await axios.get('/api/plans');
+          const r = await api.get('/api/plans');
           setExtra(prev=>({...prev, planList: r.data.plans||[]}));
         }
         if (menu==='WORK_ORDER') {
-          const r = await axios.get('/api/work-orders');
+          const r = await api.get('/api/work-orders');
           setExtra(prev=>({...prev, woList: r.data.orders||[]}));
         }
         if (menu==='QUALITY') {
-          const r = await axios.get('/api/quality/defects');
+          const r = await api.get('/api/quality/defects');
           setExtra(prev=>({...prev, defects: r.data}));
         }
         if (menu==='INVENTORY') {
-          const r = await axios.get('/api/inventory');
+          const r = await api.get('/api/inventory');
           setExtra(prev=>({...prev, invItems: r.data.items||[]}));
         }
         if (menu==='AI_CENTER') {
@@ -375,15 +361,15 @@ const App = () => {
         }
         if (menu==='REPORTS') {
           const [pr, qr] = await Promise.all([
-            axios.get('/api/reports/production'),
-            axios.get('/api/reports/quality')
+            api.get('/api/reports/production'),
+            api.get('/api/reports/quality')
           ]);
           setExtra(prev=>({...prev, prodReport:pr.data, qualReport:qr.data}));
         }
         if (menu==='NETWORK_FLOW') {
           const [hf, sm] = await Promise.all([
-            axios.get('/api/network/hubble-flows?last=100'),
-            axios.get('/api/network/service-map')
+            api.get('/api/network/hubble-flows?last=100'),
+            api.get('/api/network/service-map')
           ]);
           setHubbleFlows(hf.data.flows||[]);
           setServiceMap({ services:sm.data.services||[], connections:sm.data.connections||[] });
@@ -399,8 +385,8 @@ const App = () => {
     const t = setInterval(async () => {
       try {
         const [hf, sm] = await Promise.all([
-          axios.get('/api/network/hubble-flows?last=100'),
-          axios.get('/api/network/service-map')
+          api.get('/api/network/hubble-flows?last=100'),
+          api.get('/api/network/service-map')
         ]);
         setHubbleFlows(hf.data.flows||[]);
         setServiceMap({ services:sm.data.services||[], connections:sm.data.connections||[] });
@@ -412,7 +398,7 @@ const App = () => {
   /* ── permission helpers ────────────────────────────── */
   const loadUserPerms = async (userId) => {
     try {
-      const r = await axios.get(`/api/auth/permissions/${userId}`);
+      const r = await api.get(`/api/auth/permissions/${userId}`);
       setUserPerms(r.data.permissions || []);
     } catch { setUserPerms([]); }
   };
@@ -447,6 +433,21 @@ const App = () => {
     {id:'NETWORK_FLOW', label:'Network'},
     {id:'INFRA_MONITOR',label:'Infra'},
     {id:'K8S_MANAGER',  label:'K8s'},
+    {id:'SPC',          label:'SPC 관리도'},
+    {id:'CAPA',         label:'CAPA 관리'},
+    {id:'OEE',          label:'OEE 대시보드'},
+    {id:'NOTIFICATION', label:'알림 센터'},
+    {id:'LOT_TRACE',    label:'LOT 추적'},
+    {id:'BARCODE',      label:'바코드/QR'},
+    {id:'EWI',          label:'전자작업지시서'},
+    {id:'NCR',          label:'NCR 관리'},
+    {id:'DISPOSITION',  label:'출하판정'},
+    {id:'KPI',          label:'KPI 대시보드'},
+    {id:'CMMS',         label:'CMMS 보전'},
+    {id:'RECIPE',       label:'레시피 관리'},
+    {id:'SENSOR',       label:'센서 모니터링'},
+    {id:'DMS',          label:'문서 관리'},
+    {id:'LABOR',        label:'스킬 매트릭스'},
   ];
 
   /* ── 로그인/회원가입 화면 (미인증 상태) ────────────── */
@@ -515,16 +516,25 @@ const App = () => {
     );
   }
 
+  const [sideOpen, setSideOpen] = useState(false);
+
   return (
     <div className="flex min-h-screen bg-[#020617] text-slate-400 font-sans text-[11px]">
+      {/* mobile hamburger */}
+      <button onClick={()=>setSideOpen(!sideOpen)}
+        className="md:hidden fixed top-3 left-3 z-50 bg-slate-800 text-white p-2 rounded-lg text-xs font-bold">
+        {sideOpen ? '\u2715' : '\u2630'}
+      </button>
+      {/* sidebar overlay (mobile) */}
+      {sideOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-30" onClick={()=>setSideOpen(false)} />}
       {/* sidebar */}
-      <aside className="w-52 bg-[#0f172a] border-r border-slate-800 p-4 space-y-0.5 overflow-y-auto flex flex-col">
-        <button onClick={()=>setMenu('DASHBOARD')} className="text-left mb-6 group cursor-pointer">
+      <aside className={`${sideOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static z-40 w-52 bg-[#0f172a] border-r border-slate-800 p-4 space-y-0.5 overflow-y-auto flex flex-col h-screen transition-transform`}>
+        <button onClick={()=>{setMenu('DASHBOARD');setSideOpen(false);}} className="text-left mb-6 group cursor-pointer">
           <h1 className="text-lg font-black text-blue-500 tracking-tighter italic group-hover:text-blue-400 transition-colors">KNU MES v5.2</h1>
           <div className="text-[9px] text-slate-600 group-hover:text-slate-500 transition-colors">Manufacturing Execution System</div>
         </button>
         {menus.filter(m => canRead(m.id)).map(m=>(
-          <button key={m.id} onClick={()=>setMenu(m.id)}
+          <button key={m.id} onClick={()=>{setMenu(m.id);setSideOpen(false);}}
             className={`w-full text-left px-3 py-1.5 rounded-lg transition-all text-xs
               ${menu===m.id ? 'bg-blue-600 text-white font-bold':'hover:bg-slate-800'}`}>
             {m.label}
@@ -542,11 +552,11 @@ const App = () => {
                 className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-emerald-400 hover:bg-emerald-500/10 transition-all font-bold cursor-pointer">
                 + Register User
               </button>
-              <button onClick={async()=>{try{const r=await axios.get('/api/auth/users');setExtra(p=>({...p,userList:r.data.users||[]}));}catch{}openModal('user_approve');}}
+              <button onClick={async()=>{try{const r=await api.get('/api/auth/users');setExtra(p=>({...p,userList:r.data.users||[]}));}catch{}openModal('user_approve');}}
                 className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-amber-400 hover:bg-amber-500/10 transition-all font-bold cursor-pointer">
                 User Approval
               </button>
-              <button onClick={async()=>{try{const r=await axios.get('/api/auth/users');setExtra(p=>({...p,userList:r.data.users||[]}));}catch{}openModal('permissions');}}
+              <button onClick={async()=>{try{const r=await api.get('/api/auth/users');setExtra(p=>({...p,userList:r.data.users||[]}));}catch{}openModal('permissions');}}
                 className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-purple-400 hover:bg-purple-500/10 transition-all font-bold cursor-pointer">
                 Permissions
               </button>
@@ -560,7 +570,7 @@ const App = () => {
       </aside>
 
       {/* main content */}
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto pt-14 md:pt-8">
         <h2 className="text-xl font-bold text-white mb-6 border-b border-slate-800 pb-3">
           {menus.find(m=>m.id===menu)?.label || menu}
         </h2>
@@ -575,7 +585,7 @@ const App = () => {
           const overallRate = totalTarget>0 ? (totalActual/totalTarget*100).toFixed(1) : 0;
           return (
           <div className="space-y-6">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card title="Items" value={db.items?.length||0} />
               <Card title="CPU" value={db.infra.cpu||'0%'} color="text-slate-200" />
               <Card title="Memory" value={db.infra.mem||'0%'} color="text-purple-400" />
@@ -585,7 +595,7 @@ const App = () => {
             {/* REQ-020: Production Status Dashboard */}
             <div className="border-t border-slate-800 pt-4">
               <h3 className="text-white font-bold mb-4">Production Status (Today)</h3>
-              <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                 <Card title="Total Target" value={totalTarget} color="text-blue-400"/>
                 <Card title="Total Actual" value={totalActual} color="text-emerald-400"/>
                 <Card title="Achievement" value={`${overallRate}%`} color={overallRate>=90?'text-emerald-400':overallRate>=70?'text-amber-400':'text-red-400'}/>
@@ -676,7 +686,7 @@ const App = () => {
                     <td className="p-3">
                       <div className="flex gap-1">
                         <button onClick={()=>openModal('item_edit',{item:i})} className="text-blue-400 hover:text-blue-300 text-[10px] font-bold cursor-pointer">Edit</button>
-                        <button onClick={async()=>{if(confirm(`Delete ${i.item_code}?`)){try{await axios.delete(`/api/items/${i.item_code}`);showToast(`${i.item_code} deleted`);refreshPage('ITEMS');}catch(e){showToast('Delete failed',false);}}}} className="text-red-400 hover:text-red-300 text-[10px] font-bold cursor-pointer">Del</button>
+                        <button onClick={async()=>{if(confirm(`Delete ${i.item_code}?`)){try{await api.delete(`/api/items/${i.item_code}`);showToast(`${i.item_code} deleted`);refreshPage('ITEMS');}catch(e){showToast('Delete failed',false);}}}} className="text-red-400 hover:text-red-300 text-[10px] font-bold cursor-pointer">Del</button>
                       </div>
                     </td>
                   </tr>
@@ -702,7 +712,7 @@ const App = () => {
           return (
           <div className="space-y-4">
             {/* Summary cards */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Card title="BOM Entries" value={summary.total_entries||0} />
               <Card title="Parent Items" value={summary.parent_count||0} color="text-purple-400" />
               <Card title="Components" value={summary.child_count||0} color="text-amber-400" />
@@ -746,7 +756,7 @@ const App = () => {
                       <td className="p-3">
                         <div className="flex gap-1">
                           <button onClick={()=>openModal('bom_edit',{bom:e})} className="text-blue-400 hover:text-blue-300 text-[10px] font-bold cursor-pointer">Edit</button>
-                          <button onClick={async()=>{if(confirm(`Delete BOM ${e.parent_item}→${e.child_item}?`)){try{const r=await axios.delete(`/api/bom/${e.bom_id}`);if(r.data.error){showToast(r.data.error,false);}else{showToast('BOM entry deleted');refreshPage('BOM');}}catch(err){showToast('Delete failed',false);}}}} className="text-red-400 hover:text-red-300 text-[10px] font-bold cursor-pointer">Del</button>
+                          <button onClick={async()=>{if(confirm(`Delete BOM ${e.parent_item}→${e.child_item}?`)){try{const r=await api.delete(`/api/bom/${e.bom_id}`);if(r.data.error){showToast(r.data.error,false);}else{showToast('BOM entry deleted');refreshPage('BOM');}}catch(err){showToast('Delete failed',false);}}}} className="text-red-400 hover:text-red-300 text-[10px] font-bold cursor-pointer">Del</button>
                         </div>
                       </td>
                     </tr>
@@ -777,7 +787,7 @@ const App = () => {
                   <select className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs"
                     onChange={async e => {
                       if(!e.target.value) { setExtra(prev=>({...prev, bomTree:null})); return; }
-                      const r = await axios.get(`/api/bom/explode/${e.target.value}`);
+                      const r = await api.get(`/api/bom/explode/${e.target.value}`);
                       setExtra(prev=>({...prev, bomTree:r.data}));
                     }}>
                     <option value="">Select item to explode BOM</option>
@@ -819,7 +829,7 @@ const App = () => {
                   <select className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs"
                     onChange={async e => {
                       if(!e.target.value) { setExtra(prev=>({...prev, whereUsed:null})); return; }
-                      const r = await axios.get(`/api/bom/where-used/${e.target.value}`);
+                      const r = await api.get(`/api/bom/where-used/${e.target.value}`);
                       setExtra(prev=>({...prev, whereUsed:r.data}));
                     }}>
                     <option value="">Select component to find parents</option>
@@ -881,7 +891,7 @@ const App = () => {
           return (
           <div className="space-y-4">
             {/* Summary cards */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Card title="Processes" value={allProcs.length} />
               <Card title="Routed Items" value={allRoutingSummary.length} color="text-purple-400" />
               <Card title="Avg Std Time" value={allProcs.length ? `${Math.round(totalStdTime/allProcs.length)}m` : '0m'} color="text-amber-400" />
@@ -922,7 +932,7 @@ const App = () => {
                       <td className="p-3">
                         <div className="flex gap-1">
                           <button onClick={()=>openModal('process_edit',{proc:p})} className="text-blue-400 hover:text-blue-300 text-[10px] font-bold cursor-pointer">Edit</button>
-                          <button onClick={async()=>{if(confirm(`Delete ${p.process_code}?`)){try{const r=await axios.delete(`/api/processes/${p.process_code}`);if(r.data.error){showToast(r.data.error,false);}else{showToast(`${p.process_code} deleted`);refreshPage('PROCESS');}}catch(err){showToast(err.response?.data?.error||'Delete failed',false);}}}} className="text-red-400 hover:text-red-300 text-[10px] font-bold cursor-pointer">Del</button>
+                          <button onClick={async()=>{if(confirm(`Delete ${p.process_code}?`)){try{const r=await api.delete(`/api/processes/${p.process_code}`);if(r.data.error){showToast(r.data.error,false);}else{showToast(`${p.process_code} deleted`);refreshPage('PROCESS');}}catch(err){showToast(err.response?.data?.error||'Delete failed',false);}}}} className="text-red-400 hover:text-red-300 text-[10px] font-bold cursor-pointer">Del</button>
                         </div>
                       </td>
                     </tr>
@@ -952,7 +962,7 @@ const App = () => {
                   <select className="bg-[#0f172a] border border-slate-700 p-2 rounded-lg text-white text-xs"
                     onChange={async e => {
                       if(!e.target.value) { setExtra(prev=>({...prev, routingData:null})); return; }
-                      const r = await axios.get(`/api/routings/${e.target.value}`);
+                      const r = await api.get(`/api/routings/${e.target.value}`);
                       setExtra(prev=>({...prev, routingData:r.data}));
                     }}>
                     <option value="">Select item for routing</option>
@@ -1018,7 +1028,7 @@ const App = () => {
                   renderRow={(r,k)=>(
                     <tr key={k} className="cursor-pointer hover:bg-slate-800/30" onClick={async()=>{
                       setProcTab('routing');
-                      const res = await axios.get(`/api/routings/${r.item_code}`);
+                      const res = await api.get(`/api/routings/${r.item_code}`);
                       setExtra(prev=>({...prev, routingData:res.data}));
                     }}>
                       <td className="p-3 font-mono text-blue-400">{r.item_code}</td>
@@ -1071,7 +1081,7 @@ const App = () => {
                 const total = allEquips.length||1;
                 const avgUptime = allEquips.length ? Math.round(allEquips.reduce((s,e)=>s+(e.uptime_today||0)*100,0)/allEquips.length) : 0;
                 return (
-                  <div className="bg-[#1e293b]/50 rounded-2xl border border-slate-800 p-4 grid grid-cols-5 gap-4">
+                  <div className="bg-[#1e293b]/50 rounded-2xl border border-slate-800 p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                     <div className="text-center"><div className="text-2xl font-bold text-white">{total}</div><div className="text-[10px] text-slate-500">Total</div></div>
                     <div className="text-center"><div className="text-2xl font-bold text-emerald-400">{running}</div><div className="text-[10px] text-slate-500">Running</div></div>
                     <div className="text-center"><div className="text-2xl font-bold text-red-400">{down}</div><div className="text-[10px] text-slate-500">Down</div></div>
@@ -1086,7 +1096,7 @@ const App = () => {
                   </div>
                 );
               })()}
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {filtered.map(e=>{
                   const upt = Math.round((e.uptime_today||0)*100);
                   return (
@@ -1209,12 +1219,12 @@ const App = () => {
                     <td className="p-3">
                       <div className="flex gap-1 flex-wrap">
                         {allowed.map(s=>(
-                          <button key={s} onClick={async()=>{try{const r=await axios.put(`/api/work-orders/${w.wo_id}/status`,{status:s});if(r.data.error){showToast(r.data.error,false);}else{showToast(`${w.wo_id} → ${s}`);refreshPage('WORK_ORDER');}}catch(err){showToast(err.response?.data?.error||'Failed',false);}}}
+                          <button key={s} onClick={async()=>{try{const r=await api.put(`/api/work-orders/${w.wo_id}/status`,{status:s});if(r.data.error){showToast(r.data.error,false);}else{showToast(`${w.wo_id} → ${s}`);refreshPage('WORK_ORDER');}}catch(err){showToast(err.response?.data?.error||'Failed',false);}}}
                             className={`px-2 py-0.5 rounded text-[9px] font-bold cursor-pointer ${s==='DONE'?'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30':s==='HOLD'?'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30':'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'}`}>
                             →{s}
                           </button>
                         ))}
-                        <button onClick={async()=>{try{const r=await axios.get(`/api/work-orders/${w.wo_id}`);openModal('wo_detail',{detail:r.data});}catch{}}} className="text-slate-400 hover:text-white text-[9px] font-bold cursor-pointer">Detail</button>
+                        <button onClick={async()=>{try{const r=await api.get(`/api/work-orders/${w.wo_id}`);openModal('wo_detail',{detail:r.data});}catch{}}} className="text-slate-400 hover:text-white text-[9px] font-bold cursor-pointer">Detail</button>
                       </div>
                     </td>
                   </tr>
@@ -1247,7 +1257,7 @@ const App = () => {
               <FilterSearch value={tf.quality.search} onChange={v=>setFilter('quality','search',v)} placeholder="Search defect type..." />
               <FilterCount total={allDefects.length} filtered={filtered.length} />
             </FilterBar>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Table cols={['Defect Type','Count','Rate']}
                   rows={filtered}
@@ -1328,7 +1338,7 @@ const App = () => {
           <div className="flex justify-end">
             <BtnSuccess onClick={()=>openModal('schedule_optimize')}>AI Schedule Optimize</BtnSuccess>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Demand Forecast */}
             <div className="bg-[#1e293b]/30 p-4 rounded-2xl border border-slate-800 space-y-3">
               <h3 className="text-white font-bold">Demand Forecast</h3>
@@ -1336,7 +1346,7 @@ const App = () => {
               <Btn onClick={async()=>{
                 const code = aiDemandRef.current?.value || '';
                 if(!code) return;
-                const r = await axios.get(`/api/ai/demand-prediction/${code}`);
+                const r = await api.get(`/api/ai/demand-prediction/${code}`);
                 setExtra(prev=>({...prev, aiDemand:r.data}));
               }}>Predict</Btn>
               {extra.aiDemand && (
@@ -1360,7 +1370,7 @@ const App = () => {
               <Input placeholder="Speed" ref={aiDefSpeedRef} className="w-full" type="number" />
               <Input placeholder="Humidity" ref={aiDefHumRef} className="w-full" type="number" />
               <Btn onClick={async()=>{
-                const r = await axios.post('/api/ai/defect-prediction', {
+                const r = await api.post('/api/ai/defect-prediction', {
                   temperature: +(aiDefTempRef.current?.value || 0),
                   pressure: +(aiDefPresRef.current?.value || 0),
                   speed: +(aiDefSpeedRef.current?.value || 0),
@@ -1387,7 +1397,7 @@ const App = () => {
               <Input placeholder="Temperature" ref={aiFailTempRef} className="w-full" type="number" />
               <Input placeholder="Current (A)" ref={aiFailCurRef} className="w-full" type="number" />
               <Btn onClick={async()=>{
-                const r = await axios.post('/api/ai/failure-predict', {
+                const r = await api.post('/api/ai/failure-predict', {
                   equip_code: aiFailEqRef.current?.value || '',
                   sensor: {
                     vibration: +(aiFailVibRef.current?.value || 0),
@@ -1459,7 +1469,7 @@ const App = () => {
               <div className="flex items-center gap-3">
                 <h3 className="text-white font-bold">AI Insights</h3>
                 <Btn onClick={async()=>{
-                  const r = await axios.post('/api/ai/insights',{focus_area:'production'});
+                  const r = await api.post('/api/ai/insights',{focus_area:'production'});
                   setExtra(prev=>({...prev, insights:r.data}));
                 }}>Generate</Btn>
               </div>
@@ -1942,6 +1952,1169 @@ const App = () => {
           );
         })()}
 
+        {/* ── SPC 관리도 ──────────────────────────────────── */}
+        {menu==='SPC' && (() => {
+          const [spcData, setSpcData] = useState(null);
+          const [cpkData, setCpkData] = useState(null);
+          const [spcItem, setSpcItem] = useState('');
+          const [spcLoading, setSpcLoading] = useState(false);
+
+          const fetchSpc = async (code) => {
+            if (!code) return;
+            setSpcLoading(true);
+            try {
+              const [spc, cpk] = await Promise.all([
+                api.get(`/api/quality/spc/${code}`),
+                api.get(`/api/quality/cpk/${code}`)
+              ]);
+              setSpcData(spc.data);
+              setCpkData(cpk.data);
+            } catch { showToast('SPC 조회 실패', false); }
+            setSpcLoading(false);
+          };
+
+          return (
+            <div className="space-y-4">
+              <div className="flex gap-3 items-end">
+                <div>
+                  <label className="text-slate-500 text-[10px] font-bold">품목 코드</label>
+                  <input value={spcItem} onChange={e=>setSpcItem(e.target.value)}
+                    placeholder="ITM-00001" className="block bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white w-40" />
+                </div>
+                <button onClick={()=>fetchSpc(spcItem)} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg">조회</button>
+              </div>
+
+              {spcLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+
+              {spcData && spcData.charts && spcData.charts.map((chart, ci) => (
+                <div key={ci} className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                  <h3 className="text-white font-bold text-sm mb-3">{chart.check_name || 'SPC'} — X̄/R Chart</h3>
+                  {chart.x_bar_chart && (
+                    <div className="space-y-2">
+                      <div className="flex gap-4 text-[10px] text-slate-400">
+                        <span>CL: {chart.x_bar_chart.cl}</span>
+                        <span className="text-red-400">UCL: {chart.x_bar_chart.ucl}</span>
+                        <span className="text-blue-400">LCL: {chart.x_bar_chart.lcl}</span>
+                        <span className={chart.in_control ? 'text-emerald-400' : 'text-red-400'}>
+                          {chart.in_control ? '관리상태' : `위반 ${chart.violations?.length}건`}
+                        </span>
+                      </div>
+                      <div className="flex items-end gap-[2px] h-24">
+                        {chart.x_bar_chart.data.map((d,i) => {
+                          const range = chart.x_bar_chart.ucl - chart.x_bar_chart.lcl || 1;
+                          const pct = Math.max(5, Math.min(100, ((d.mean - chart.x_bar_chart.lcl) / range) * 100));
+                          const ooc = d.mean > chart.x_bar_chart.ucl || d.mean < chart.x_bar_chart.lcl;
+                          return <div key={i} title={`#${d.no}: ${d.mean}`}
+                            className={`w-3 rounded-t ${ooc ? 'bg-red-500' : 'bg-blue-500'}`}
+                            style={{height:`${pct}%`}} />;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {chart.violations && chart.violations.length > 0 && (
+                    <div className="mt-3">
+                      <h4 className="text-red-400 text-[10px] font-bold mb-1">위반 이력</h4>
+                      {chart.violations.map((v,vi) => (
+                        <div key={vi} className="text-[9px] text-slate-400">
+                          서브그룹 #{v.subgroup}: {v.rule} (값: {v.value?.toFixed(4)})
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {cpkData && cpkData.cpk_analysis && cpkData.cpk_analysis.length > 0 && (
+                <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                  <h3 className="text-white font-bold text-sm mb-3">Cp/Cpk 분석</h3>
+                  <table className="w-full text-[10px]">
+                    <thead><tr className="text-slate-500 border-b border-slate-800">
+                      <th className="text-left py-1">검사항목</th><th>Cp</th><th>Cpk</th>
+                      <th>등급</th><th>평균</th><th>σ</th><th>N</th>
+                    </tr></thead>
+                    <tbody>{cpkData.cpk_analysis.map((c,i) => (
+                      <tr key={i} className="border-b border-slate-800/50 text-slate-300">
+                        <td className="py-1">{c.check_name}</td>
+                        <td className="text-center">{c.cp?.toFixed(3) ?? '-'}</td>
+                        <td className={`text-center font-bold ${c.cpk>=1.33?'text-emerald-400':c.cpk>=1?'text-yellow-400':'text-red-400'}`}>
+                          {c.cpk?.toFixed(3) ?? '-'}
+                        </td>
+                        <td className="text-center">{c.grade || '-'}</td>
+                        <td className="text-center">{c.mean?.toFixed(3) ?? '-'}</td>
+                        <td className="text-center">{c.sigma?.toFixed(4) ?? '-'}</td>
+                        <td className="text-center">{c.n ?? '-'}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── CAPA 관리 ───────────────────────────────────── */}
+        {menu==='CAPA' && (() => {
+          const [capaList, setCapaList] = useState([]);
+          const [capaSummary, setCapaSummary] = useState({});
+          const [capaFilter, setCapaFilter] = useState('ALL');
+          const [capaLoading, setCapaLoading] = useState(true);
+
+          useEffect(() => {
+            (async () => {
+              try {
+                const r = await api.get('/api/quality/capa');
+                setCapaList(r.data.items || []);
+                setCapaSummary(r.data.summary || {});
+              } catch { showToast('CAPA 조회 실패', false); }
+              setCapaLoading(false);
+            })();
+          }, []);
+
+          const statuses = ['ALL','OPEN','INVESTIGATION','ACTION','VERIFICATION','CLOSED','REJECTED'];
+          const filtered = capaFilter === 'ALL' ? capaList : capaList.filter(c => c.status === capaFilter);
+          const statusColor = (s) => ({OPEN:'text-blue-400',INVESTIGATION:'text-yellow-400',ACTION:'text-orange-400',VERIFICATION:'text-purple-400',CLOSED:'text-emerald-400',REJECTED:'text-red-400'}[s] || 'text-slate-400');
+
+          return (
+            <div className="space-y-4">
+              <div className="flex gap-2 items-center">
+                <button onClick={()=>openModal('capa_new')} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg">+ CAPA 등록</button>
+                <div className="flex gap-1 ml-4">
+                  {statuses.map(s => (
+                    <button key={s} onClick={()=>setCapaFilter(s)}
+                      className={`px-2 py-1 rounded text-[9px] font-bold ${capaFilter===s?'bg-blue-600 text-white':'bg-slate-800 text-slate-400'}`}>
+                      {s} {s!=='ALL' && capaSummary[s] ? `(${capaSummary[s]})` : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {capaLoading ? <p className="text-slate-500 text-xs">로딩 중...</p> : (
+                <div className="space-y-2">
+                  {filtered.map(c => (
+                    <div key={c.capa_id} className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                      <div>
+                        <div className="flex gap-2 items-center">
+                          <span className="text-white text-xs font-bold">{c.capa_id}</span>
+                          <span className={`text-[9px] font-bold ${statusColor(c.status)}`}>{c.status}</span>
+                          <span className="text-slate-600 text-[9px]">{c.capa_type}</span>
+                        </div>
+                        <p className="text-slate-400 text-[10px] mt-0.5">{c.title}</p>
+                        <div className="text-slate-600 text-[9px] mt-0.5">
+                          담당: {c.assigned_to || '-'} | 기한: {c.due_date || '-'} | 조치: {c.action_count}건
+                        </div>
+                      </div>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${c.priority==='HIGH'?'bg-red-500/20 text-red-400':c.priority==='LOW'?'bg-slate-700 text-slate-400':'bg-yellow-500/20 text-yellow-400'}`}>{c.priority}</span>
+                    </div>
+                  ))}
+                  {filtered.length === 0 && <p className="text-slate-600 text-xs text-center py-8">CAPA가 없습니다.</p>}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── OEE 대시보드 ────────────────────────────────── */}
+        {menu==='OEE' && (() => {
+          const [oeeDash, setOeeDash] = useState(null);
+          const [oeeLoading, setOeeLoading] = useState(true);
+
+          useEffect(() => {
+            (async () => {
+              try {
+                const r = await api.get('/api/equipment/oee/dashboard');
+                setOeeDash(r.data);
+              } catch { showToast('OEE 조회 실패', false); }
+              setOeeLoading(false);
+            })();
+          }, []);
+
+          const oeeColor = (v) => v >= 0.85 ? 'text-emerald-400' : v >= 0.65 ? 'text-yellow-400' : v >= 0.40 ? 'text-orange-400' : 'text-red-400';
+
+          return (
+            <div className="space-y-4">
+              {oeeLoading ? <p className="text-slate-500 text-xs">로딩 중...</p> : oeeDash && (
+                <>
+                  <div className="bg-[#1e293b]/20 p-6 rounded-2xl border border-slate-800 text-center">
+                    <span className="text-slate-500 text-[10px] font-bold uppercase">Plant OEE</span>
+                    <div className={`text-4xl font-black mt-1 ${oeeColor(oeeDash.plant_oee)}`}>
+                      {(oeeDash.plant_oee * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {(oeeDash.equipments || []).map(eq => (
+                      <div key={eq.equip_code} className="bg-[#1e293b]/20 p-4 rounded-xl border border-slate-800">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-white text-xs font-bold">{eq.equip_code}</span>
+                          <span className={`text-[9px] font-bold ${eq.status==='RUNNING'?'text-emerald-400':eq.status==='DOWN'?'text-red-400':'text-slate-500'}`}>{eq.status}</span>
+                        </div>
+                        <p className="text-slate-400 text-[10px] mb-2">{eq.name}</p>
+                        {eq.oee != null ? (
+                          <>
+                            <div className={`text-2xl font-black ${oeeColor(eq.oee)}`}>{(eq.oee*100).toFixed(1)}%</div>
+                            <div className="flex gap-3 mt-2 text-[9px] text-slate-500">
+                              <span>A: {eq.availability!=null?(eq.availability*100).toFixed(1)+'%':'-'}</span>
+                              <span>P: {eq.performance!=null?(eq.performance*100).toFixed(1)+'%':'-'}</span>
+                              <span>Q: {eq.quality_rate!=null?(eq.quality_rate*100).toFixed(1)+'%':'-'}</span>
+                            </div>
+                            <div className="text-[9px] text-slate-600 mt-1">{eq.grade || '-'} | {eq.data_days}일 데이터</div>
+                          </>
+                        ) : <p className="text-slate-600 text-[10px]">데이터 없음</p>}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── 알림 센터 ───────────────────────────────────── */}
+        {menu==='NOTIFICATION' && (() => {
+          const [notifs, setNotifs] = useState([]);
+          const [unreadCount, setUnreadCount] = useState(0);
+          const [notifLoading, setNotifLoading] = useState(true);
+
+          useEffect(() => {
+            (async () => {
+              try {
+                const r = await api.get('/api/notifications');
+                setNotifs(r.data.items || []);
+                setUnreadCount(r.data.unread_count || 0);
+              } catch { showToast('알림 조회 실패', false); }
+              setNotifLoading(false);
+            })();
+          }, []);
+
+          const markRead = async (id) => {
+            try {
+              await api.put(`/api/notifications/${id}/read`);
+              setNotifs(prev => prev.map(n => n.notification_id===id ? {...n, is_read:true} : n));
+              setUnreadCount(prev => Math.max(0, prev-1));
+            } catch {}
+          };
+
+          const severityColor = (s) => ({CRITICAL:'border-red-500 bg-red-500/10',WARNING:'border-yellow-500 bg-yellow-500/10',INFO:'border-blue-500 bg-blue-500/10'}[s] || 'border-slate-700');
+          const typeIcon = (t) => ({EQUIP_DOWN:'⚠',SPC_VIOLATION:'📊',INVENTORY_LOW:'📦',AI_WARNING:'🤖',CAPA_DUE:'📋',SYSTEM:'⚙'}[t] || '🔔');
+
+          return (
+            <div className="space-y-4">
+              <div className="flex gap-3 items-center">
+                <span className="text-white text-sm font-bold">알림 센터</span>
+                {unreadCount > 0 && <span className="bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">{unreadCount}</span>}
+              </div>
+              {notifLoading ? <p className="text-slate-500 text-xs">로딩 중...</p> : (
+                <div className="space-y-2">
+                  {notifs.map(n => (
+                    <div key={n.notification_id}
+                      onClick={()=>!n.is_read && markRead(n.notification_id)}
+                      className={`p-3 rounded-xl border cursor-pointer ${n.is_read ? 'border-slate-800 opacity-60' : severityColor(n.severity)}`}>
+                      <div className="flex justify-between items-start">
+                        <div className="flex gap-2 items-center">
+                          <span className="text-sm">{typeIcon(n.type)}</span>
+                          <span className={`text-xs font-bold ${n.is_read?'text-slate-500':'text-white'}`}>{n.title}</span>
+                        </div>
+                        <span className="text-slate-600 text-[9px]">{n.created_at?.slice(0,16)}</span>
+                      </div>
+                      {n.message && <p className="text-slate-400 text-[10px] mt-1 ml-7">{n.message}</p>}
+                    </div>
+                  ))}
+                  {notifs.length === 0 && <p className="text-slate-600 text-xs text-center py-8">알림이 없습니다.</p>}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── LOT 추적 ────────────────────────────────────── */}
+        {menu==='LOT_TRACE' && (() => {
+          const [lotNo, setLotNo] = useState('');
+          const [traceData, setTraceData] = useState(null);
+          const [traceLoading, setTraceLoading] = useState(false);
+
+          const doTrace = async () => {
+            if (!lotNo) return;
+            setTraceLoading(true);
+            try {
+              const r = await api.get(`/api/lot/genealogy/${lotNo}`);
+              setTraceData(r.data);
+            } catch { showToast('LOT 추적 실패', false); }
+            setTraceLoading(false);
+          };
+
+          const TreeNode = ({node, type}) => (
+            <div className="ml-4 border-l border-slate-700 pl-3 py-1">
+              <div className="flex gap-2 items-center text-[10px]">
+                <span className="text-blue-400 font-bold">{node.lot_no}</span>
+                <span className="text-slate-400">{node.item_code}</span>
+                <span className="text-slate-600">{node.item_name}</span>
+                <span className="text-slate-500">x{node.qty}</span>
+                {node.via_wo && <span className="text-slate-700">via {node.via_wo}</span>}
+              </div>
+              {(node.children||[]).map((c,i) => <TreeNode key={i} node={c} type="forward" />)}
+              {(node.parents||[]).map((p,i) => <TreeNode key={i} node={p} type="backward" />)}
+            </div>
+          );
+
+          return (
+            <div className="space-y-4">
+              <div className="flex gap-3 items-end">
+                <div>
+                  <label className="text-slate-500 text-[10px] font-bold">LOT 번호</label>
+                  <input value={lotNo} onChange={e=>setLotNo(e.target.value)}
+                    onKeyDown={e=>e.key==='Enter'&&doTrace()}
+                    placeholder="LOT-20260301-001" className="block bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white w-56" />
+                </div>
+                <button onClick={doTrace} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg">추적</button>
+              </div>
+
+              {traceLoading && <p className="text-slate-500 text-xs">추적 중...</p>}
+
+              {traceData && !traceData.error && (
+                <div className="space-y-3">
+                  <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                    <h3 className="text-white font-bold text-sm mb-2">LOT 정보</h3>
+                    <div className="grid grid-cols-4 gap-2 text-[10px]">
+                      <div><span className="text-slate-500">LOT:</span> <span className="text-white">{traceData.lot_no}</span></div>
+                      <div><span className="text-slate-500">품목:</span> <span className="text-white">{traceData.item_code} ({traceData.item_name})</span></div>
+                      <div><span className="text-slate-500">수량:</span> <span className="text-white">{traceData.qty}</span></div>
+                      <div><span className="text-slate-500">위치:</span> <span className="text-white">{traceData.warehouse}/{traceData.location}</span></div>
+                    </div>
+                  </div>
+
+                  {traceData.forward && traceData.forward.length > 0 && (
+                    <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                      <h3 className="text-emerald-400 font-bold text-xs mb-2">Forward Trace (원자재 → 완제품)</h3>
+                      {traceData.forward.map((n,i) => <TreeNode key={i} node={n} type="forward" />)}
+                    </div>
+                  )}
+
+                  {traceData.backward && traceData.backward.length > 0 && (
+                    <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                      <h3 className="text-orange-400 font-bold text-xs mb-2">Backward Trace (완제품 → 원자재)</h3>
+                      {traceData.backward.map((n,i) => <TreeNode key={i} node={n} type="backward" />)}
+                    </div>
+                  )}
+
+                  {traceData.recall_impact && (
+                    <div className="bg-red-900/20 p-4 rounded-2xl border border-red-800">
+                      <h3 className="text-red-400 font-bold text-xs mb-2">리콜 시뮬레이션</h3>
+                      <div className="flex gap-6 text-[10px]">
+                        <div><span className="text-slate-500">영향 LOT:</span> <span className="text-red-300 font-bold">{traceData.recall_impact.affected_lot_count}건</span></div>
+                        <div><span className="text-slate-500">영향 품목:</span> <span className="text-red-300 font-bold">{traceData.recall_impact.affected_item_count}종</span></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {traceData && traceData.error && <p className="text-red-400 text-xs">{traceData.error}</p>}
+            </div>
+          );
+        })()}
+
+        {/* ── 바코드/QR ────────────────────────────────────── */}
+        {menu==='BARCODE' && (() => {
+          const [bcContent, setBcContent] = useState('');
+          const [bcFormat, setBcFormat] = useState('qr');
+          const [bcImage, setBcImage] = useState(null);
+          const [scanCode, setScanCode] = useState('');
+          const [scanResult, setScanResult] = useState(null);
+
+          const doGenerate = async () => {
+            if (!bcContent) return;
+            try {
+              const r = await api.post('/api/barcode/generate', {content: bcContent, format: bcFormat});
+              if (r.data.image_base64) setBcImage(r.data);
+              else showToast(r.data.error || '생성 실패', false);
+            } catch { showToast('바코드 생성 실패', false); }
+          };
+
+          const doScan = async () => {
+            if (!scanCode) return;
+            try {
+              const r = await api.post('/api/barcode/scan', {code: scanCode});
+              setScanResult(r.data);
+            } catch { showToast('스캔 처리 실패', false); }
+          };
+
+          return (
+            <div className="space-y-6">
+              {/* 생성 */}
+              <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                <h3 className="text-white font-bold text-sm mb-3">바코드/QR 생성</h3>
+                <div className="flex gap-3 items-end flex-wrap">
+                  <div>
+                    <label className="text-slate-500 text-[10px] font-bold">내용</label>
+                    <input value={bcContent} onChange={e=>setBcContent(e.target.value)}
+                      placeholder="LOT-20260301-001" className="block bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white w-56" />
+                  </div>
+                  <div>
+                    <label className="text-slate-500 text-[10px] font-bold">형식</label>
+                    <select value={bcFormat} onChange={e=>setBcFormat(e.target.value)}
+                      className="block bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white">
+                      <option value="qr">QR코드</option>
+                      <option value="code128">Code128</option>
+                      <option value="ean13">EAN-13</option>
+                    </select>
+                  </div>
+                  <button onClick={doGenerate} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg">생성</button>
+                </div>
+                {bcImage && (
+                  <div className="mt-4 flex flex-col items-center">
+                    <img src={`data:${bcImage.mime_type};base64,${bcImage.image_base64}`} alt="barcode" className="max-w-[200px] bg-white p-2 rounded" />
+                    <p className="text-slate-400 text-[10px] mt-1">{bcImage.format}: {bcImage.content}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* 스캔 */}
+              <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                <h3 className="text-white font-bold text-sm mb-3">바코드 스캔 조회</h3>
+                <div className="flex gap-3 items-end">
+                  <div>
+                    <label className="text-slate-500 text-[10px] font-bold">스캔 코드</label>
+                    <input value={scanCode} onChange={e=>setScanCode(e.target.value)}
+                      onKeyDown={e=>e.key==='Enter'&&doScan()}
+                      placeholder="코드 입력" className="block bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white w-56" />
+                  </div>
+                  <button onClick={doScan} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg">조회</button>
+                </div>
+                {scanResult && (
+                  <div className="mt-3 text-[10px]">
+                    {scanResult.found ? (
+                      <div className="grid grid-cols-4 gap-2">
+                        <div><span className="text-slate-500">유형:</span> <span className="text-blue-400 font-bold">{scanResult.type}</span></div>
+                        {scanResult.lot_no && <div><span className="text-slate-500">LOT:</span> <span className="text-white">{scanResult.lot_no}</span></div>}
+                        {scanResult.wo_no && <div><span className="text-slate-500">작업지시:</span> <span className="text-white">{scanResult.wo_no}</span></div>}
+                        {scanResult.item_code && <div><span className="text-slate-500">품목:</span> <span className="text-white">{scanResult.item_code}</span></div>}
+                        {scanResult.item_name && <div><span className="text-slate-500">품명:</span> <span className="text-white">{scanResult.item_name}</span></div>}
+                        {scanResult.qty !== undefined && <div><span className="text-slate-500">수량:</span> <span className="text-white">{scanResult.qty}</span></div>}
+                        {scanResult.status && <div><span className="text-slate-500">상태:</span> <span className="text-white">{scanResult.status}</span></div>}
+                      </div>
+                    ) : (
+                      <p className="text-slate-400">코드 '{scanResult.code}'에 해당하는 데이터를 찾을 수 없습니다.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── 전자 작업지시서 (EWI) ─────────────────────────── */}
+        {menu==='EWI' && (() => {
+          const [wiList, setWiList] = useState([]);
+          const [selWi, setSelWi] = useState(null);
+          const [wiLoading, setWiLoading] = useState(false);
+
+          const loadWi = async () => {
+            setWiLoading(true);
+            try {
+              const r = await api.get('/api/work-instructions');
+              setWiList(r.data.items || []);
+            } catch { showToast('작업지시서 조회 실패', false); }
+            setWiLoading(false);
+          };
+
+          const loadDetail = async (id) => {
+            try {
+              const r = await api.get(`/api/work-instructions/${id}`);
+              setSelWi(r.data);
+            } catch { showToast('상세 조회 실패', false); }
+          };
+
+          const doSign = async (wiId, stepNo) => {
+            try {
+              const r = await api.post(`/api/work-instructions/${wiId}/steps/${stepNo}/sign`);
+              if (r.data.success) { showToast('서명 완료', true); loadDetail(wiId); }
+              else showToast(r.data.error || '서명 실패', false);
+            } catch { showToast('서명 실패', false); }
+          };
+
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadWi(); }, []);
+
+          return (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-white font-bold text-sm">전자 작업지시서</h3>
+                <button onClick={loadWi} className="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded-lg">새로고침</button>
+              </div>
+
+              {wiLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+
+              {!selWi ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px]">
+                    <thead><tr className="border-b border-slate-800 text-slate-500">
+                      <th className="text-left py-2 px-2">ID</th>
+                      <th className="text-left py-2 px-2">작업지시</th>
+                      <th className="text-left py-2 px-2">제목</th>
+                      <th className="text-left py-2 px-2">버전</th>
+                      <th className="text-left py-2 px-2">상태</th>
+                      <th className="text-left py-2 px-2">생성일</th>
+                    </tr></thead>
+                    <tbody>
+                      {wiList.map(w => (
+                        <tr key={w.wi_id} onClick={()=>loadDetail(w.wi_id)}
+                          className="border-b border-slate-800/50 hover:bg-slate-800/30 cursor-pointer text-slate-300">
+                          <td className="py-1.5 px-2 text-blue-400">{w.wi_id}</td>
+                          <td className="py-1.5 px-2">{w.wo_no || '-'}</td>
+                          <td className="py-1.5 px-2">{w.title}</td>
+                          <td className="py-1.5 px-2">v{w.version}</td>
+                          <td className="py-1.5 px-2"><span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${w.status==='COMPLETED'?'bg-emerald-900/50 text-emerald-400':w.status==='ACTIVE'?'bg-blue-900/50 text-blue-400':'bg-slate-700 text-slate-400'}`}>{w.status}</span></td>
+                          <td className="py-1.5 px-2 text-slate-500">{w.created_at?.slice(0,10)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {wiList.length===0 && !wiLoading && <p className="text-slate-600 text-xs text-center py-4">등록된 작업지시서가 없습니다.</p>}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <button onClick={()=>setSelWi(null)} className="text-blue-400 text-xs hover:underline">&larr; 목록으로</button>
+                  <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="text-white font-bold text-sm">{selWi.title}</h4>
+                        <p className="text-slate-500 text-[10px]">{selWi.wi_id} | v{selWi.version} | {selWi.wo_no || '작업지시 미연결'}</p>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${selWi.status==='COMPLETED'?'bg-emerald-900/50 text-emerald-400':'bg-blue-900/50 text-blue-400'}`}>{selWi.status}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {(selWi.steps||[]).map(s => (
+                      <div key={s.step_no} className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                        <div>
+                          <span className="text-blue-400 text-xs font-bold mr-2">Step {s.step_no}</span>
+                          <span className="text-white text-xs">{s.title}</span>
+                          {s.description && <p className="text-slate-500 text-[10px] mt-0.5">{s.description}</p>}
+                          {s.duration_min > 0 && <span className="text-slate-600 text-[9px] ml-2">{s.duration_min}분</span>}
+                        </div>
+                        <div className="text-right">
+                          {s.signed_by ? (
+                            <span className="text-emerald-400 text-[10px]">signed: {s.signed_by} ({s.signed_at?.slice(0,10)})</span>
+                          ) : s.sign_required ? (
+                            <button onClick={()=>doSign(selWi.wi_id, s.step_no)}
+                              className="bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-bold px-3 py-1 rounded-lg">서명</button>
+                          ) : (
+                            <span className="text-slate-600 text-[10px]">서명불요</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── NCR 관리 ─────────────────────────────────────── */}
+        {menu==='NCR' && (() => {
+          const [ncrList, setNcrList] = useState([]);
+          const [ncrLoading, setNcrLoading] = useState(false);
+          const [ncrFilter, setNcrFilter] = useState('');
+          const [ncrSummary, setNcrSummary] = useState({});
+
+          const loadNcr = async () => {
+            setNcrLoading(true);
+            try {
+              const url = ncrFilter ? `/api/quality/ncr?status=${ncrFilter}` : '/api/quality/ncr';
+              const r = await api.get(url);
+              setNcrList(r.data.items || []);
+              setNcrSummary(r.data.summary || {});
+            } catch { showToast('NCR 조회 실패', false); }
+            setNcrLoading(false);
+          };
+
+          const doTransition = async (id, status, disposition) => {
+            try {
+              const body = {status};
+              if (disposition) body.disposition = disposition;
+              const r = await api.put(`/api/quality/ncr/${id}/disposition`, body);
+              if (r.data.success) { showToast('상태 변경 완료', true); loadNcr(); }
+              else showToast(r.data.error || '변경 실패', false);
+            } catch { showToast('상태 변경 실패', false); }
+          };
+
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadNcr(); }, [ncrFilter]);
+
+          const statusColors = {DETECTED:'bg-red-900/50 text-red-400', QUARANTINED:'bg-orange-900/50 text-orange-400', MRB_REVIEW:'bg-yellow-900/50 text-yellow-400', DISPOSITION:'bg-blue-900/50 text-blue-400', CLOSED:'bg-emerald-900/50 text-emerald-400'};
+          const nextStatus = {DETECTED:'QUARANTINED', QUARANTINED:'MRB_REVIEW', MRB_REVIEW:'DISPOSITION', DISPOSITION:'CLOSED'};
+
+          return (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-white font-bold text-sm">부적합품 관리 (NCR)</h3>
+                <div className="flex gap-2 items-center">
+                  <select value={ncrFilter} onChange={e=>{setNcrFilter(e.target.value);}}
+                    className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-white">
+                    <option value="">전체</option>
+                    <option value="DETECTED">DETECTED</option>
+                    <option value="QUARANTINED">QUARANTINED</option>
+                    <option value="MRB_REVIEW">MRB_REVIEW</option>
+                    <option value="DISPOSITION">DISPOSITION</option>
+                    <option value="CLOSED">CLOSED</option>
+                  </select>
+                  <button onClick={loadNcr} className="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded-lg">새로고침</button>
+                </div>
+              </div>
+
+              {/* 상태 요약 */}
+              <div className="flex gap-2 flex-wrap">
+                {Object.entries(ncrSummary).map(([s,c]) => (
+                  <span key={s} className={`px-2 py-0.5 rounded text-[9px] font-bold ${statusColors[s]||'bg-slate-700 text-slate-400'}`}>{s}: {c}</span>
+                ))}
+              </div>
+
+              {ncrLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-[10px]">
+                  <thead><tr className="border-b border-slate-800 text-slate-500">
+                    <th className="text-left py-2 px-2">NCR ID</th>
+                    <th className="text-left py-2 px-2">제목</th>
+                    <th className="text-left py-2 px-2">LOT</th>
+                    <th className="text-left py-2 px-2">수량</th>
+                    <th className="text-left py-2 px-2">상태</th>
+                    <th className="text-left py-2 px-2">처분</th>
+                    <th className="text-left py-2 px-2">액션</th>
+                  </tr></thead>
+                  <tbody>
+                    {ncrList.map(n => (
+                      <tr key={n.ncr_id} className="border-b border-slate-800/50 text-slate-300">
+                        <td className="py-1.5 px-2 text-blue-400">{n.ncr_id}</td>
+                        <td className="py-1.5 px-2">{n.title}</td>
+                        <td className="py-1.5 px-2">{n.lot_no||'-'}</td>
+                        <td className="py-1.5 px-2">{n.qty_affected}</td>
+                        <td className="py-1.5 px-2"><span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${statusColors[n.status]||''}`}>{n.status}</span></td>
+                        <td className="py-1.5 px-2">{n.disposition||'-'}</td>
+                        <td className="py-1.5 px-2">
+                          {nextStatus[n.status] && (
+                            n.status==='MRB_REVIEW' ? (
+                              <select onChange={e=>{if(e.target.value) doTransition(n.ncr_id,'DISPOSITION',e.target.value);}}
+                                className="bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-[9px] text-white" defaultValue="">
+                                <option value="" disabled>처분결정...</option>
+                                <option value="REWORK">재작업</option>
+                                <option value="SCRAP">폐기</option>
+                                <option value="USE_AS_IS">현상사용</option>
+                                <option value="RETURN">반품</option>
+                                <option value="CONCESSION">특채</option>
+                              </select>
+                            ) : (
+                              <button onClick={()=>doTransition(n.ncr_id, nextStatus[n.status])}
+                                className="bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold px-2 py-0.5 rounded">{nextStatus[n.status]}</button>
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── 출하판정 ─────────────────────────────────────── */}
+        {menu==='DISPOSITION' && (() => {
+          const [dispList, setDispList] = useState([]);
+          const [dispLoading, setDispLoading] = useState(false);
+          const [newDisp, setNewDisp] = useState({lot_no:'', item_code:'', decision:'ACCEPT', reason:''});
+
+          const loadDisp = async () => {
+            setDispLoading(true);
+            try {
+              const r = await api.get('/api/quality/disposition');
+              setDispList(r.data.items || []);
+            } catch { showToast('출하판정 조회 실패', false); }
+            setDispLoading(false);
+          };
+
+          const doCreate = async () => {
+            if (!newDisp.lot_no) { showToast('LOT 번호를 입력하세요', false); return; }
+            try {
+              const r = await api.post('/api/quality/disposition', newDisp);
+              if (r.data.success) { showToast('판정 등록 완료', true); setNewDisp({lot_no:'',item_code:'',decision:'ACCEPT',reason:''}); loadDisp(); }
+              else showToast(r.data.error||'등록 실패', false);
+            } catch { showToast('등록 실패', false); }
+          };
+
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadDisp(); }, []);
+
+          const decColors = {ACCEPT:'text-emerald-400', REJECT:'text-red-400', CONDITIONAL:'text-yellow-400', HOLD:'text-orange-400'};
+
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">출하판정</h3>
+
+              <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                <h4 className="text-slate-400 text-xs font-bold mb-2">판정 등록</h4>
+                <div className="flex gap-3 items-end flex-wrap">
+                  <div>
+                    <label className="text-slate-500 text-[10px] font-bold">LOT 번호</label>
+                    <input value={newDisp.lot_no} onChange={e=>setNewDisp({...newDisp,lot_no:e.target.value})}
+                      className="block bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white w-44" />
+                  </div>
+                  <div>
+                    <label className="text-slate-500 text-[10px] font-bold">품목코드</label>
+                    <input value={newDisp.item_code} onChange={e=>setNewDisp({...newDisp,item_code:e.target.value})}
+                      className="block bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white w-32" />
+                  </div>
+                  <div>
+                    <label className="text-slate-500 text-[10px] font-bold">판정</label>
+                    <select value={newDisp.decision} onChange={e=>setNewDisp({...newDisp,decision:e.target.value})}
+                      className="block bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white">
+                      <option value="ACCEPT">합격</option>
+                      <option value="REJECT">불합격</option>
+                      <option value="CONDITIONAL">조건부</option>
+                      <option value="HOLD">보류</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-slate-500 text-[10px] font-bold">사유</label>
+                    <input value={newDisp.reason} onChange={e=>setNewDisp({...newDisp,reason:e.target.value})}
+                      className="block bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white w-44" />
+                  </div>
+                  <button onClick={doCreate} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg">등록</button>
+                </div>
+              </div>
+
+              {dispLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              <div className="overflow-x-auto">
+                <table className="w-full text-[10px]">
+                  <thead><tr className="border-b border-slate-800 text-slate-500">
+                    <th className="text-left py-2 px-2">ID</th>
+                    <th className="text-left py-2 px-2">LOT</th>
+                    <th className="text-left py-2 px-2">품목</th>
+                    <th className="text-left py-2 px-2">판정</th>
+                    <th className="text-left py-2 px-2">사유</th>
+                    <th className="text-left py-2 px-2">검사자</th>
+                    <th className="text-left py-2 px-2">일시</th>
+                  </tr></thead>
+                  <tbody>
+                    {dispList.map(d => (
+                      <tr key={d.disp_id} className="border-b border-slate-800/50 text-slate-300">
+                        <td className="py-1.5 px-2 text-blue-400">{d.disp_id}</td>
+                        <td className="py-1.5 px-2">{d.lot_no}</td>
+                        <td className="py-1.5 px-2">{d.item_code||'-'}</td>
+                        <td className={`py-1.5 px-2 font-bold ${decColors[d.decision]||''}`}>{d.decision}</td>
+                        <td className="py-1.5 px-2">{d.reason||'-'}</td>
+                        <td className="py-1.5 px-2">{d.inspector_id||'-'}</td>
+                        <td className="py-1.5 px-2 text-slate-500">{d.decided_at?.slice(0,10)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── KPI 대시보드 (FPY + 보전KPI) ──────────────────── */}
+        {menu==='KPI' && (() => {
+          const [fpyData, setFpyData] = useState(null);
+          const [maintData, setMaintData] = useState(null);
+          const [equipCode, setEquipCode] = useState('EQP-001');
+          const [kpiLoading, setKpiLoading] = useState(false);
+
+          const loadFpy = async () => {
+            try {
+              const r = await api.get('/api/kpi/fpy');
+              setFpyData(r.data);
+            } catch { showToast('FPY 조회 실패', false); }
+          };
+
+          const loadMaint = async () => {
+            if (!equipCode) return;
+            try {
+              const r = await api.get(`/api/kpi/maintenance/${equipCode}`);
+              setMaintData(r.data);
+            } catch { showToast('보전 KPI 조회 실패', false); }
+          };
+
+          const loadAll = async () => {
+            setKpiLoading(true);
+            await Promise.all([loadFpy(), loadMaint()]);
+            setKpiLoading(false);
+          };
+
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadAll(); }, []);
+
+          return (
+            <div className="space-y-6">
+              <h3 className="text-white font-bold text-sm">KPI 대시보드</h3>
+              {kpiLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+
+              {/* FPY */}
+              <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-blue-400 font-bold text-xs">FPY (First Pass Yield)</h4>
+                  {fpyData && fpyData.rty !== undefined && (
+                    <span className="text-white text-xs">RTY: <span className="text-emerald-400 font-bold">{(fpyData.rty*100).toFixed(2)}%</span></span>
+                  )}
+                </div>
+                {fpyData && fpyData.items && (
+                  <table className="w-full text-[10px]">
+                    <thead><tr className="border-b border-slate-800 text-slate-500">
+                      <th className="text-left py-1 px-2">공정</th>
+                      <th className="text-right py-1 px-2">투입수</th>
+                      <th className="text-right py-1 px-2">1차양품</th>
+                      <th className="text-right py-1 px-2">FPY</th>
+                    </tr></thead>
+                    <tbody>
+                      {fpyData.items.slice(0,20).map((f,i) => (
+                        <tr key={i} className="border-b border-slate-800/50 text-slate-300">
+                          <td className="py-1 px-2">{f.process_code}</td>
+                          <td className="py-1 px-2 text-right">{f.input_qty}</td>
+                          <td className="py-1 px-2 text-right">{f.first_pass_qty}</td>
+                          <td className={`py-1 px-2 text-right font-bold ${f.fpy>=0.95?'text-emerald-400':f.fpy>=0.9?'text-yellow-400':'text-red-400'}`}>
+                            {(f.fpy*100).toFixed(2)}%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                {fpyData && fpyData.items && fpyData.items.length===0 && (
+                  <p className="text-slate-600 text-xs">FPY 데이터가 없습니다.</p>
+                )}
+              </div>
+
+              {/* Maintenance KPI */}
+              <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                <h4 className="text-orange-400 font-bold text-xs mb-3">설비보전 KPI (MTTF/MTTR/MTBF)</h4>
+                <div className="flex gap-3 items-end mb-3">
+                  <div>
+                    <label className="text-slate-500 text-[10px] font-bold">설비코드</label>
+                    <input value={equipCode} onChange={e=>setEquipCode(e.target.value)}
+                      className="block bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white w-32" />
+                  </div>
+                  <button onClick={loadMaint} className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg">조회</button>
+                </div>
+                {maintData && !maintData.error && (
+                  maintData.items ? (
+                    <table className="w-full text-[10px]">
+                      <thead><tr className="border-b border-slate-800 text-slate-500">
+                        <th className="text-left py-1 px-2">날짜</th>
+                        <th className="text-right py-1 px-2">MTTF(h)</th>
+                        <th className="text-right py-1 px-2">MTTR(h)</th>
+                        <th className="text-right py-1 px-2">MTBF(h)</th>
+                        <th className="text-right py-1 px-2">고장횟수</th>
+                      </tr></thead>
+                      <tbody>
+                        {maintData.items.slice(0,15).map((m,i) => (
+                          <tr key={i} className="border-b border-slate-800/50 text-slate-300">
+                            <td className="py-1 px-2">{m.calc_date}</td>
+                            <td className="py-1 px-2 text-right">{m.mttf_hours}</td>
+                            <td className="py-1 px-2 text-right">{m.mttr_hours}</td>
+                            <td className="py-1 px-2 text-right font-bold text-blue-400">{m.mtbf_hours}</td>
+                            <td className="py-1 px-2 text-right">{m.failure_count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-4 text-center">
+                      <div className="bg-slate-800/50 p-3 rounded-xl">
+                        <p className="text-slate-500 text-[9px]">MTTF</p>
+                        <p className="text-white text-sm font-bold">{maintData.mttf_hours}h</p>
+                      </div>
+                      <div className="bg-slate-800/50 p-3 rounded-xl">
+                        <p className="text-slate-500 text-[9px]">MTTR</p>
+                        <p className="text-white text-sm font-bold">{maintData.mttr_hours}h</p>
+                      </div>
+                      <div className="bg-slate-800/50 p-3 rounded-xl">
+                        <p className="text-slate-500 text-[9px]">MTBF</p>
+                        <p className="text-blue-400 text-sm font-bold">{maintData.mtbf_hours}h</p>
+                      </div>
+                      <div className="bg-slate-800/50 p-3 rounded-xl">
+                        <p className="text-slate-500 text-[9px]">고장횟수</p>
+                        <p className="text-red-400 text-sm font-bold">{maintData.failure_count}</p>
+                      </div>
+                    </div>
+                  )
+                )}
+                {maintData && maintData.error && <p className="text-red-400 text-xs">{maintData.error}</p>}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── CMMS 보전 ───────────────────────────────────── */}
+        {menu==='CMMS' && (() => {
+          const [pmList, setPmList] = useState([]);
+          const [moList, setMoList] = useState([]);
+          const [cmmsTab, setCmmsTab] = useState('pm');
+          const [cmmsLoading, setCmmsLoading] = useState(false);
+
+          const loadPm = async () => { try { const r = await api.get('/api/maintenance/pm'); setPmList(r.data.items||[]); } catch {} };
+          const loadMo = async () => { try { const r = await api.get('/api/maintenance/history/EQP-001'); setMoList(r.data.history||[]); } catch {} };
+          const loadAll = async () => { setCmmsLoading(true); await Promise.all([loadPm(), loadMo()]); setCmmsLoading(false); };
+
+          const doMoTransition = async (moId, status) => {
+            try { const r = await api.put(`/api/maintenance/work-orders/${moId}`, {status}); if(r.data.success) { showToast('상태 변경',true); loadMo(); } else showToast(r.data.error,false); } catch { showToast('변경 실패',false); }
+          };
+
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadAll(); }, []);
+
+          return (
+            <div className="space-y-4">
+              <div className="flex gap-2 mb-3">
+                <button onClick={()=>setCmmsTab('pm')} className={`px-3 py-1 rounded-lg text-xs font-bold ${cmmsTab==='pm'?'bg-blue-600 text-white':'bg-slate-800 text-slate-400'}`}>PM 일정</button>
+                <button onClick={()=>setCmmsTab('mo')} className={`px-3 py-1 rounded-lg text-xs font-bold ${cmmsTab==='mo'?'bg-blue-600 text-white':'bg-slate-800 text-slate-400'}`}>작업지시</button>
+              </div>
+              {cmmsLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {cmmsTab==='pm' && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                    <th className="text-left py-2 px-2">PM ID</th><th className="text-left py-2 px-2">설비</th><th className="text-left py-2 px-2">유형</th><th className="text-left py-2 px-2">주기(일)</th><th className="text-left py-2 px-2">다음예정</th><th className="text-left py-2 px-2">담당</th><th className="text-left py-2 px-2">상태</th>
+                  </tr></thead><tbody>
+                    {pmList.map(p=><tr key={p.pm_id} className="border-b border-slate-800/50 text-slate-300">
+                      <td className="py-1.5 px-2 text-blue-400">{p.pm_id}</td><td className="py-1.5 px-2">{p.equip_code}</td><td className="py-1.5 px-2">{p.pm_type}</td><td className="py-1.5 px-2">{p.interval_days}</td><td className="py-1.5 px-2">{p.next_due}</td><td className="py-1.5 px-2">{p.assignee||'-'}</td><td className="py-1.5 px-2"><span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${p.status==='ACTIVE'?'bg-emerald-900/50 text-emerald-400':'bg-slate-700 text-slate-400'}`}>{p.status}</span></td>
+                    </tr>)}
+                  </tbody></table>
+                </div>
+              )}
+              {cmmsTab==='mo' && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                    <th className="text-left py-2 px-2">MO ID</th><th className="text-left py-2 px-2">유형</th><th className="text-left py-2 px-2">우선순위</th><th className="text-left py-2 px-2">상태</th><th className="text-left py-2 px-2">소요(분)</th><th className="text-left py-2 px-2">비용</th><th className="text-left py-2 px-2">액션</th>
+                  </tr></thead><tbody>
+                    {moList.map(m=><tr key={m.mo_id} className="border-b border-slate-800/50 text-slate-300">
+                      <td className="py-1.5 px-2 text-blue-400">{m.mo_id}</td><td className="py-1.5 px-2">{m.mo_type}</td>
+                      <td className="py-1.5 px-2"><span className={m.priority==='EMERGENCY'?'text-red-400 font-bold':m.priority==='HIGH'?'text-orange-400':''}>{m.priority}</span></td>
+                      <td className="py-1.5 px-2"><span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${m.status==='COMPLETED'?'bg-emerald-900/50 text-emerald-400':m.status==='IN_PROGRESS'?'bg-blue-900/50 text-blue-400':'bg-slate-700 text-slate-400'}`}>{m.status}</span></td>
+                      <td className="py-1.5 px-2">{m.duration_min||'-'}</td><td className="py-1.5 px-2">{m.cost?m.cost.toLocaleString():'-'}</td>
+                      <td className="py-1.5 px-2 flex gap-1">
+                        {m.status==='PLANNED'&&<button onClick={()=>doMoTransition(m.mo_id,'IN_PROGRESS')} className="bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded">시작</button>}
+                        {m.status==='IN_PROGRESS'&&<button onClick={()=>doMoTransition(m.mo_id,'COMPLETED')} className="bg-emerald-600 text-white text-[9px] px-2 py-0.5 rounded">완료</button>}
+                      </td>
+                    </tr>)}
+                  </tbody></table>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── 레시피 관리 ──────────────────────────────────── */}
+        {menu==='RECIPE' && (() => {
+          const [rcpList, setRcpList] = useState([]);
+          const [selRcp, setSelRcp] = useState(null);
+          const [rcpLoading, setRcpLoading] = useState(false);
+
+          const loadRcp = async () => { setRcpLoading(true); try { const r = await api.get('/api/recipes'); setRcpList(r.data.items||[]); } catch {} setRcpLoading(false); };
+          const loadDetail = async (id) => { try { const r = await api.get(`/api/recipes/${id}`); setSelRcp(r.data); } catch {} };
+          const doApprove = async (id) => { try { const r = await api.put(`/api/recipes/${id}/approve`); if(r.data.success){showToast('승인완료',true);loadRcp();setSelRcp(null);} else showToast(r.data.error,false); } catch{showToast('승인실패',false);} };
+
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadRcp(); }, []);
+
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">레시피 관리 (ISA-88)</h3>
+              {rcpLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {!selRcp ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                    <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">품목</th><th className="text-left py-2 px-2">공정</th><th className="text-left py-2 px-2">버전</th><th className="text-left py-2 px-2">상태</th><th className="text-left py-2 px-2">승인자</th>
+                  </tr></thead><tbody>
+                    {rcpList.map(r=><tr key={r.recipe_id} onClick={()=>loadDetail(r.recipe_id)} className="border-b border-slate-800/50 text-slate-300 hover:bg-slate-800/30 cursor-pointer">
+                      <td className="py-1.5 px-2 text-blue-400">{r.recipe_code}</td><td className="py-1.5 px-2">{r.item_code||'-'}</td><td className="py-1.5 px-2">{r.process_code||'-'}</td><td className="py-1.5 px-2">v{r.version}</td>
+                      <td className="py-1.5 px-2"><span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${r.status==='APPROVED'?'bg-emerald-900/50 text-emerald-400':'bg-slate-700 text-slate-400'}`}>{r.status}</span></td>
+                      <td className="py-1.5 px-2">{r.approved_by||'-'}</td>
+                    </tr>)}
+                  </tbody></table>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <button onClick={()=>setSelRcp(null)} className="text-blue-400 text-xs hover:underline">&larr; 목록</button>
+                  <div className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                    <div className="flex justify-between items-center">
+                      <div><h4 className="text-white font-bold text-sm">{selRcp.recipe_code} v{selRcp.version}</h4>
+                        <p className="text-slate-500 text-[10px]">{selRcp.item_code} | {selRcp.process_code}</p></div>
+                      <div className="flex gap-2 items-center">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${selRcp.status==='APPROVED'?'bg-emerald-900/50 text-emerald-400':'bg-slate-700 text-slate-400'}`}>{selRcp.status}</span>
+                        {selRcp.status==='DRAFT'&&<button onClick={()=>doApprove(selRcp.recipe_id)} className="bg-emerald-600 text-white text-[10px] px-3 py-1 rounded-lg font-bold">승인</button>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                      <th className="text-left py-2 px-2">파라미터</th><th className="text-right py-2 px-2">목표</th><th className="text-right py-2 px-2">최소</th><th className="text-right py-2 px-2">최대</th><th className="text-left py-2 px-2">단위</th>
+                    </tr></thead><tbody>
+                      {(selRcp.parameters||[]).map((p,i)=><tr key={i} className="border-b border-slate-800/50 text-slate-300">
+                        <td className="py-1.5 px-2 text-white font-bold">{p.param_name}</td>
+                        <td className="py-1.5 px-2 text-right text-blue-400">{p.target_value}</td>
+                        <td className="py-1.5 px-2 text-right">{p.min_value}</td>
+                        <td className="py-1.5 px-2 text-right">{p.max_value}</td>
+                        <td className="py-1.5 px-2 text-slate-500">{p.unit}</td>
+                      </tr>)}
+                    </tbody></table>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── 센서 모니터링 ────────────────────────────────── */}
+        {menu==='SENSOR' && (() => {
+          const [sensorEquip, setSensorEquip] = useState('EQP-001');
+          const [sensorData, setSensorData] = useState(null);
+          const [sensorLoading, setSensorLoading] = useState(false);
+
+          const loadSensor = async () => {
+            if (!sensorEquip) return;
+            setSensorLoading(true);
+            try { const r = await api.get(`/api/datacollect/realtime/${sensorEquip}?minutes=60`); setSensorData(r.data); }
+            catch { showToast('센서 데이터 조회 실패',false); }
+            setSensorLoading(false);
+          };
+
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadSensor(); }, []);
+
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">센서 실시간 모니터링</h3>
+              <div className="flex gap-3 items-end">
+                <div>
+                  <label className="text-slate-500 text-[10px] font-bold">설비코드</label>
+                  <input value={sensorEquip} onChange={e=>setSensorEquip(e.target.value)}
+                    className="block bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white w-32" />
+                </div>
+                <button onClick={loadSensor} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg">조회</button>
+              </div>
+              {sensorLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {sensorData && sensorData.sensors && sensorData.sensors.map(s=>(
+                <div key={s.type} className="bg-[#1e293b]/20 p-4 rounded-2xl border border-slate-800">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-blue-400 font-bold text-xs">{s.type}</h4>
+                    <div className="flex gap-4 text-[9px] text-slate-400">
+                      <span>min: <span className="text-white">{s.stats.min}</span></span>
+                      <span>max: <span className="text-white">{s.stats.max}</span></span>
+                      <span>avg: <span className="text-emerald-400">{s.stats.avg}</span></span>
+                      <span>std: <span className="text-white">{s.stats.std}</span></span>
+                    </div>
+                  </div>
+                  <div className="flex gap-0.5 items-end h-16">
+                    {s.data.slice(-60).map((d,i)=>{
+                      const range = s.stats.max - s.stats.min || 1;
+                      const pct = ((d.value - s.stats.min) / range) * 100;
+                      return <div key={i} className="flex-1 bg-blue-500/60 rounded-t" style={{height:`${Math.max(2,pct)}%`}} title={`${d.value} @ ${d.timestamp}`} />;
+                    })}
+                  </div>
+                  {s.data.length===0 && <p className="text-slate-600 text-[10px]">데이터 없음</p>}
+                </div>
+              ))}
+              {sensorData && sensorData.last_received && <p className="text-slate-600 text-[9px]">마지막 수신: {sensorData.last_received}</p>}
+              {sensorData && !sensorData.sensors?.length && !sensorLoading && <p className="text-slate-600 text-xs">센서 데이터가 없습니다.</p>}
+            </div>
+          );
+        })()}
+
+        {/* ── 문서 관리 DMS ─────────────────────────────────── */}
+        {menu==='DMS' && (() => {
+          const [docList, setDocList] = useState([]);
+          const [docFilter, setDocFilter] = useState('');
+          const [docLoading, setDocLoading] = useState(false);
+
+          const loadDocs = async () => { setDocLoading(true); try { const url = docFilter ? `/api/documents?doc_type=${docFilter}` : '/api/documents'; const r = await api.get(url); setDocList(r.data.items||[]); } catch {} setDocLoading(false); };
+          const doApproveDoc = async (id) => { try { const r = await api.put(`/api/documents/${id}/approve`); if(r.data.success){showToast('승인완료',true);loadDocs();} else showToast(r.data.error,false); } catch{showToast('실패',false);} };
+
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadDocs(); }, [docFilter]);
+
+          return (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-white font-bold text-sm">문서 관리 (DMS)</h3>
+                <select value={docFilter} onChange={e=>setDocFilter(e.target.value)}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-white">
+                  <option value="">전체</option>
+                  <option value="SOP">SOP</option><option value="WI">WI</option>
+                  <option value="QC_SPEC">QC_SPEC</option><option value="DRAWING">DRAWING</option>
+                  <option value="REPORT">REPORT</option>
+                </select>
+              </div>
+              {docLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              <div className="overflow-x-auto">
+                <table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                  <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">유형</th><th className="text-left py-2 px-2">제목</th><th className="text-left py-2 px-2">버전</th><th className="text-left py-2 px-2">크기</th><th className="text-left py-2 px-2">상태</th><th className="text-left py-2 px-2">액션</th>
+                </tr></thead><tbody>
+                  {docList.map(d=><tr key={d.doc_id} className="border-b border-slate-800/50 text-slate-300">
+                    <td className="py-1.5 px-2 text-blue-400">{d.doc_code}</td><td className="py-1.5 px-2">{d.doc_type}</td><td className="py-1.5 px-2 text-white">{d.title}</td><td className="py-1.5 px-2">v{d.version}</td><td className="py-1.5 px-2">{d.file_size_kb}KB</td>
+                    <td className="py-1.5 px-2"><span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${d.status==='APPROVED'?'bg-emerald-900/50 text-emerald-400':'bg-slate-700 text-slate-400'}`}>{d.status}</span></td>
+                    <td className="py-1.5 px-2">{d.status==='DRAFT'&&<button onClick={()=>doApproveDoc(d.doc_id)} className="bg-emerald-600 text-white text-[9px] px-2 py-0.5 rounded">승인</button>}</td>
+                  </tr>)}
+                </tbody></table>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── 스킬 매트릭스 ────────────────────────────────── */}
+        {menu==='LABOR' && (() => {
+          const [skillData, setSkillData] = useState(null);
+          const [skillLoading, setSkillLoading] = useState(false);
+
+          const loadSkills = async () => { setSkillLoading(true); try { const r = await api.get('/api/labor/skills'); setSkillData(r.data); } catch {} setSkillLoading(false); };
+
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadSkills(); }, []);
+
+          const lvlColors = {EXPERT:'text-purple-400',ADVANCED:'text-emerald-400',INTERMEDIATE:'text-blue-400',BEGINNER:'text-slate-400'};
+
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">작업자 스킬 매트릭스</h3>
+              {skillLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+
+              {/* 공정별 요약 */}
+              {skillData && skillData.summary && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {skillData.summary.by_process.map(s=>(
+                    <div key={s.process_code} className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                      <p className="text-white font-bold text-xs mb-1">{s.process_code}</p>
+                      <div className="flex gap-2 text-[9px]">
+                        <span className="text-purple-400">E:{s.EXPERT}</span>
+                        <span className="text-emerald-400">A:{s.ADVANCED}</span>
+                        <span className="text-blue-400">I:{s.INTERMEDIATE}</span>
+                        <span className="text-slate-400">B:{s.BEGINNER}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 작업자 목록 */}
+              {skillData && skillData.workers && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                    <th className="text-left py-2 px-2">작업자</th><th className="text-left py-2 px-2">이름</th><th className="text-left py-2 px-2">스킬</th>
+                  </tr></thead><tbody>
+                    {skillData.workers.map(w=><tr key={w.worker_id} className="border-b border-slate-800/50 text-slate-300">
+                      <td className="py-1.5 px-2 text-blue-400">{w.worker_id}</td>
+                      <td className="py-1.5 px-2 text-white">{w.name}</td>
+                      <td className="py-1.5 px-2">
+                        <div className="flex gap-1 flex-wrap">
+                          {w.skills.map((s,i)=><span key={i} className={`px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 ${lvlColors[s.skill_level]||''}`}>{s.process_code}:{s.skill_level.slice(0,3)}</span>)}
+                        </div>
+                      </td>
+                    </tr>)}
+                  </tbody></table>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
       </main>
 
       {/* ── Toast notification ──────────────────────────── */}
@@ -1957,7 +3130,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            const r=await axios.post('/api/items',{name:fd.get('name'),category:fd.get('category'),unit:fd.get('unit'),spec:fd.get('spec'),safety_stock:Number(fd.get('safety_stock')||0)});
+            const r=await api.post('/api/items',{name:fd.get('name'),category:fd.get('category'),unit:fd.get('unit'),spec:fd.get('spec'),safety_stock:Number(fd.get('safety_stock')||0)});
             showToast(`Item ${r.data.item_code} created`);
             closeModal(); refreshPage('ITEMS');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -1984,7 +3157,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            await axios.post('/api/bom',{parent_item:fd.get('parent_item'),child_item:fd.get('child_item'),qty_per_unit:Number(fd.get('qty_per_unit')||1),loss_rate:Number(fd.get('loss_rate')||0)});
+            await api.post('/api/bom',{parent_item:fd.get('parent_item'),child_item:fd.get('child_item'),qty_per_unit:Number(fd.get('qty_per_unit')||1),loss_rate:Number(fd.get('loss_rate')||0)});
             showToast('BOM entry created');
             closeModal(); refreshPage('BOM');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2016,7 +3189,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            const r=await axios.post('/api/processes',{name:fd.get('name'),std_time_min:Number(fd.get('std_time_min')||0),description:fd.get('description'),equip_code:fd.get('equip_code')||null});
+            const r=await api.post('/api/processes',{name:fd.get('name'),std_time_min:Number(fd.get('std_time_min')||0),description:fd.get('description'),equip_code:fd.get('equip_code')||null});
             showToast(`Process ${r.data.process_code} created`);
             closeModal(); refreshPage('PROCESS');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2043,7 +3216,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            await axios.post('/api/routings',{item_code:fd.get('item_code'),routes:modalRoutes.filter(r=>r.process_code)});
+            await api.post('/api/routings',{item_code:fd.get('item_code'),routes:modalRoutes.filter(r=>r.process_code)});
             showToast('Routing created');
             closeModal(); refreshPage('PROCESS');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2082,7 +3255,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            const r=await axios.post('/api/equipments',{name:fd.get('name'),process_code:fd.get('process_code')||null,capacity_per_hour:Number(fd.get('capacity_per_hour')||100),install_date:fd.get('install_date')||null});
+            const r=await api.post('/api/equipments',{name:fd.get('name'),process_code:fd.get('process_code')||null,capacity_per_hour:Number(fd.get('capacity_per_hour')||100),install_date:fd.get('install_date')||null});
             showToast(`Equipment ${r.data.equip_code} created`);
             closeModal(); refreshPage('EQUIPMENT');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2110,7 +3283,7 @@ const App = () => {
           const fd=new FormData(e.target);
           const code=fd.get('equip_code');
           try {
-            await axios.put(`/api/equipments/${code}/status`,{status:fd.get('status'),reason:fd.get('reason'),worker_id:fd.get('worker_id')});
+            await api.put(`/api/equipments/${code}/status`,{status:fd.get('status'),reason:fd.get('reason'),worker_id:fd.get('worker_id')});
             showToast(`Equipment ${code} status updated`);
             closeModal(); refreshPage('EQUIPMENT');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2139,7 +3312,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            const r=await axios.post('/api/plans',{item_code:fd.get('item_code'),plan_qty:Number(fd.get('plan_qty')),due_date:fd.get('due_date'),priority:fd.get('priority')});
+            const r=await api.post('/api/plans',{item_code:fd.get('item_code'),plan_qty:Number(fd.get('plan_qty')),due_date:fd.get('due_date'),priority:fd.get('priority')});
             showToast(`Plan #${r.data.plan_id} created`);
             closeModal(); refreshPage('PLANS');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2168,7 +3341,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            const r=await axios.post('/api/work-orders',{plan_id:Number(fd.get('plan_id')),work_date:fd.get('work_date')||undefined,equip_code:fd.get('equip_code')||undefined});
+            const r=await api.post('/api/work-orders',{plan_id:Number(fd.get('plan_id')),work_date:fd.get('work_date')||undefined,equip_code:fd.get('equip_code')||undefined});
             showToast(`Work Order ${r.data.work_order_id} created`);
             closeModal(); refreshPage('WORK_ORDER');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2199,7 +3372,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            const r=await axios.post('/api/work-results',{wo_id:fd.get('wo_id'),good_qty:Number(fd.get('good_qty')||0),defect_qty:Number(fd.get('defect_qty')||0),defect_code:fd.get('defect_code')||undefined,worker_id:fd.get('worker_id')||undefined,start_time:fd.get('start_time')||undefined,end_time:fd.get('end_time')||undefined});
+            const r=await api.post('/api/work-results',{wo_id:fd.get('wo_id'),good_qty:Number(fd.get('good_qty')||0),defect_qty:Number(fd.get('defect_qty')||0),defect_code:fd.get('defect_code')||undefined,worker_id:fd.get('worker_id')||undefined,start_time:fd.get('start_time')||undefined,end_time:fd.get('end_time')||undefined});
             showToast(`Result recorded (Progress: ${r.data.progress_pct}%)`);
             closeModal(); refreshPage('WORK_ORDER');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2233,7 +3406,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            await axios.post('/api/quality/standards',{item_code:fd.get('item_code'),checks:modalChecks.filter(c=>c.name)});
+            await api.post('/api/quality/standards',{item_code:fd.get('item_code'),checks:modalChecks.filter(c=>c.name)});
             showToast('Quality standard created');
             closeModal(); refreshPage('QUALITY');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2273,7 +3446,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            const r=await axios.post('/api/quality/inspections',{type:fd.get('type'),item_code:fd.get('item_code'),lot_no:fd.get('lot_no'),inspector_id:fd.get('inspector_id'),results:modalResults.filter(r=>r.check_name)});
+            const r=await api.post('/api/quality/inspections',{type:fd.get('type'),item_code:fd.get('item_code'),lot_no:fd.get('lot_no'),inspector_id:fd.get('inspector_id'),results:modalResults.filter(r=>r.check_name)});
             showToast(`Inspection: ${r.data.judgment}${r.data.fail_items?.length ? ' (Fail: '+r.data.fail_items.join(', ')+')' : ''}`);
             closeModal(); refreshPage('QUALITY');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2312,7 +3485,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            const r=await axios.post('/api/inventory/in',{item_code:fd.get('item_code'),qty:Number(fd.get('qty')),supplier:fd.get('supplier'),warehouse:fd.get('warehouse')||'WH01',location:fd.get('location')});
+            const r=await api.post('/api/inventory/in',{item_code:fd.get('item_code'),qty:Number(fd.get('qty')),supplier:fd.get('supplier'),warehouse:fd.get('warehouse')||'WH01',location:fd.get('location')});
             showToast(`Received: LOT ${r.data.lot_no}, Slip ${r.data.slip_no}`);
             closeModal(); refreshPage('INVENTORY');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2340,7 +3513,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            const r=await axios.post('/api/inventory/out',{item_code:fd.get('item_code'),qty:Number(fd.get('qty')),out_type:fd.get('out_type'),ref_id:fd.get('ref_id')});
+            const r=await api.post('/api/inventory/out',{item_code:fd.get('item_code'),qty:Number(fd.get('qty')),out_type:fd.get('out_type'),ref_id:fd.get('ref_id')});
             showToast(`Issued: Slip ${r.data.slip_no} (${r.data.lots_used?.length||0} lots used)`);
             closeModal(); refreshPage('INVENTORY');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2373,7 +3546,7 @@ const App = () => {
           ['name','category','unit','spec'].forEach(f=>{if(fd.get(f))body[f]=fd.get(f);});
           if(fd.get('safety_stock'))body.safety_stock=Number(fd.get('safety_stock'));
           try {
-            await axios.put(`/api/items/${modal.data.item.item_code}`,body);
+            await api.put(`/api/items/${modal.data.item.item_code}`,body);
             showToast(`Item ${modal.data.item.item_code} updated`);
             closeModal(); refreshPage('ITEMS');
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
@@ -2405,7 +3578,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            const r=await axios.post('/api/inventory/move',{item_code:fd.get('item_code'),lot_no:fd.get('lot_no'),qty:Number(fd.get('qty')),from_location:fd.get('from_location'),to_location:fd.get('to_location')});
+            const r=await api.post('/api/inventory/move',{item_code:fd.get('item_code'),lot_no:fd.get('lot_no'),qty:Number(fd.get('qty')),from_location:fd.get('from_location'),to_location:fd.get('to_location')});
             if(r.data.error) throw {response:{data:r.data}};
             showToast(r.data.message||'Inventory moved');
             closeModal(); refreshPage('INVENTORY');
@@ -2435,7 +3608,7 @@ const App = () => {
           const fd=new FormData(e.target);
           if(fd.get('password')!==fd.get('password_confirm')){showToast('Passwords do not match',false);return;}
           try {
-            const r=await axios.post('/api/auth/register',{user_id:fd.get('user_id'),password:fd.get('password'),name:fd.get('name'),email:fd.get('email'),role:fd.get('role')});
+            const r=await api.post('/api/auth/register',{user_id:fd.get('user_id'),password:fd.get('password'),name:fd.get('name'),email:fd.get('email'),role:fd.get('role')});
             if(r.data.error) throw {response:{data:r.data}};
             showToast(`User ${r.data.user_id} registered`);
             closeModal();
@@ -2465,7 +3638,7 @@ const App = () => {
               const allMenus=['DASHBOARD','ITEMS','BOM','PROCESS','EQUIPMENT','PLANS','WORK_ORDER','QUALITY','INVENTORY','AI_CENTER','REPORTS'];
               if(!uid){setModalPerms([]);return;}
               try {
-                const r = await axios.get(`/api/auth/permissions/${uid}`);
+                const r = await api.get(`/api/auth/permissions/${uid}`);
                 const existing = r.data.permissions||[];
                 setModalPerms(allMenus.map(m=>{const found=existing.find(p=>p.menu===m); return {menu:m,read:found?found.read:false,write:found?found.write:false};}));
               } catch{ setModalPerms(allMenus.map(m=>({menu:m,read:false,write:false}))); }
@@ -2498,7 +3671,7 @@ const App = () => {
                 <button type="button" onClick={()=>{setModalPerms(modalPerms.map(p=>({...p,read:false,write:false})));}} className="text-slate-400 text-[10px] hover:text-slate-300 cursor-pointer">Clear All</button>
                 <BtnSuccess onClick={async()=>{
                   try {
-                    await axios.put(`/api/auth/permissions/${modalSelUser}`,{permissions:modalPerms});
+                    await api.put(`/api/auth/permissions/${modalSelUser}`,{permissions:modalPerms});
                     showToast(`Permissions updated for ${modalSelUser}`);
                   } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
                 }}>Save Permissions</BtnSuccess>
@@ -2515,7 +3688,7 @@ const App = () => {
           e.preventDefault();
           const fd=new FormData(e.target);
           try {
-            const r=await axios.put(`/api/bom/${modal.data.bom.bom_id}`,{qty_per_unit:Number(fd.get('qty_per_unit')),loss_rate:Number(fd.get('loss_rate'))});
+            const r=await api.put(`/api/bom/${modal.data.bom.bom_id}`,{qty_per_unit:Number(fd.get('qty_per_unit')),loss_rate:Number(fd.get('loss_rate'))});
             if(r.data.error){showToast(r.data.error,false);}else{showToast('BOM entry updated');closeModal();refreshPage('BOM');}
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
         }}>
@@ -2545,7 +3718,7 @@ const App = () => {
           if(fd.get('description')!==null) body.description=fd.get('description');
           if(fd.get('equip_code')) body.equip_code=fd.get('equip_code');
           try {
-            const r=await axios.put(`/api/processes/${modal.data.proc.process_code}`,body);
+            const r=await api.put(`/api/processes/${modal.data.proc.process_code}`,body);
             if(r.data.error){showToast(r.data.error,false);}else{showToast(`${modal.data.proc.process_code} updated`);closeModal();refreshPage('PROCESS');}
           } catch(err){ showToast(err.response?.data?.error||'Failed',false); }
         }}>
@@ -2634,7 +3807,7 @@ const App = () => {
               const lotNo=(lotTraceRef.current?.value || '').trim();
               if(!lotNo){showToast('LOT번호를 입력하세요',false);return;}
               try{
-                const r=await axios.get(`/api/lot/trace/${lotNo}`);
+                const r=await api.get(`/api/lot/trace/${lotNo}`);
                 if(r.data.error){showToast(r.data.error,false);}else{setExtra(p=>({...p,lotTrace:r.data}));}
               }catch(err){showToast('LOT 추적 실패',false);}
             }}>Trace</BtnSuccess>
@@ -2735,9 +3908,9 @@ const App = () => {
                       <div className="text-slate-500 text-[10px]">{u.email||'-'} | Role: {u.role} | {u.created_at}</div>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={async()=>{try{const r=await axios.put(`/api/auth/approve/${u.user_id}`,{approved:true});if(r.data.error){showToast(r.data.error,false);}else{showToast(`${u.user_id} approved`);const rr=await axios.get('/api/auth/users');setExtra(p=>({...p,userList:rr.data.users||[]}));}}catch(err){showToast('Approval failed',false);}}}
+                      <button onClick={async()=>{try{const r=await api.put(`/api/auth/approve/${u.user_id}`,{approved:true});if(r.data.error){showToast(r.data.error,false);}else{showToast(`${u.user_id} approved`);const rr=await api.get('/api/auth/users');setExtra(p=>({...p,userList:rr.data.users||[]}));}}catch(err){showToast('Approval failed',false);}}}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-[10px] font-bold cursor-pointer">Approve</button>
-                      <button onClick={async()=>{try{const r=await axios.put(`/api/auth/approve/${u.user_id}`,{approved:false});if(r.data.error){showToast(r.data.error,false);}else{showToast(`${u.user_id} rejected`);const rr=await axios.get('/api/auth/users');setExtra(p=>({...p,userList:rr.data.users||[]}));}}catch(err){showToast('Rejection failed',false);}}}
+                      <button onClick={async()=>{try{const r=await api.put(`/api/auth/approve/${u.user_id}`,{approved:false});if(r.data.error){showToast(r.data.error,false);}else{showToast(`${u.user_id} rejected`);const rr=await api.get('/api/auth/users');setExtra(p=>({...p,userList:rr.data.users||[]}));}}catch(err){showToast('Rejection failed',false);}}}
                         className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-[10px] font-bold cursor-pointer">Reject</button>
                     </div>
                   </div>
@@ -2783,7 +3956,7 @@ const App = () => {
             <BtnSuccess onClick={async()=>{
               if(modalSelPlans.length===0){showToast('Select at least one plan',false);return;}
               try {
-                const r=await axios.post('/api/ai/schedule-optimize',{plan_ids:modalSelPlans});
+                const r=await api.post('/api/ai/schedule-optimize',{plan_ids:modalSelPlans});
                 if(r.data.error) throw {response:{data:r.data}};
                 setModalSchedule(r.data);
                 showToast(`Optimized: makespan ${r.data.makespan}min, util ${(r.data.utilization*100).toFixed(0)}%`);

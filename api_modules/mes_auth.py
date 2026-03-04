@@ -101,6 +101,11 @@ def _verify_token(token: str) -> dict:
         return None
 
 
+async def verify_token(token: str) -> dict:
+    """Public: WebSocket 등 외부에서 토큰 검증용."""
+    return _verify_token(token)
+
+
 async def verify_request(request: Request) -> dict:
     """Backend JWT verification middleware.
 

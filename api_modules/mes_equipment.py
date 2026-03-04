@@ -314,13 +314,19 @@ def _iforest_predict(history, input_features, equip_code):
         for r in history
     ])
 
-    # Train IsolationForest
-    clf = IsolationForest(
-        n_estimators=100,
-        contamination=0.1,
-        random_state=42,
-    )
-    clf.fit(X_hist)
+    # Train IsolationForest (with caching)
+    from api_modules.ai_model_cache import ModelCache
+
+    def train_iforest(data):
+        m = IsolationForest(
+            n_estimators=100,
+            contamination=0.1,
+            random_state=42,
+        )
+        m.fit(data)
+        return m
+
+    clf = ModelCache.get_or_train(f"iforest_{equip_code}", train_iforest, X_hist)
 
     # Anomaly score: sklearn returns negative scores (lower = more anomalous)
     raw_score = clf.decision_function(input_features)[0]

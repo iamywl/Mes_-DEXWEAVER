@@ -246,6 +246,368 @@ CREATE TABLE IF NOT EXISTS ai_forecasts (
 
 
 -- =============================================================
+-- ██  Phase 1 신규 테이블 (v6.0)  ██
+-- =============================================================
+
+-- ─── 22. SPC 관리 규칙 ───────────────────────────────────────
+CREATE TABLE IF NOT EXISTS spc_rules (
+    rule_id      SERIAL PRIMARY KEY,
+    item_code    VARCHAR(20) REFERENCES items(item_code),
+    check_name   VARCHAR(100) NOT NULL,
+    rule_type    VARCHAR(20) NOT NULL DEFAULT 'XBAR_R'
+                     CHECK (rule_type IN ('XBAR_R','XBAR_S','P','NP','C','U')),
+    ucl          DECIMAL(12,4),
+    lcl          DECIMAL(12,4),
+    target       DECIMAL(12,4),
+    sample_size  INTEGER NOT NULL DEFAULT 5,
+    is_active    BOOLEAN DEFAULT TRUE,
+    created_at   TIMESTAMP DEFAULT NOW(),
+    UNIQUE(item_code, check_name)
+);
+
+-- ─── 23. SPC 위반 이력 ───────────────────────────────────────
+CREATE TABLE IF NOT EXISTS spc_violations (
+    violation_id   SERIAL PRIMARY KEY,
+    rule_id        INTEGER REFERENCES spc_rules(rule_id),
+    inspection_id  INTEGER REFERENCES inspections(inspection_id),
+    violation_type VARCHAR(50) NOT NULL,
+    measured_value DECIMAL(12,4),
+    subgroup_no    INTEGER,
+    severity       VARCHAR(10) DEFAULT 'WARNING'
+                       CHECK (severity IN ('WARNING','CRITICAL')),
+    resolved       BOOLEAN DEFAULT FALSE,
+    resolved_at    TIMESTAMP,
+    created_at     TIMESTAMP DEFAULT NOW()
+);
+
+-- ─── 24. CAPA (시정/예방 조치) ───────────────────────────────
+CREATE TABLE IF NOT EXISTS capa (
+    capa_id      VARCHAR(30) PRIMARY KEY,
+    capa_type    VARCHAR(20) NOT NULL
+                     CHECK (capa_type IN ('CORRECTIVE','PREVENTIVE')),
+    source_type  VARCHAR(30),
+    source_id    VARCHAR(50),
+    title        VARCHAR(200) NOT NULL,
+    description  TEXT,
+    status       VARCHAR(20) NOT NULL DEFAULT 'OPEN'
+                     CHECK (status IN ('OPEN','INVESTIGATION','ACTION','VERIFICATION','CLOSED','REJECTED')),
+    priority     VARCHAR(10) DEFAULT 'MID'
+                     CHECK (priority IN ('HIGH','MID','LOW')),
+    assigned_to  VARCHAR(50) REFERENCES users(user_id),
+    due_date     DATE,
+    closed_at    TIMESTAMP,
+    created_by   VARCHAR(50) REFERENCES users(user_id),
+    created_at   TIMESTAMP DEFAULT NOW()
+);
+
+-- ─── 25. CAPA 조치 이력 ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS capa_actions (
+    action_id    SERIAL PRIMARY KEY,
+    capa_id      VARCHAR(30) REFERENCES capa(capa_id),
+    action_type  VARCHAR(30) NOT NULL
+                     CHECK (action_type IN ('ROOT_CAUSE','CORRECTIVE','PREVENTIVE','VERIFICATION')),
+    description  TEXT NOT NULL,
+    result       TEXT,
+    performed_by VARCHAR(50) REFERENCES users(user_id),
+    performed_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ─── 26. OEE 일일 집계 ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS oee_daily (
+    oee_id        SERIAL PRIMARY KEY,
+    equip_code    VARCHAR(20) REFERENCES equipments(equip_code),
+    calc_date     DATE NOT NULL,
+    planned_time  DECIMAL(8,2) DEFAULT 480,
+    downtime      DECIMAL(8,2) DEFAULT 0,
+    ideal_ct      DECIMAL(8,4),
+    total_count   INTEGER DEFAULT 0,
+    good_count    INTEGER DEFAULT 0,
+    availability  DECIMAL(5,4),
+    performance   DECIMAL(5,4),
+    quality_rate  DECIMAL(5,4),
+    oee           DECIMAL(5,4),
+    created_at    TIMESTAMP DEFAULT NOW(),
+    UNIQUE(equip_code, calc_date)
+);
+
+-- ─── 27. 알림 ────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id SERIAL PRIMARY KEY,
+    user_id         VARCHAR(50) REFERENCES users(user_id),
+    type            VARCHAR(30) NOT NULL
+                        CHECK (type IN ('EQUIP_DOWN','SPC_VIOLATION','INVENTORY_LOW','AI_WARNING','CAPA_DUE','SYSTEM')),
+    title           VARCHAR(200) NOT NULL,
+    message         TEXT,
+    severity        VARCHAR(10) DEFAULT 'INFO'
+                        CHECK (severity IN ('INFO','WARNING','CRITICAL')),
+    ref_type        VARCHAR(30),
+    ref_id          VARCHAR(50),
+    is_read         BOOLEAN DEFAULT FALSE,
+    created_at      TIMESTAMP DEFAULT NOW()
+);
+
+-- ─── 28. 알림 설정 ───────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS notification_settings (
+    setting_id        SERIAL PRIMARY KEY,
+    user_id           VARCHAR(50) REFERENCES users(user_id),
+    notification_type VARCHAR(30) NOT NULL,
+    channel           VARCHAR(20) DEFAULT 'WEB'
+                          CHECK (channel IN ('WEB','EMAIL','BOTH')),
+    is_enabled        BOOLEAN DEFAULT TRUE,
+    UNIQUE(user_id, notification_type, channel)
+);
+
+-- ─── Phase 1 인덱스 ─────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_spc_rules_item ON spc_rules(item_code);
+CREATE INDEX IF NOT EXISTS idx_spc_violations_rule ON spc_violations(rule_id);
+CREATE INDEX IF NOT EXISTS idx_spc_violations_created ON spc_violations(created_at);
+CREATE INDEX IF NOT EXISTS idx_capa_status ON capa(status);
+CREATE INDEX IF NOT EXISTS idx_capa_assigned ON capa(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_capa_due ON capa(due_date);
+CREATE INDEX IF NOT EXISTS idx_capa_actions_capa ON capa_actions(capa_id);
+CREATE INDEX IF NOT EXISTS idx_oee_equip ON oee_daily(equip_code);
+CREATE INDEX IF NOT EXISTS idx_oee_date ON oee_daily(calc_date);
+CREATE INDEX IF NOT EXISTS idx_oee_equip_date ON oee_daily(equip_code, calc_date);
+CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notif_unread ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notif_created ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notif_settings_user ON notification_settings(user_id);
+
+-- ── 전자 작업지시서 (REQ-053) ──────────────────────────────
+CREATE TABLE IF NOT EXISTS work_instructions (
+    wi_id         VARCHAR(20)  PRIMARY KEY,
+    wo_no         VARCHAR(20)  REFERENCES work_orders(wo_no),
+    title         VARCHAR(200) NOT NULL,
+    process_code  VARCHAR(20),
+    version       INTEGER      DEFAULT 1,
+    status        VARCHAR(20)  DEFAULT 'DRAFT'
+                  CHECK (status IN ('DRAFT','ACTIVE','COMPLETED','OBSOLETE')),
+    created_at    TIMESTAMP    DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS work_instruction_steps (
+    wi_id         VARCHAR(20)  REFERENCES work_instructions(wi_id) ON DELETE CASCADE,
+    step_no       INTEGER      NOT NULL,
+    title         VARCHAR(200) NOT NULL,
+    description   TEXT,
+    duration_min  INTEGER      DEFAULT 0,
+    sign_required BOOLEAN      DEFAULT TRUE,
+    signed_by     VARCHAR(50),
+    signed_at     TIMESTAMP,
+    PRIMARY KEY (wi_id, step_no)
+);
+
+CREATE INDEX IF NOT EXISTS idx_wi_wo ON work_instructions(wo_no);
+CREATE INDEX IF NOT EXISTS idx_wi_status ON work_instructions(status);
+
+-- ── 부적합품 관리 NCR (REQ-054) ────────────────────────────
+CREATE TABLE IF NOT EXISTS ncr (
+    ncr_id        VARCHAR(20)  PRIMARY KEY,
+    title         VARCHAR(200) NOT NULL,
+    source        VARCHAR(20)  DEFAULT 'INSPECTION'
+                  CHECK (source IN ('INSPECTION','PROCESS','CUSTOMER','SUPPLIER')),
+    lot_no        VARCHAR(30),
+    item_code     VARCHAR(20),
+    defect_code   VARCHAR(20),
+    qty_affected  NUMERIC(12,2) DEFAULT 0,
+    status        VARCHAR(20)  DEFAULT 'DETECTED'
+                  CHECK (status IN ('DETECTED','QUARANTINED','MRB_REVIEW','DISPOSITION','CLOSED')),
+    disposition   VARCHAR(20)
+                  CHECK (disposition IN ('USE_AS_IS','REWORK','SCRAP','RETURN','CONCESSION')),
+    assigned_to   VARCHAR(50),
+    description   TEXT,
+    created_by    VARCHAR(50),
+    created_at    TIMESTAMP    DEFAULT NOW(),
+    closed_at     TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ncr_status ON ncr(status);
+CREATE INDEX IF NOT EXISTS idx_ncr_lot ON ncr(lot_no);
+
+-- ── 출하판정 (REQ-056) ─────────────────────────────────────
+CREATE TABLE IF NOT EXISTS shipment_disposition (
+    disp_id       VARCHAR(20)  PRIMARY KEY,
+    lot_no        VARCHAR(30)  NOT NULL,
+    item_code     VARCHAR(20),
+    decision      VARCHAR(20)  NOT NULL
+                  CHECK (decision IN ('ACCEPT','REJECT','CONDITIONAL','HOLD')),
+    reason        TEXT,
+    inspector_id  VARCHAR(50),
+    decided_at    TIMESTAMP    DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_disp_lot ON shipment_disposition(lot_no);
+
+-- ── KPI (REQ-057, REQ-058) ─────────────────────────────────
+CREATE TABLE IF NOT EXISTS kpi_fpy_daily (
+    calc_date     DATE         NOT NULL,
+    process_code  VARCHAR(20)  NOT NULL,
+    item_code     VARCHAR(20),
+    input_qty     NUMERIC(12,2) DEFAULT 0,
+    first_pass_qty NUMERIC(12,2) DEFAULT 0,
+    fpy           NUMERIC(6,4),
+    PRIMARY KEY (calc_date, process_code)
+);
+
+CREATE TABLE IF NOT EXISTS kpi_maintenance (
+    calc_date     DATE         NOT NULL,
+    equip_code    VARCHAR(20)  NOT NULL,
+    mttf_hours    NUMERIC(10,2),
+    mttr_hours    NUMERIC(10,2),
+    mtbf_hours    NUMERIC(10,2),
+    failure_count INTEGER      DEFAULT 0,
+    PRIMARY KEY (calc_date, equip_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_kpi_fpy_date ON kpi_fpy_daily(calc_date);
+CREATE INDEX IF NOT EXISTS idx_kpi_maint_equip ON kpi_maintenance(equip_code);
+
+-- =============================================================
+-- ██  PHASE 2 TABLES (8개)  ██
+-- =============================================================
+
+-- ── CMMS: PM 일정 (REQ-040, FN-049) ───────────────────────
+CREATE TABLE IF NOT EXISTS maintenance_plans (
+    pm_id         SERIAL       PRIMARY KEY,
+    equip_code    VARCHAR(20)  NOT NULL,
+    pm_type       VARCHAR(20)  DEFAULT 'TIME_BASED'
+                  CHECK (pm_type IN ('TIME_BASED','COUNT_BASED','CONDITION_BASED')),
+    interval_days INTEGER,
+    interval_hours INTEGER,
+    checklist     JSONB        DEFAULT '[]',
+    next_due      DATE,
+    status        VARCHAR(20)  DEFAULT 'ACTIVE'
+                  CHECK (status IN ('ACTIVE','COMPLETED','OVERDUE','CANCELLED')),
+    assignee      VARCHAR(50),
+    description   TEXT,
+    created_at    TIMESTAMP    DEFAULT NOW()
+);
+
+-- ── CMMS: 정비 작업지시 (FN-050) ──────────────────────────
+CREATE TABLE IF NOT EXISTS maintenance_orders (
+    mo_id         VARCHAR(20)  PRIMARY KEY,
+    equip_code    VARCHAR(20)  NOT NULL,
+    mo_type       VARCHAR(10)  DEFAULT 'PM'
+                  CHECK (mo_type IN ('PM','CM','BM')),
+    source        VARCHAR(20)  DEFAULT 'MANUAL'
+                  CHECK (source IN ('SCHEDULE','BREAKDOWN','MANUAL')),
+    pm_id         INTEGER      REFERENCES maintenance_plans(pm_id),
+    description   TEXT,
+    priority      VARCHAR(20)  DEFAULT 'NORMAL'
+                  CHECK (priority IN ('EMERGENCY','HIGH','NORMAL')),
+    status        VARCHAR(20)  DEFAULT 'PLANNED'
+                  CHECK (status IN ('PLANNED','IN_PROGRESS','COMPLETED','CANCELLED')),
+    assigned_to   VARCHAR(50),
+    start_time    TIMESTAMP,
+    end_time      TIMESTAMP,
+    duration_min  INTEGER,
+    cost          NUMERIC(12,2) DEFAULT 0,
+    parts_used    JSONB        DEFAULT '[]',
+    created_at    TIMESTAMP    DEFAULT NOW()
+);
+
+-- ── 레시피 관리 (REQ-041, FN-052) ─────────────────────────
+CREATE TABLE IF NOT EXISTS recipes (
+    recipe_id     SERIAL       PRIMARY KEY,
+    recipe_code   VARCHAR(30)  NOT NULL,
+    item_code     VARCHAR(20),
+    process_code  VARCHAR(20),
+    version       INTEGER      DEFAULT 1,
+    status        VARCHAR(20)  DEFAULT 'DRAFT'
+                  CHECK (status IN ('DRAFT','APPROVED','ACTIVE','OBSOLETE')),
+    description   TEXT,
+    approved_by   VARCHAR(50),
+    created_at    TIMESTAMP    DEFAULT NOW(),
+    UNIQUE (recipe_code, version)
+);
+
+CREATE TABLE IF NOT EXISTS recipe_parameters (
+    param_id      SERIAL       PRIMARY KEY,
+    recipe_id     INTEGER      REFERENCES recipes(recipe_id) ON DELETE CASCADE,
+    param_name    VARCHAR(50)  NOT NULL,
+    param_type    VARCHAR(20)  DEFAULT 'NUMERIC',
+    target_value  NUMERIC(12,4),
+    min_value     NUMERIC(12,4),
+    max_value     NUMERIC(12,4),
+    unit          VARCHAR(20)
+);
+
+-- ── MQTT 설정 (REQ-042, FN-054) ───────────────────────────
+CREATE TABLE IF NOT EXISTS mqtt_config (
+    config_id         SERIAL       PRIMARY KEY,
+    broker_url        VARCHAR(200) NOT NULL,
+    topic_pattern     VARCHAR(200),
+    equip_code        VARCHAR(20),
+    sensor_type       VARCHAR(50),
+    collect_interval_sec INTEGER   DEFAULT 10,
+    is_active         BOOLEAN      DEFAULT TRUE,
+    created_at        TIMESTAMP    DEFAULT NOW()
+);
+
+-- ── 센서 데이터 (FN-055) ──────────────────────────────────
+CREATE TABLE IF NOT EXISTS sensor_data (
+    data_id       BIGSERIAL    PRIMARY KEY,
+    equip_code    VARCHAR(20)  NOT NULL,
+    sensor_type   VARCHAR(50)  NOT NULL,
+    value         NUMERIC(12,4),
+    collected_at  TIMESTAMP    DEFAULT NOW(),
+    source        VARCHAR(20)  DEFAULT 'MQTT'
+                  CHECK (source IN ('MQTT','OPCUA','MANUAL'))
+);
+
+-- ── 문서 관리 DMS (REQ-043, FN-056) ──────────────────────
+CREATE TABLE IF NOT EXISTS documents (
+    doc_id        SERIAL       PRIMARY KEY,
+    doc_code      VARCHAR(30),
+    doc_type      VARCHAR(20)  DEFAULT 'SOP'
+                  CHECK (doc_type IN ('SOP','WI','QC_SPEC','DRAWING','REPORT')),
+    title         VARCHAR(200) NOT NULL,
+    file_path     VARCHAR(500),
+    file_size     INTEGER      DEFAULT 0,
+    version       INTEGER      DEFAULT 1,
+    item_code     VARCHAR(20),
+    process_code  VARCHAR(20),
+    status        VARCHAR(20)  DEFAULT 'DRAFT'
+                  CHECK (status IN ('DRAFT','APPROVED','ARCHIVED')),
+    uploaded_by   VARCHAR(50),
+    description   TEXT,
+    is_active     BOOLEAN      DEFAULT TRUE,
+    created_at    TIMESTAMP    DEFAULT NOW()
+);
+
+-- ── 노동 관리 (REQ-044, FN-058) ──────────────────────────
+CREATE TABLE IF NOT EXISTS worker_skills (
+    skill_id      SERIAL       PRIMARY KEY,
+    user_id       VARCHAR(50)  NOT NULL,
+    process_code  VARCHAR(20)  NOT NULL,
+    skill_level   VARCHAR(20)  DEFAULT 'BEGINNER'
+                  CHECK (skill_level IN ('BEGINNER','INTERMEDIATE','ADVANCED','EXPERT')),
+    certified     BOOLEAN      DEFAULT FALSE,
+    cert_expiry   DATE,
+    updated_at    TIMESTAMP    DEFAULT NOW(),
+    UNIQUE (user_id, process_code)
+);
+
+-- ── Phase 2 인덱스 ────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_mp_equip ON maintenance_plans(equip_code);
+CREATE INDEX IF NOT EXISTS idx_mp_next_due ON maintenance_plans(next_due);
+CREATE INDEX IF NOT EXISTS idx_mo_equip ON maintenance_orders(equip_code);
+CREATE INDEX IF NOT EXISTS idx_mo_status ON maintenance_orders(status);
+CREATE INDEX IF NOT EXISTS idx_mo_assigned ON maintenance_orders(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_recipe_item ON recipes(item_code);
+CREATE INDEX IF NOT EXISTS idx_recipe_process ON recipes(process_code);
+CREATE INDEX IF NOT EXISTS idx_rparam_recipe ON recipe_parameters(recipe_id);
+CREATE INDEX IF NOT EXISTS idx_mqtt_equip ON mqtt_config(equip_code);
+CREATE INDEX IF NOT EXISTS idx_sensor_equip ON sensor_data(equip_code);
+CREATE INDEX IF NOT EXISTS idx_sensor_time ON sensor_data(collected_at);
+CREATE INDEX IF NOT EXISTS idx_sensor_equip_time ON sensor_data(equip_code, collected_at);
+CREATE INDEX IF NOT EXISTS idx_doc_type ON documents(doc_type);
+CREATE INDEX IF NOT EXISTS idx_doc_item ON documents(item_code);
+CREATE INDEX IF NOT EXISTS idx_ws_user ON worker_skills(user_id);
+CREATE INDEX IF NOT EXISTS idx_ws_process ON worker_skills(process_code);
+
+
+-- =============================================================
 -- ██  MASSIVE SEED DATA  ██
 -- =============================================================
 

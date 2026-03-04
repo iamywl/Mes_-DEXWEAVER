@@ -76,15 +76,24 @@ def _xgboost_predict(rows, process_params):
     X_train = np.array(X_train)
     y_train = np.array(y_train)
 
-    # Train XGBoost model
-    model = xgb.XGBRegressor(
-        n_estimators=100,
-        max_depth=4,
-        learning_rate=0.1,
-        objective="reg:squarederror",
-        random_state=42,
+    # Train XGBoost model (with caching)
+    from api_modules.ai_model_cache import ModelCache
+
+    def train_xgb(data):
+        X, y = data
+        m = xgb.XGBRegressor(
+            n_estimators=100,
+            max_depth=4,
+            learning_rate=0.1,
+            objective="reg:squarederror",
+            random_state=42,
+        )
+        m.fit(X, y)
+        return m
+
+    model = ModelCache.get_or_train(
+        f"xgb_defect_{item_code}", train_xgb, (X_train, y_train)
     )
-    model.fit(X_train, y_train)
 
     # Predict for input params
     X_input = np.array([[

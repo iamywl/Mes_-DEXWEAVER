@@ -89,18 +89,23 @@ async def predict_demand(
 def _prophet_predict(rows, prediction_months, item_code):
     """Prophet-based prediction with seasonality and confidence intervals."""
     import pandas as pd
+    from api_modules.ai_model_cache import ModelCache
 
     df = pd.DataFrame(rows, columns=["ds", "y"])
     df["ds"] = pd.to_datetime(df["ds"])
     df["y"] = df["y"].astype(float)
 
-    model = Prophet(
-        yearly_seasonality=True,
-        weekly_seasonality=False,
-        daily_seasonality=False,
-        seasonality_mode="multiplicative",
-    )
-    model.fit(df)
+    def train_prophet(data):
+        m = Prophet(
+            yearly_seasonality=True,
+            weekly_seasonality=False,
+            daily_seasonality=False,
+            seasonality_mode="multiplicative",
+        )
+        m.fit(data)
+        return m
+
+    model = ModelCache.get_or_train(f"prophet_{item_code}", train_prophet, df)
 
     future = model.make_future_dataframe(periods=prediction_months, freq="MS")
     forecast = model.predict(future)
