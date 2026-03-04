@@ -1,64 +1,277 @@
+# docker-compose.yml — DEXWEAVER MES v6.0 개발 환경
+# 사용법: docker compose up -d
+# 중지:   docker compose down
+# 초기화: docker compose down -v (볼륨 포함 삭제)
+# 모니터링 포함: docker compose --profile monitoring up -d
+
 version: "3.8"
 
-services:
-  postgres:
-    image: postgres:15
-    container_name: mes-postgres
-    environment:
-      POSTGRES_DB: mes_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: mes1234
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    restart: always
+x-common-env: &common-env
+  TZ: Asia/Seoul
 
-  redis:
+services:
+  # ─────────────────────────────────────────────
+  # 1. PostgreSQL 15 — 메인 데이터베이스
+  # ─────────────────────────────────────────────
+  mes-db:
+    image: postgres:15-alpine
+    container_name: mes-postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      <<: *common-env
+      POSTGRES_USER: ${POSTGRES_USER:-mes_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mes_secure_2026!}
+      POSTGRES_DB: ${POSTGRES_DB:-mes_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mes_admin} -d ${POSTGRES_DB:-mes_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - mes-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  # ─────────────────────────────────────────────
+  # 2. Redis 7 — 캐싱, 세션, AI 모델 메타데이터
+  # ─────────────────────────────────────────────
+  mes-redis:
     image: redis:7-alpine
     container_name: mes-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-mes_redis_2026!}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+    volumes:
+      - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-mes_redis_2026!}", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 5
-    restart: always
+    networks:
+      - mes-network
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 300M
 
-  api:
+  # ─────────────────────────────────────────────
+  # 3. Eclipse Mosquitto — MQTT 브로커
+  # ─────────────────────────────────────────────
+  mes-mqtt:
+    image: eclipse-mosquitto:2
+    container_name: mes-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9883:9883"
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    networks:
+      - mes-network
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  # ─────────────────────────────────────────────
+  # 4. MES API — FastAPI 백엔드
+  # ─────────────────────────────────────────────
+  mes-api:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.api
+      target: dev
     container_name: mes-api
-    environment:
-      DATABASE_URL: postgresql://postgres:mes1234@postgres:5432/mes_db
-      REDIS_URL: redis://redis:6379/0
-      CORS_ORIGINS: "http://localhost:3000,http://localhost:30173"
-      JWT_SECRET: ${JWT_SECRET:-dexweaver-mes-secret-key}
+    restart: unless-stopped
     ports:
       - "8000:8000"
+    environment:
+      <<: *common-env
+      DATABASE_HOST: mes-db
+      DATABASE_PORT: "5432"
+      DATABASE_USER: ${POSTGRES_USER:-mes_admin}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-mes_secure_2026!}
+      DATABASE_NAME: ${POSTGRES_DB:-mes_db}
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-mes_redis_2026!}@mes-redis:6379/0"
+      MQTT_BROKER_HOST: mes-mqtt
+      MQTT_BROKER_PORT: "1883"
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      JWT_ALGORITHM: "HS256"
+      JWT_EXPIRE_MINUTES: "60"
+      CORS_ORIGINS: "http://localhost:5173,http://localhost:3000"
+      ENVIRONMENT: development
+      LOG_LEVEL: DEBUG
+    volumes:
+      - ./app.py:/app/app.py
+      - ./api_modules:/app/api_modules
     depends_on:
-      postgres:
+      mes-db:
         condition: service_healthy
-    restart: always
+      mes-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - mes-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 512M
 
-  frontend:
+  # ─────────────────────────────────────────────
+  # 5. MES Frontend — React/Vite (개발 서버)
+  # ─────────────────────────────────────────────
+  mes-frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.web
+      target: dev
     container_name: mes-frontend
+    restart: unless-stopped
     ports:
-      - "3000:80"
+      - "5173:5173"
+    environment:
+      <<: *common-env
+      VITE_API_URL: "http://localhost:8000"
+      VITE_MQTT_WS_URL: "ws://localhost:9883"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
     depends_on:
-      - api
-    restart: always
+      - mes-api
+    networks:
+      - mes-network
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
 
+  # ─────────────────────────────────────────────
+  # 6. pgAdmin 4 — DB 관리 UI (선택)
+  # ─────────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mes-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@mes.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-pgadmin1234}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      mes-db:
+        condition: service_healthy
+    networks:
+      - mes-network
+    profiles:
+      - tools
+
+  # ─────────────────────────────────────────────
+  # 7. Prometheus — 메트릭 수집 (선택)
+  # ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: mes-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    networks:
+      - mes-network
+    profiles:
+      - monitoring
+
+  # ─────────────────────────────────────────────
+  # 8. Grafana — 대시보드 (선택)
+  # ─────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: mes-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-grafana1234}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - mes-network
+    profiles:
+      - monitoring
+
+# ─────────────────────────────────────────────
+# 네트워크
+# ─────────────────────────────────────────────
+networks:
+  mes-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# ─────────────────────────────────────────────
+# 볼륨
+# ─────────────────────────────────────────────
 volumes:
-  pgdata:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  mosquitto_data:
+    driver: local
+  mosquitto_log:
+    driver: local
+  pgadmin_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

@@ -79,6 +79,13 @@ from api_modules import mes_ecm
 from api_modules import mes_complex_routing
 from api_modules import mes_multisite
 
+# Prometheus metrics (graceful fallback)
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+    _HAS_PROMETHEUS = True
+except ImportError:
+    _HAS_PROMETHEUS = False
+
 log = logging.getLogger(__name__)
 
 # ── Rate Limiter (NFR-007) ────────────────────────────────────
@@ -103,6 +110,14 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
+
+# ── Prometheus Metrics Instrumentation ──
+if _HAS_PROMETHEUS:
+    Instrumentator(
+        should_group_status_codes=True,
+        should_ignore_untemplated=True,
+        excluded_handlers=["/metrics", "/api/health", "/api/docs", "/api/redoc"],
+    ).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 # ── KISA: Global Exception Handler (Stack Trace 노출 방지) ──

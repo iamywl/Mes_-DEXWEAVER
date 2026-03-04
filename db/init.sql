@@ -1844,3 +1844,90 @@ CREATE TABLE IF NOT EXISTS sites (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_site_parent ON sites(parent_site_id);
+
+-- ============================================================
+-- Phase 2+/3/3+ Seed Data
+-- ============================================================
+
+-- 멀티사이트 (ISA-95 계층)
+INSERT INTO sites (site_code, site_name, site_type, parent_site_id, timezone, address) VALUES
+  ('ENT-01', 'DEXWEAVER그룹', 'ENTERPRISE', NULL, 'Asia/Seoul', '대구광역시 북구'),
+  ('SITE-KNU', '경북대공장', 'SITE', 1, 'Asia/Seoul', '대구광역시 북구 대학로 80'),
+  ('AREA-SMT', 'SMT라인', 'AREA', 2, 'Asia/Seoul', NULL),
+  ('AREA-ASSY', '조립라인', 'AREA', 2, 'Asia/Seoul', NULL),
+  ('WC-SMT01', 'SMT워크센터1', 'WORK_CENTER', 3, 'Asia/Seoul', NULL),
+  ('UNIT-PICK01', '칩마운터1호기', 'UNIT', 5, 'Asia/Seoul', NULL);
+
+-- MSA Study 시드데이터
+INSERT INTO msa_studies (study_code, study_name, gauge_name, part_number, characteristic, num_operators, num_parts, num_trials, tolerance, created_by) VALUES
+  ('MSA-20260301-001', '칩저항 두께 측정기 GRR', '마이크로미터 M-001', 'CHIP-R-001', '두께(mm)', 3, 10, 3, 0.05, 'admin'),
+  ('MSA-20260301-002', 'PCB 폭 측정 GRR', '버니어캘리퍼스 C-002', 'PCB-001', '폭(mm)', 2, 5, 3, 0.10, 'admin');
+
+-- FMEA 시드데이터
+INSERT INTO fmea (fmea_code, fmea_type, title, item_code, process_code, created_by) VALUES
+  ('FMEA-20260301-001', 'PFMEA', 'SMT 공정 PFMEA', 'PCB-001', 'SMT', 'admin'),
+  ('FMEA-20260301-002', 'PFMEA', '조립 공정 PFMEA', 'ASSY-001', 'ASSEMBLY', 'admin');
+
+INSERT INTO fmea_items (fmea_id, step_name, failure_mode, failure_effect, failure_cause, severity, occurrence, detection, current_control, recommended_action) VALUES
+  (1, '솔더 도포', '솔더 부족', '납땜 불량', '스텐실 막힘', 8, 4, 5, '목시검사', '스텐실 청소주기 단축'),
+  (1, '부품 실장', '부품 틀어짐', '접촉 불량', '피더 진동', 7, 3, 4, 'AOI 검사', '피더 교정 강화'),
+  (2, '나사 체결', '체결 불량', '분해 위험', '토크 부족', 9, 2, 3, '토크렌치 확인', '자동 토크 제어 도입');
+
+-- 에너지 소비 시드데이터
+INSERT INTO energy_consumption (equip_code, energy_type, value, unit, recorded_at) VALUES
+  ('EQ-SMT-001', 'ELECTRICITY', 45.2, 'kWh', NOW() - INTERVAL '1 hour'),
+  ('EQ-SMT-001', 'ELECTRICITY', 47.8, 'kWh', NOW()),
+  ('EQ-OVEN-001', 'ELECTRICITY', 120.5, 'kWh', NOW() - INTERVAL '1 hour'),
+  ('EQ-OVEN-001', 'ELECTRICITY', 118.3, 'kWh', NOW()),
+  ('EQ-AOI-001', 'ELECTRICITY', 12.1, 'kWh', NOW());
+
+-- 교정 게이지 시드데이터
+INSERT INTO calibrations (gauge_code, gauge_name, gauge_type, location, calibration_interval_days, last_calibrated, next_due, status) VALUES
+  ('GAU-001', '마이크로미터 M-001', '길이', 'SMT라인', 180, CURRENT_DATE - 30, CURRENT_DATE + 150, 'VALID'),
+  ('GAU-002', '버니어캘리퍼스 C-002', '길이', '조립라인', 365, CURRENT_DATE - 200, CURRENT_DATE + 165, 'VALID'),
+  ('GAU-003', '토크렌치 T-001', '토크', '조립라인', 90, CURRENT_DATE - 85, CURRENT_DATE + 5, 'DUE_SOON'),
+  ('GAU-004', '온도계 TH-001', '온도', 'SMT라인', 365, CURRENT_DATE - 400, CURRENT_DATE - 35, 'EXPIRED');
+
+-- 공급업체 시드데이터
+INSERT INTO suppliers (supplier_code, supplier_name, contact_name, contact_email, contact_phone, address, quality_score, delivery_score, overall_score) VALUES
+  ('SUP-001', '삼성전기', '김영호', 'kim@samsung.com', '010-1234-5678', '수원시 영통구', 92.5, 95.0, 93.5),
+  ('SUP-002', 'LG이노텍', '박수진', 'park@lginnotek.com', '010-2345-6789', '서울시 강서구', 88.0, 90.0, 88.8),
+  ('SUP-003', '대덕전자', '이철수', 'lee@daeduck.com', '010-3456-7890', '대전시 유성구', 85.0, 82.0, 83.8);
+
+-- 셋업 매트릭스 시드데이터
+INSERT INTO setup_matrix (equip_code, from_item, to_item, planned_minutes, actual_avg_minutes) VALUES
+  ('EQ-SMT-001', 'PCB-001', 'PCB-002', 30, 28.5),
+  ('EQ-SMT-001', 'PCB-002', 'PCB-001', 25, 26.0),
+  ('EQ-OVEN-001', 'PCB-001', 'PCB-003', 45, 50.2);
+
+-- 리포트 템플릿 시드데이터
+INSERT INTO report_templates (template_code, title, description, data_source, columns, filters, grouping, sorting, output_format, created_by) VALUES
+  ('RPT-20260301-001', '작업지시 현황 리포트', '진행 중인 작업지시 요약', 'work_orders', '["wo_code","item_code","order_qty","status"]', '[]', '[]', '[{"col":"status","dir":"asc"}]', 'PDF', 'admin'),
+  ('RPT-20260301-002', '품질 검사 요약', '품목별 검사 합격률', 'quality_summary', '["item_code","total","pass_cnt","fail_cnt"]', '[]', '[]', '[{"col":"total","dir":"desc"}]', 'EXCEL', 'admin');
+
+-- 배치 오더 시드데이터 (ISA-88)
+INSERT INTO batch_orders (batch_code, recipe_id, item_code, batch_size, status, operator_id) VALUES
+  ('BAT-20260301-001', NULL, 'CHEM-001', 500.0, 'IDLE', 'operator1'),
+  ('BAT-20260301-002', NULL, 'CHEM-002', 1000.0, 'RUNNING', 'operator2');
+
+INSERT INTO batch_phases (batch_id, phase_name, phase_order, params) VALUES
+  (1, '원료 투입', 1, '{"temp": 25, "speed": 100}'),
+  (1, '반응', 2, '{"temp": 80, "time_min": 60}'),
+  (1, '냉각', 3, '{"target_temp": 30}'),
+  (2, '혼합', 1, '{"speed": 200}'),
+  (2, '가열', 2, '{"temp": 120, "time_min": 90}');
+
+-- ECM (설계변경관리) 시드데이터
+INSERT INTO ecm_requests (ecr_code, title, description, change_type, priority, status, affected_items, requested_by) VALUES
+  ('ECR-20260301-001', 'PCB 레이아웃 변경', 'EMI 저감을 위한 GND 패턴 변경', 'DESIGN', 'HIGH', 'SUBMITTED', '["PCB-001","PCB-002"]', 'engineer1'),
+  ('ECR-20260301-002', '솔더페이스트 재질 변경', '무연 솔더로 전환', 'MATERIAL', 'NORMAL', 'UNDER_REVIEW', '["SOLDER-001"]', 'engineer2');
+
+-- 복합라우팅 시드데이터
+INSERT INTO complex_routings (routing_code, item_code, step_order, process_code, step_type, condition_expr, rework_target_step, max_reentry, setup_minutes, cycle_minutes) VALUES
+  ('CRT-PCB-001', 'PCB-001', 1, 'SMT', 'SEQUENTIAL', NULL, NULL, 1, 15, 5),
+  ('CRT-PCB-001', 'PCB-001', 2, 'REFLOW', 'SEQUENTIAL', NULL, NULL, 1, 10, 8),
+  ('CRT-PCB-001', 'PCB-001', 3, 'AOI', 'CONDITIONAL', 'defect_rate > 0.02', 1, 3, 5, 3),
+  ('CRT-PCB-001', 'PCB-001', 4, 'MANUAL_INSP', 'SEQUENTIAL', NULL, NULL, 1, 0, 10),
+  ('CRT-ASSY-001', 'ASSY-001', 1, 'ASSEMBLY', 'SEQUENTIAL', NULL, NULL, 1, 20, 15),
+  ('CRT-ASSY-001', 'ASSY-001', 2, 'TEST', 'PARALLEL', NULL, NULL, 1, 5, 10),
+  ('CRT-ASSY-001', 'ASSY-001', 3, 'REWORK', 'REWORK', 'test_fail = true', 1, 2, 10, 20);

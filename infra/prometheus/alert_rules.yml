@@ -1,0 +1,52 @@
+# Prometheus Alert Rules — DEXWEAVER MES v6.0
+
+groups:
+  - name: mes-api-alerts
+    rules:
+      - alert: APIHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: mes-api
+        annotations:
+          summary: "MES API 5xx 에러율 5% 초과"
+          description: "최근 5분간 API 에러율: {{ $value | humanizePercentage }}"
+
+      - alert: APIHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          service: mes-api
+        annotations:
+          summary: "MES API P95 응답시간 2초 초과"
+          description: "P95 응답시간: {{ $value }}s"
+
+      - alert: APIDown
+        expr: up{job="mes-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: mes-api
+        annotations:
+          summary: "MES API 서버 다운"
+          description: "mes-api 인스턴스가 Prometheus 스크래핑에 응답하지 않음"
+
+  - name: postgres-alerts
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: postgres
+        annotations:
+          summary: "PostgreSQL 서버 다운"

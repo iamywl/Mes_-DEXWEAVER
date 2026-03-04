@@ -1,0 +1,82 @@
+# Dockerfile.api — DEXWEAVER MES v6.0 Backend
+# 멀티스테이지 빌드: builder → runtime → dev
+# 대상: FastAPI + Uvicorn + psycopg2 + Redis + MQTT
+
+# ============================================================
+# Stage 1: Builder — 의존성 설치
+# ============================================================
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+# 시스템 의존성 (psycopg2 빌드용)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# pip 의존성 설치
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# ============================================================
+# Stage 2: Runtime — 최소 프로덕션 이미지
+# ============================================================
+FROM python:3.11-slim AS runtime
+
+# 보안: non-root 사용자 생성
+RUN groupadd -r mesapp && useradd -r -g mesapp -d /app -s /sbin/nologin mesapp
+
+# 런타임 시스템 라이브러리 (libpq for psycopg2)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python 패키지 복사 (builder stage에서)
+COPY --from=builder /install /usr/local
+
+# 애플리케이션 코드 복사
+WORKDIR /app
+COPY app.py .
+COPY api_modules/ ./api_modules/
+
+# 소유권 설정
+RUN chown -R mesapp:mesapp /app
+
+# non-root 사용자로 전환
+USER mesapp
+
+# 환경 변수
+ENV PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# 헬스체크
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
+
+# 포트 노출
+EXPOSE 8000
+
+# 실행 (Uvicorn + 멀티 워커)
+CMD ["python", "-m", "uvicorn", "app:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--workers", "4", \
+     "--access-log"]
+
+# ============================================================
+# Stage 3: Dev — 개발 환경 (핫 리로드)
+# ============================================================
+FROM runtime AS dev
+
+USER root
+RUN pip install --no-cache-dir debugpy watchfiles
+USER mesapp
+
+CMD ["python", "-m", "uvicorn", "app:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--reload", \
+     "--reload-dir", "/app"]

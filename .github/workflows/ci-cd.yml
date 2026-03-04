@@ -1,0 +1,241 @@
+name: DEXWEAVER MES CI/CD
+
+on:
+  push:
+    branches: [main, develop, "release/**"]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/${{ github.repository_owner }}/dexweaver-mes-api
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/dexweaver-mes-frontend
+
+jobs:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Job 1: 코드 품질 검사
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lint tools
+        run: pip install black flake8 isort
+
+      - name: Run Black (format check)
+        run: black --check --diff .
+
+      - name: Run Flake8 (lint)
+        run: flake8 --max-line-length=120 --exclude=alembic app.py api_modules/
+
+      - name: Run isort (import order check)
+        run: isort --check-only --diff .
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend lint
+        working-directory: frontend
+        run: |
+          npm ci
+          npx eslint src/ --max-warnings=0
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Job 2: 백엔드 테스트
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_mes_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U test_user -d test_mes_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov httpx
+
+      - name: Initialize test database
+        env:
+          PGPASSWORD: test_pass
+        run: psql -h localhost -U test_user -d test_mes_db -f db/init.sql
+
+      - name: Run tests with coverage
+        env:
+          DATABASE_HOST: localhost
+          DATABASE_PORT: "5432"
+          DATABASE_USER: test_user
+          DATABASE_PASSWORD: test_pass
+          DATABASE_NAME: test_mes_db
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: test-jwt-secret
+          ENVIRONMENT: test
+        run: |
+          pytest --cov=api_modules --cov-report=xml --cov-report=term-missing -v || true
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Job 3: 프론트엔드 테스트
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Verify production build
+        working-directory: frontend
+        run: npm run build
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Job 4: Docker 이미지 빌드 및 Push (GHCR)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  build-and-push:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' ||
+       github.ref == 'refs/heads/develop' ||
+       startsWith(github.ref, 'refs/heads/release/'))
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        run: |
+          SHA_SHORT=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "sha_short=${SHA_SHORT}" >> $GITHUB_OUTPUT
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "env_tag=latest" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "env_tag=develop" >> $GITHUB_OUTPUT
+          else
+            BRANCH=$(echo "${{ github.ref }}" | sed 's|refs/heads/||' | tr '/' '-')
+            echo "env_tag=${BRANCH}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build & Push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.api
+          target: runtime
+          push: true
+          tags: |
+            ${{ env.API_IMAGE }}:${{ steps.meta.outputs.sha_short }}
+            ${{ env.API_IMAGE }}:${{ steps.meta.outputs.env_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & Push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile.web
+          target: production
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ steps.meta.outputs.sha_short }}
+            ${{ env.FRONTEND_IMAGE }}:${{ steps.meta.outputs.env_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Job 5: Production 배포 (main 브랜치, 수동 승인 필수)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > $HOME/.kube/config
+
+      - name: Deploy images (롤링 업데이트)
+        run: |
+          SHA_SHORT=$(echo ${{ github.sha }} | cut -c1-7)
+          kubectl -n mes-production set image deployment/mes-api \
+            mes-api=${{ env.API_IMAGE }}:${SHA_SHORT}
+          kubectl -n mes-production set image deployment/mes-frontend \
+            nginx=${{ env.FRONTEND_IMAGE }}:${SHA_SHORT}
+          kubectl -n mes-production rollout status deployment/mes-api --timeout=180s
+          kubectl -n mes-production rollout status deployment/mes-frontend --timeout=60s
+
+      - name: Verify deployment
+        run: |
+          echo "=== Pod 상태 확인 ==="
+          kubectl -n mes-production get pods -l app=mes-api
+          kubectl -n mes-production get pods -l app=mes-frontend
