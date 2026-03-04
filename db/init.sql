@@ -649,20 +649,40 @@ CREATE TABLE IF NOT EXISTS opcua_config (
     created_at            TIMESTAMP    DEFAULT NOW()
 );
 
--- ── 감사 추적 (REQ-049, FN-063) ──────────────────────────
+-- ── 감사 추적 (REQ-049, FN-063) — NFR-014: append-only + hash chain ──
 CREATE TABLE IF NOT EXISTS audit_trail (
     audit_id    BIGSERIAL    PRIMARY KEY,
-    table_name  VARCHAR(50)  NOT NULL,
-    record_id   VARCHAR(100) NOT NULL,
-    action      VARCHAR(10)  NOT NULL
-                CHECK (action IN ('INSERT','UPDATE','DELETE')),
-    old_value   JSONB,
-    new_value   JSONB,
-    changed_by  VARCHAR(50)  NOT NULL,
-    changed_at  TIMESTAMP    DEFAULT NOW(),
+    user_id     VARCHAR(50)  NOT NULL,
+    action      VARCHAR(20)  NOT NULL,
+    entity_type VARCHAR(50)  NOT NULL,
+    entity_id   VARCHAR(100),
+    old_values  JSONB,
+    new_values  JSONB,
     ip_address  VARCHAR(45),
-    reason      TEXT
+    reason      TEXT,
+    prev_hash   VARCHAR(64),
+    record_hash VARCHAR(64)  NOT NULL,
+    created_at  TIMESTAMP    DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_trail(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_trail(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_trail(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_trail(action);
+
+-- NFR-014: Append-only — UPDATE/DELETE 차단 트리거
+CREATE OR REPLACE FUNCTION audit_trail_immutable()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'audit_trail is append-only. UPDATE/DELETE not allowed.';
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_audit_immutable ON audit_trail;
+CREATE TRIGGER trg_audit_immutable
+    BEFORE UPDATE OR DELETE ON audit_trail
+    FOR EACH ROW EXECUTE FUNCTION audit_trail_immutable();
 
 -- ── 다국어 지원 (REQ-047, FN-062) ────────────────────────
 CREATE TABLE IF NOT EXISTS translations (

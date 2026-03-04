@@ -178,6 +178,12 @@ async def get_audits(entity_type: str = None, entity_id: str = None,
         entity_type, entity_id, user_id, action, date_from, date_to, page, page_size)
 
 
+@router.get("/audit/verify")
+async def audit_verify(limit: int = 1000, request: Request = None,
+                       user=Depends(admin_required)):
+    return await mes_audit.verify_chain_integrity(limit)
+
+
 @router.get("/audit/summary")
 async def audit_summary(request: Request = None, user=Depends(admin_required)):
     return await mes_audit.get_audit_summary()
