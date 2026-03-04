@@ -64,6 +64,16 @@ from api_modules import mes_opcua
 from api_modules import mes_i18n
 from api_modules import mes_audit
 from api_modules import mes_resource
+from api_modules import mes_msa
+from api_modules import mes_fmea
+from api_modules import mes_energy
+from api_modules import mes_calibration
+from api_modules import mes_sqm
+from api_modules import mes_dispatch
+from api_modules import mes_setup
+from api_modules import mes_costing
+from api_modules import mes_dashboard_builder
+from api_modules import mes_report_builder
 
 log = logging.getLogger(__name__)
 
@@ -1076,6 +1086,216 @@ async def update_res_status(resource_id: int, request: Request,
 @app.get("/api/resources/summary")
 async def res_summary(request: Request = None, user=Depends(auth_required)):
     return await mes_resource.get_resource_summary()
+
+
+# ── Phase 2+: MSA/Gage R&R (REQ-059) ────────────────────────
+
+@app.post("/api/msa/studies")
+async def create_msa(request: Request, user=Depends(auth_required)):
+    return await mes_msa.create_study(await request.json())
+
+
+@app.get("/api/msa/studies")
+async def get_msa_list(gauge_code: str = None, study_type: str = None,
+                       request: Request = None, user=Depends(auth_required)):
+    return await mes_msa.get_studies(gauge_code, study_type)
+
+
+@app.post("/api/msa/studies/{study_id}/measurements")
+async def add_msa_meas(study_id: int, request: Request, user=Depends(auth_required)):
+    return await mes_msa.add_measurements(study_id, await request.json())
+
+
+@app.post("/api/msa/studies/{study_id}/calculate")
+async def calc_grr(study_id: int, request: Request, user=Depends(auth_required)):
+    return await mes_msa.calculate_grr(study_id)
+
+
+# ── Phase 2+: FMEA (REQ-061) ────────────────────────────────
+
+@app.post("/api/fmea")
+async def create_fmea_doc(request: Request, user=Depends(auth_required)):
+    return await mes_fmea.create_fmea(await request.json())
+
+
+@app.get("/api/fmea")
+async def list_fmea(item_code: str = None, status: str = None,
+                    request: Request = None, user=Depends(auth_required)):
+    return await mes_fmea.get_fmea_list(item_code, status)
+
+
+@app.get("/api/fmea/{fmea_id}")
+async def detail_fmea(fmea_id: int, request: Request = None,
+                      user=Depends(auth_required)):
+    return await mes_fmea.get_fmea_detail(fmea_id)
+
+
+@app.post("/api/fmea/{fmea_id}/items")
+async def add_fmea_item_ep(fmea_id: int, request: Request,
+                           user=Depends(auth_required)):
+    return await mes_fmea.add_fmea_item(fmea_id, await request.json())
+
+
+# ── Phase 2+: 에너지 관리 (REQ-063) ─────────────────────────
+
+@app.post("/api/energy")
+async def record_energy_ep(request: Request, user=Depends(auth_required)):
+    return await mes_energy.record_energy(await request.json())
+
+
+@app.get("/api/energy/dashboard")
+async def energy_dash(equip_code: str = None, energy_type: str = None,
+                      hours: int = 24, request: Request = None,
+                      user=Depends(auth_required)):
+    return await mes_energy.get_energy_dashboard(equip_code, energy_type, hours)
+
+
+@app.get("/api/energy/per-unit")
+async def energy_per_unit(request: Request = None, user=Depends(auth_required)):
+    return await mes_energy.get_energy_per_unit()
+
+
+# ── Phase 2+: 교정 관리 (REQ-064) ───────────────────────────
+
+@app.post("/api/calibration/gauges")
+async def create_gauge_ep(request: Request, user=Depends(admin_required)):
+    return await mes_calibration.create_gauge(await request.json())
+
+
+@app.get("/api/calibration/gauges")
+async def list_gauges(status: str = None, request: Request = None,
+                      user=Depends(auth_required)):
+    return await mes_calibration.get_gauges(status)
+
+
+@app.post("/api/calibration/gauges/{calibration_id}/records")
+async def record_calib(calibration_id: int, request: Request,
+                       user=Depends(auth_required)):
+    return await mes_calibration.record_calibration(calibration_id, await request.json())
+
+
+# ── Phase 2+: SQM 공급업체 품질 (REQ-065) ───────────────────
+
+@app.post("/api/sqm/suppliers")
+async def create_supplier_ep(request: Request, user=Depends(admin_required)):
+    return await mes_sqm.create_supplier(await request.json())
+
+
+@app.get("/api/sqm/suppliers")
+async def list_suppliers(asl_status: str = None, request: Request = None,
+                         user=Depends(auth_required)):
+    return await mes_sqm.get_suppliers(asl_status)
+
+
+@app.post("/api/sqm/scar")
+async def create_scar_ep(request: Request, user=Depends(auth_required)):
+    return await mes_sqm.create_scar(await request.json())
+
+
+@app.get("/api/sqm/scar")
+async def list_scar(supplier_id: int = None, status: str = None,
+                    request: Request = None, user=Depends(auth_required)):
+    return await mes_sqm.get_scars(supplier_id, status)
+
+
+@app.post("/api/sqm/suppliers/{supplier_id}/score")
+async def update_score(supplier_id: int, request: Request,
+                       user=Depends(admin_required)):
+    return await mes_sqm.update_supplier_score(supplier_id)
+
+
+# ── Phase 2+: 자동디스패칭 (REQ-066) ────────────────────────
+
+@app.post("/api/dispatch/auto")
+async def auto_dispatch_ep(request: Request, user=Depends(admin_required)):
+    body = await request.json()
+    return await mes_dispatch.auto_dispatch(body.get("plan_id"))
+
+
+@app.post("/api/dispatch/backflush")
+async def backflush_ep(request: Request, user=Depends(auth_required)):
+    body = await request.json()
+    return await mes_dispatch.backflush(body.get("wo_code", ""), body.get("good_qty", 0))
+
+
+# ── Phase 2+: 셋업시간 매트릭스 (REQ-067) ───────────────────
+
+@app.post("/api/setup-matrix")
+async def upsert_setup_ep(request: Request, user=Depends(auth_required)):
+    return await mes_setup.upsert_setup(await request.json())
+
+
+@app.post("/api/setup-matrix/actual")
+async def record_setup_actual(request: Request, user=Depends(auth_required)):
+    return await mes_setup.record_actual(await request.json())
+
+
+@app.get("/api/setup-matrix")
+async def get_setup_matrix(equip_code: str = None, request: Request = None,
+                           user=Depends(auth_required)):
+    return await mes_setup.get_matrix(equip_code)
+
+
+# ── Phase 2+: WO 원가추적 (REQ-068) ─────────────────────────
+
+@app.post("/api/costing")
+async def add_cost_ep(request: Request, user=Depends(auth_required)):
+    return await mes_costing.add_cost(await request.json())
+
+
+@app.get("/api/costing/{wo_code}")
+async def get_wo_cost_ep(wo_code: str, request: Request = None,
+                         user=Depends(auth_required)):
+    return await mes_costing.get_wo_cost(wo_code)
+
+
+@app.get("/api/costing")
+async def cost_summary(request: Request = None, user=Depends(auth_required)):
+    return await mes_costing.get_cost_summary()
+
+
+# ── Phase 2+: 대시보드 빌더 (REQ-069) ───────────────────────
+
+@app.post("/api/dashboard-builder/layouts")
+async def save_dash(request: Request, user=Depends(auth_required)):
+    return await mes_dashboard_builder.save_layout(
+        await request.json(), user.get("user_id", ""))
+
+
+@app.get("/api/dashboard-builder/layouts")
+async def list_dash(request: Request = None, user=Depends(auth_required)):
+    return await mes_dashboard_builder.get_layouts(user.get("user_id", ""))
+
+
+@app.get("/api/dashboard-builder/layouts/{layout_id}")
+async def detail_dash(layout_id: int, request: Request = None,
+                      user=Depends(auth_required)):
+    return await mes_dashboard_builder.get_layout_detail(layout_id)
+
+
+@app.delete("/api/dashboard-builder/layouts/{layout_id}")
+async def delete_dash(layout_id: int, request: Request = None,
+                      user=Depends(auth_required)):
+    return await mes_dashboard_builder.delete_layout(layout_id, user.get("user_id", ""))
+
+
+# ── Phase 2+: 리포트 빌더 (REQ-070) ─────────────────────────
+
+@app.post("/api/report-builder/templates")
+async def create_rpt(request: Request, user=Depends(auth_required)):
+    return await mes_report_builder.create_template(
+        await request.json(), user.get("user_id", ""))
+
+
+@app.get("/api/report-builder/templates")
+async def list_rpt(request: Request = None, user=Depends(auth_required)):
+    return await mes_report_builder.get_templates()
+
+
+@app.post("/api/report-builder/templates/{template_id}/execute")
+async def exec_rpt(template_id: int, request: Request,
+                   user=Depends(auth_required)):
+    return await mes_report_builder.execute_report(template_id)
 
 
 # ── Health Check (no auth) ───────────────────────────────────

@@ -453,6 +453,16 @@ const App = () => {
     {id:'AUDIT',        label:'감사 추적'},
     {id:'I18N',         label:'다국어 설정'},
     {id:'RESOURCE',     label:'리소스 관리'},
+    {id:'MSA',          label:'MSA/Gage R&R'},
+    {id:'FMEA',         label:'FMEA'},
+    {id:'ENERGY',       label:'에너지 관리'},
+    {id:'CALIBRATION',  label:'교정 관리'},
+    {id:'SQM',          label:'공급업체 품질'},
+    {id:'DISPATCH',     label:'자동디스패칭'},
+    {id:'SETUPMATRIX',  label:'셋업시간'},
+    {id:'COSTING',      label:'원가추적'},
+    {id:'DASHBUILDER',  label:'대시보드 빌더'},
+    {id:'RPTBUILDER',   label:'리포트 빌더'},
   ];
 
   /* ── 로그인/회원가입 화면 (미인증 상태) ────────────── */
@@ -3386,6 +3396,365 @@ const App = () => {
                   <td className="py-1.5 px-2 text-right">{r.utilization>0?`${r.utilization}%`:'-'}</td>
                 </tr>)}
               </tbody></table></div>
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 2+: MSA/Gage R&R ────────────────── */}
+        {menu==='MSA' && (() => {
+          const [msaData, setMsaData] = useState({items:[]});
+          const [msaLoading, setMsaLoading] = useState(false);
+          const loadMsa = async () => { setMsaLoading(true); try { const r = await api.get('/api/msa/studies'); setMsaData(r.data); } catch {} setMsaLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadMsa(); }, []);
+          const verdictColor = (pct) => !pct ? 'text-slate-400' : pct < 10 ? 'text-emerald-400' : pct < 30 ? 'text-yellow-400' : 'text-red-400';
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">MSA / Gage R&R 연구</h3>
+              {msaLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">타입</th><th className="text-left py-2 px-2">게이지</th><th className="text-left py-2 px-2">특성</th><th className="text-right py-2 px-2">%GRR</th><th className="text-right py-2 px-2">ndc</th><th className="text-left py-2 px-2">상태</th>
+              </tr></thead><tbody>
+                {msaData.items?.map(s=><tr key={s.study_id} className="border-b border-slate-800/50 text-slate-300">
+                  <td className="py-1.5 px-2 text-blue-400">{s.study_code}</td>
+                  <td className="py-1.5 px-2">{s.study_type}</td>
+                  <td className="py-1.5 px-2">{s.gauge_code}</td>
+                  <td className="py-1.5 px-2">{s.characteristic}</td>
+                  <td className={`py-1.5 px-2 text-right font-bold ${verdictColor(s.grr_pct)}`}>{s.grr_pct!=null?`${s.grr_pct}%`:'-'}</td>
+                  <td className="py-1.5 px-2 text-right">{s.ndc??'-'}</td>
+                  <td className="py-1.5 px-2">{s.status}</td>
+                </tr>)}
+              </tbody></table></div>
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 2+: FMEA ────────────────────────── */}
+        {menu==='FMEA' && (() => {
+          const [fmeaList, setFmeaList] = useState({items:[]});
+          const [selFmea, setSelFmea] = useState(null);
+          const [fmeaLoading, setFmeaLoading] = useState(false);
+          const loadFmea = async () => { setFmeaLoading(true); try { const r = await api.get('/api/fmea'); setFmeaList(r.data); } catch {} setFmeaLoading(false); };
+          const loadDetail = async (id) => { try { const r = await api.get(`/api/fmea/${id}`); setSelFmea(r.data); } catch {} };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadFmea(); }, []);
+          const rpnColor = (v) => !v ? '' : v >= 200 ? 'text-red-400' : v >= 100 ? 'text-yellow-400' : 'text-emerald-400';
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">FMEA 관리</h3>
+              {fmeaLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {!selFmea ? (
+                <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                  <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">타입</th><th className="text-left py-2 px-2">제목</th><th className="text-left py-2 px-2">상태</th><th className="py-2 px-2">상세</th>
+                </tr></thead><tbody>
+                  {fmeaList.items?.map(f=><tr key={f.fmea_id} className="border-b border-slate-800/50 text-slate-300">
+                    <td className="py-1.5 px-2 text-blue-400">{f.fmea_code}</td>
+                    <td className="py-1.5 px-2">{f.fmea_type}</td>
+                    <td className="py-1.5 px-2 text-white">{f.title}</td>
+                    <td className="py-1.5 px-2">{f.status}</td>
+                    <td className="py-1.5 px-2 text-center"><button onClick={()=>loadDetail(f.fmea_id)} className="text-blue-400 hover:underline cursor-pointer text-[9px]">보기</button></td>
+                  </tr>)}
+                </tbody></table></div>
+              ) : (
+                <div>
+                  <button onClick={()=>setSelFmea(null)} className="text-blue-400 text-xs mb-3 cursor-pointer hover:underline">← 목록</button>
+                  <h4 className="text-white font-bold text-xs mb-2">{selFmea.fmea_code}: {selFmea.title}</h4>
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    <div className="bg-[#1e293b]/20 p-2 rounded-lg border border-slate-800 text-center">
+                      <p className="text-slate-500 text-[9px]">항목 수</p><p className="text-white font-bold">{selFmea.summary?.total_items}</p>
+                    </div>
+                    <div className="bg-[#1e293b]/20 p-2 rounded-lg border border-slate-800 text-center">
+                      <p className="text-slate-500 text-[9px]">고위험(RPN≥100)</p><p className="text-red-400 font-bold">{selFmea.summary?.high_rpn_count}</p>
+                    </div>
+                    <div className="bg-[#1e293b]/20 p-2 rounded-lg border border-slate-800 text-center">
+                      <p className="text-slate-500 text-[9px]">최대 RPN</p><p className="text-yellow-400 font-bold">{selFmea.summary?.max_rpn}</p>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                    <th className="text-left py-2 px-2">고장모드</th><th className="text-center py-2 px-2">S</th><th className="text-center py-2 px-2">O</th><th className="text-center py-2 px-2">D</th><th className="text-center py-2 px-2">RPN</th><th className="text-left py-2 px-2">권장조치</th><th className="text-left py-2 px-2">상태</th>
+                  </tr></thead><tbody>
+                    {selFmea.items?.map(i=><tr key={i.fmea_item_id} className="border-b border-slate-800/50 text-slate-300">
+                      <td className="py-1.5 px-2 text-white">{i.failure_mode}</td>
+                      <td className="py-1.5 px-2 text-center">{i.severity}</td>
+                      <td className="py-1.5 px-2 text-center">{i.occurrence}</td>
+                      <td className="py-1.5 px-2 text-center">{i.detection}</td>
+                      <td className={`py-1.5 px-2 text-center font-bold ${rpnColor(i.rpn)}`}>{i.rpn}</td>
+                      <td className="py-1.5 px-2 truncate max-w-[200px]">{i.recommended_action||'-'}</td>
+                      <td className="py-1.5 px-2">{i.status}</td>
+                    </tr>)}
+                  </tbody></table></div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 2+: 에너지 관리 ──────────────────── */}
+        {menu==='ENERGY' && (() => {
+          const [enData, setEnData] = useState(null);
+          const [enLoading, setEnLoading] = useState(false);
+          const loadEn = async () => { setEnLoading(true); try { const r = await api.get('/api/energy/dashboard?hours=24'); setEnData(r.data); } catch {} setEnLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadEn(); }, []);
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">에너지 소비 대시보드 (24h)</h3>
+              {enLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {enData && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                    <p className="text-slate-500 text-[9px] mb-1">총 소비량</p>
+                    <p className="font-black text-sm text-yellow-400">{enData.grand_total_kwh} kWh</p>
+                  </div>
+                  <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                    <p className="text-slate-500 text-[9px] mb-1">총 비용</p>
+                    <p className="font-black text-sm text-emerald-400">₩{enData.grand_total_cost?.toLocaleString()}</p>
+                  </div>
+                </div>
+              )}
+              {enData?.by_equipment && (
+                <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                  <th className="text-left py-2 px-2">설비</th><th className="text-left py-2 px-2">타입</th><th className="text-right py-2 px-2">합계</th><th className="text-right py-2 px-2">피크</th><th className="text-right py-2 px-2">비용</th>
+                </tr></thead><tbody>
+                  {enData.by_equipment.map((e,i)=><tr key={i} className="border-b border-slate-800/50 text-slate-300">
+                    <td className="py-1.5 px-2 text-blue-400">{e.equip_code}</td>
+                    <td className="py-1.5 px-2">{e.energy_type}</td>
+                    <td className="py-1.5 px-2 text-right">{e.total} kWh</td>
+                    <td className="py-1.5 px-2 text-right text-red-400">{e.peak}</td>
+                    <td className="py-1.5 px-2 text-right">₩{e.cost?.toLocaleString()}</td>
+                  </tr>)}
+                </tbody></table></div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 2+: 교정 관리 ────────────────────── */}
+        {menu==='CALIBRATION' && (() => {
+          const [calData, setCalData] = useState({items:[], summary:{}});
+          const [calLoading, setCalLoading] = useState(false);
+          const loadCal = async () => { setCalLoading(true); try { const r = await api.get('/api/calibration/gauges'); setCalData(r.data); } catch {} setCalLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadCal(); }, []);
+          const stColors = {VALID:'text-emerald-400',DUE_SOON:'text-yellow-400',EXPIRED:'text-red-400',IN_CALIBRATION:'text-blue-400'};
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">교정 관리</h3>
+              {calLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {calData.summary && (
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800"><p className="text-slate-500 text-[9px]">유효</p><p className="text-emerald-400 font-black text-sm">{calData.summary.valid||0}</p></div>
+                  <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800"><p className="text-slate-500 text-[9px]">임박</p><p className="text-yellow-400 font-black text-sm">{calData.summary.due_soon||0}</p></div>
+                  <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800"><p className="text-slate-500 text-[9px]">만료</p><p className="text-red-400 font-black text-sm">{calData.summary.expired||0}</p></div>
+                </div>
+              )}
+              <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">이름</th><th className="text-left py-2 px-2">타입</th><th className="text-left py-2 px-2">다음교정</th><th className="text-left py-2 px-2">상태</th><th className="text-left py-2 px-2">차단</th>
+              </tr></thead><tbody>
+                {calData.items?.map(g=><tr key={g.calibration_id} className="border-b border-slate-800/50 text-slate-300">
+                  <td className="py-1.5 px-2 text-blue-400">{g.gauge_code}</td>
+                  <td className="py-1.5 px-2 text-white">{g.gauge_name||'-'}</td>
+                  <td className="py-1.5 px-2">{g.gauge_type||'-'}</td>
+                  <td className="py-1.5 px-2">{g.next_due}</td>
+                  <td className={`py-1.5 px-2 font-bold ${stColors[g.status]||''}`}>{g.status}</td>
+                  <td className="py-1.5 px-2">{g.is_blocked?'차단':'정상'}</td>
+                </tr>)}
+              </tbody></table></div>
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 2+: SQM 공급업체 품질 ────────────── */}
+        {menu==='SQM' && (() => {
+          const [sqmData, setSqmData] = useState({suppliers:[], scars:[]});
+          const [sqmTab, setSqmTab] = useState('suppliers');
+          const [sqmLoading, setSqmLoading] = useState(false);
+          const loadSqm = async () => { setSqmLoading(true); try { const [s, sc] = await Promise.all([api.get('/api/sqm/suppliers'), api.get('/api/sqm/scar')]); setSqmData({suppliers:s.data.items||[], scars:sc.data.items||[]}); } catch {} setSqmLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadSqm(); }, []);
+          const aslColors = {APPROVED:'text-emerald-400',CONDITIONAL:'text-yellow-400',PROBATION:'text-orange-400',DISQUALIFIED:'text-red-400'};
+          return (
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <button onClick={()=>setSqmTab('suppliers')} className={`px-3 py-1 rounded text-xs font-bold cursor-pointer ${sqmTab==='suppliers'?'bg-blue-600 text-white':'bg-slate-800 text-slate-400'}`}>공급업체</button>
+                <button onClick={()=>setSqmTab('scar')} className={`px-3 py-1 rounded text-xs font-bold cursor-pointer ${sqmTab==='scar'?'bg-blue-600 text-white':'bg-slate-800 text-slate-400'}`}>SCAR</button>
+              </div>
+              {sqmLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {sqmTab==='suppliers' && (
+                <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                  <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">업체명</th><th className="text-left py-2 px-2">ASL</th><th className="text-right py-2 px-2">품질</th><th className="text-right py-2 px-2">종합</th>
+                </tr></thead><tbody>
+                  {sqmData.suppliers.map(s=><tr key={s.supplier_id} className="border-b border-slate-800/50 text-slate-300">
+                    <td className="py-1.5 px-2 text-blue-400">{s.supplier_code}</td>
+                    <td className="py-1.5 px-2 text-white">{s.name}</td>
+                    <td className={`py-1.5 px-2 font-bold ${aslColors[s.asl_status]||''}`}>{s.asl_status}</td>
+                    <td className="py-1.5 px-2 text-right">{s.quality_score??'-'}</td>
+                    <td className="py-1.5 px-2 text-right font-bold">{s.overall_score}</td>
+                  </tr>)}
+                </tbody></table></div>
+              )}
+              {sqmTab==='scar' && (
+                <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                  <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">업체</th><th className="text-left py-2 px-2">유형</th><th className="text-left py-2 px-2">심각도</th><th className="text-left py-2 px-2">상태</th><th className="text-left py-2 px-2">응답기한</th>
+                </tr></thead><tbody>
+                  {sqmData.scars.map(s=><tr key={s.scar_id} className="border-b border-slate-800/50 text-slate-300">
+                    <td className="py-1.5 px-2 text-blue-400">{s.scar_code}</td>
+                    <td className="py-1.5 px-2">{s.supplier_name}</td>
+                    <td className="py-1.5 px-2">{s.issue_type}</td>
+                    <td className={`py-1.5 px-2 font-bold ${s.severity==='CRITICAL'?'text-red-400':s.severity==='MAJOR'?'text-yellow-400':'text-slate-400'}`}>{s.severity}</td>
+                    <td className="py-1.5 px-2">{s.status}</td>
+                    <td className="py-1.5 px-2">{s.response_due||'-'}</td>
+                  </tr>)}
+                </tbody></table></div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 2+: 자동디스패칭 ─────────────────── */}
+        {menu==='DISPATCH' && (() => {
+          const [dispResult, setDispResult] = useState(null);
+          const doDispatch = async () => { try { const r = await api.post('/api/dispatch/auto', {}); setDispResult(r.data); showToast(`${r.data.created||0}건 작업지시 생성`); } catch(e) { showToast(e.response?.data?.error||'실패',false); } };
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">자동 디스패칭 / 자재 역산</h3>
+              <button onClick={doDispatch} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-blue-700">CONFIRMED 계획 → 작업지시 자동생성</button>
+              {dispResult && (
+                <div className="bg-[#1e293b]/20 p-4 rounded-xl border border-slate-800">
+                  <p className="text-emerald-400 font-bold text-xs mb-2">생성 결과: {dispResult.created}건</p>
+                  {dispResult.work_orders?.map((w,i)=>(
+                    <div key={i} className="flex gap-3 text-[10px] text-slate-300 py-1">
+                      <span className="text-blue-400">{w.wo_code}</span>
+                      <span>{w.item_code}</span>
+                      <span>x{w.qty}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 2+: 셋업시간 매트릭스 ────────────── */}
+        {menu==='SETUPMATRIX' && (() => {
+          const [setupData, setSetupData] = useState({matrix:{}, total_entries:0});
+          const [setupLoading, setSetupLoading] = useState(false);
+          const loadSetup = async () => { setSetupLoading(true); try { const r = await api.get('/api/setup-matrix'); setSetupData(r.data); } catch {} setSetupLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadSetup(); }, []);
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">셋업시간 매트릭스</h3>
+              {setupLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {Object.entries(setupData.matrix||{}).map(([eq, entries])=>(
+                <div key={eq} className="bg-[#1e293b]/10 p-3 rounded-xl border border-slate-800/50">
+                  <p className="text-blue-400 font-bold text-xs mb-2">{eq}</p>
+                  <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                    <th className="text-left py-1 px-2">From</th><th className="text-left py-1 px-2">To</th><th className="text-right py-1 px-2">계획(분)</th><th className="text-right py-1 px-2">실적(분)</th><th className="text-right py-1 px-2">차이</th>
+                  </tr></thead><tbody>
+                    {entries.map((e,i)=><tr key={i} className="border-b border-slate-800/30 text-slate-300">
+                      <td className="py-1 px-2">{e.from}</td>
+                      <td className="py-1 px-2">{e.to}</td>
+                      <td className="py-1 px-2 text-right">{e.planned}</td>
+                      <td className="py-1 px-2 text-right">{e.actual_avg??'-'}</td>
+                      <td className={`py-1 px-2 text-right ${e.variance>0?'text-red-400':'text-emerald-400'}`}>{e.variance!=null?`${e.variance>0?'+':''}${e.variance}`:'-'}</td>
+                    </tr>)}
+                  </tbody></table></div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 2+: 원가추적 ─────────────────────── */}
+        {menu==='COSTING' && (() => {
+          const [costData, setCostData] = useState({items:[]});
+          const [costLoading, setCostLoading] = useState(false);
+          const loadCost = async () => { setCostLoading(true); try { const r = await api.get('/api/costing'); setCostData(r.data); } catch {} setCostLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadCost(); }, []);
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">WO 원가 추적</h3>
+              {costLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                <th className="text-left py-2 px-2">WO</th><th className="text-right py-2 px-2">표준원가</th><th className="text-right py-2 px-2">실제원가</th><th className="text-right py-2 px-2">차이</th>
+              </tr></thead><tbody>
+                {costData.items?.map(c=><tr key={c.wo_code} className="border-b border-slate-800/50 text-slate-300">
+                  <td className="py-1.5 px-2 text-blue-400">{c.wo_code}</td>
+                  <td className="py-1.5 px-2 text-right">₩{c.standard?.toLocaleString()}</td>
+                  <td className="py-1.5 px-2 text-right">₩{c.actual?.toLocaleString()}</td>
+                  <td className={`py-1.5 px-2 text-right font-bold ${c.variance>0?'text-red-400':'text-emerald-400'}`}>{c.variance>0?'+':''}₩{c.variance?.toLocaleString()}</td>
+                </tr>)}
+              </tbody></table></div>
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 2+: 대시보드 빌더 ────────────────── */}
+        {menu==='DASHBUILDER' && (() => {
+          const [dashList, setDashList] = useState({items:[]});
+          const [dashLoading, setDashLoading] = useState(false);
+          const loadDash = async () => { setDashLoading(true); try { const r = await api.get('/api/dashboard-builder/layouts'); setDashList(r.data); } catch {} setDashLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadDash(); }, []);
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">커스텀 대시보드 빌더</h3>
+              {dashLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {dashList.items?.map(d=>(
+                  <div key={d.layout_id} className="bg-[#1e293b]/20 p-4 rounded-xl border border-slate-800 hover:border-blue-700 cursor-pointer">
+                    <p className="text-white font-bold text-xs">{d.layout_name}</p>
+                    <div className="flex gap-2 mt-1">
+                      {d.is_preset && <span className="text-[8px] px-1.5 py-0.5 bg-purple-900/50 text-purple-400 rounded">프리셋</span>}
+                      {d.is_shared && <span className="text-[8px] px-1.5 py-0.5 bg-blue-900/50 text-blue-400 rounded">공유</span>}
+                    </div>
+                    <p className="text-slate-500 text-[9px] mt-1">{d.updated_at?.slice(0,10)}</p>
+                  </div>
+                ))}
+              </div>
+              {dashList.items?.length===0 && <p className="text-slate-500 text-xs">대시보드 레이아웃이 없습니다.</p>}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 2+: 리포트 빌더 ──────────────────── */}
+        {menu==='RPTBUILDER' && (() => {
+          const [rptList, setRptList] = useState({items:[], data_sources:[]});
+          const [rptResult, setRptResult] = useState(null);
+          const [rptLoading, setRptLoading] = useState(false);
+          const loadRpt = async () => { setRptLoading(true); try { const r = await api.get('/api/report-builder/templates'); setRptList(r.data); } catch {} setRptLoading(false); };
+          const execRpt = async (id) => { try { const r = await api.post(`/api/report-builder/templates/${id}/execute`); setRptResult(r.data); } catch(e) { showToast(e.response?.data?.error||'실패',false); } };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadRpt(); }, []);
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">리포트 빌더</h3>
+              {rptLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">제목</th><th className="text-left py-2 px-2">데이터소스</th><th className="text-left py-2 px-2">포맷</th><th className="py-2 px-2">실행</th>
+              </tr></thead><tbody>
+                {rptList.items?.map(t=><tr key={t.template_id} className="border-b border-slate-800/50 text-slate-300">
+                  <td className="py-1.5 px-2 text-blue-400">{t.template_code}</td>
+                  <td className="py-1.5 px-2 text-white">{t.title}</td>
+                  <td className="py-1.5 px-2">{t.data_source}</td>
+                  <td className="py-1.5 px-2">{t.output_format}</td>
+                  <td className="py-1.5 px-2 text-center"><button onClick={()=>execRpt(t.template_id)} className="text-emerald-400 hover:underline cursor-pointer text-[9px]">실행</button></td>
+                </tr>)}
+              </tbody></table></div>
+              {rptResult && (
+                <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                  <p className="text-white font-bold text-xs mb-2">{rptResult.title} — {rptResult.row_count}건</p>
+                  <div className="overflow-x-auto max-h-60"><table className="w-full text-[9px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                    {rptResult.columns?.map(c=><th key={c} className="text-left py-1 px-2">{c}</th>)}
+                  </tr></thead><tbody>
+                    {rptResult.data?.slice(0,50).map((row,i)=><tr key={i} className="border-b border-slate-800/30 text-slate-300">
+                      {rptResult.columns?.map(c=><td key={c} className="py-0.5 px-2">{row[c]??'-'}</td>)}
+                    </tr>)}
+                  </tbody></table></div>
+                </div>
+              )}
             </div>
           );
         })()}

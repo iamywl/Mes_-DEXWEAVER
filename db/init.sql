@@ -1521,3 +1521,224 @@ INSERT INTO inspection_details (inspection_id, check_name, measured_value, judgm
 (23, '온도정확도', 0.6, 'FAIL'),
 (23, '압력정확도', 1.2, 'FAIL')
 ON CONFLICT DO NOTHING;
+
+-- ================================================================
+-- Phase 2+ Tables (REQ-059~070)
+-- ================================================================
+
+-- MSA/Gage R&R (REQ-059)
+CREATE TABLE IF NOT EXISTS msa_studies (
+  study_id SERIAL PRIMARY KEY,
+  study_code VARCHAR(30) NOT NULL UNIQUE,
+  study_type VARCHAR(20) NOT NULL CHECK (study_type IN ('GAGE_RR','TYPE1','BIAS','LINEARITY','STABILITY')),
+  gauge_code VARCHAR(50) NOT NULL,
+  gauge_name VARCHAR(100),
+  characteristic VARCHAR(100) NOT NULL,
+  specification_lsl DECIMAL(12,4),
+  specification_usl DECIMAL(12,4),
+  num_operators INT NOT NULL DEFAULT 3,
+  num_parts INT NOT NULL DEFAULT 10,
+  num_trials INT NOT NULL DEFAULT 3,
+  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT','IN_PROGRESS','COMPLETED','REJECTED')),
+  result_grr_pct DECIMAL(8,4),
+  result_ndc INT,
+  conducted_by VARCHAR(50),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_msa_gauge ON msa_studies(gauge_code);
+
+CREATE TABLE IF NOT EXISTS msa_measurements (
+  measurement_id SERIAL PRIMARY KEY,
+  study_id INT NOT NULL REFERENCES msa_studies(study_id),
+  operator_id VARCHAR(50) NOT NULL,
+  part_number INT NOT NULL,
+  trial_number INT NOT NULL,
+  measured_value DECIMAL(12,6) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_msa_meas_study ON msa_measurements(study_id);
+
+-- FMEA (REQ-061)
+CREATE TABLE IF NOT EXISTS fmea (
+  fmea_id SERIAL PRIMARY KEY,
+  fmea_code VARCHAR(30) NOT NULL UNIQUE,
+  fmea_type VARCHAR(10) NOT NULL DEFAULT 'PFMEA' CHECK (fmea_type IN ('PFMEA','DFMEA')),
+  item_code VARCHAR(20),
+  process_code VARCHAR(20),
+  title VARCHAR(200) NOT NULL,
+  team_members TEXT,
+  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT','IN_REVIEW','APPROVED','CLOSED')),
+  created_by VARCHAR(50),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS fmea_items (
+  fmea_item_id SERIAL PRIMARY KEY,
+  fmea_id INT NOT NULL REFERENCES fmea(fmea_id),
+  process_step VARCHAR(100),
+  failure_mode VARCHAR(200) NOT NULL,
+  failure_effect VARCHAR(500),
+  failure_cause VARCHAR(500),
+  severity INT NOT NULL CHECK (severity BETWEEN 1 AND 10),
+  occurrence INT NOT NULL CHECK (occurrence BETWEEN 1 AND 10),
+  detection INT NOT NULL CHECK (detection BETWEEN 1 AND 10),
+  rpn INT GENERATED ALWAYS AS (severity * occurrence * detection) STORED,
+  recommended_action TEXT,
+  action_taken TEXT,
+  action_owner VARCHAR(50),
+  action_due DATE,
+  new_severity INT CHECK (new_severity BETWEEN 1 AND 10),
+  new_occurrence INT CHECK (new_occurrence BETWEEN 1 AND 10),
+  new_detection INT CHECK (new_detection BETWEEN 1 AND 10),
+  new_rpn INT GENERATED ALWAYS AS (
+    COALESCE(new_severity,severity) * COALESCE(new_occurrence,occurrence) * COALESCE(new_detection,detection)
+  ) STORED,
+  status VARCHAR(20) DEFAULT 'OPEN' CHECK (status IN ('OPEN','IN_PROGRESS','COMPLETED','VERIFIED'))
+);
+CREATE INDEX IF NOT EXISTS idx_fmea_items_fmea ON fmea_items(fmea_id);
+
+-- 에너지 관리 (REQ-063)
+CREATE TABLE IF NOT EXISTS energy_consumption (
+  energy_id BIGSERIAL PRIMARY KEY,
+  equip_code VARCHAR(20) NOT NULL,
+  energy_type VARCHAR(20) NOT NULL DEFAULT 'ELECTRICITY' CHECK (energy_type IN ('ELECTRICITY','GAS','WATER','STEAM','COMPRESSED_AIR')),
+  value DECIMAL(12,4) NOT NULL,
+  unit VARCHAR(10) NOT NULL DEFAULT 'kWh',
+  cost_per_unit DECIMAL(10,4),
+  recorded_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  source VARCHAR(20) DEFAULT 'SENSOR'
+);
+CREATE INDEX IF NOT EXISTS idx_energy_equip_time ON energy_consumption(equip_code, recorded_at);
+
+-- 교정 관리 (REQ-064)
+CREATE TABLE IF NOT EXISTS calibrations (
+  calibration_id SERIAL PRIMARY KEY,
+  gauge_code VARCHAR(50) NOT NULL,
+  gauge_name VARCHAR(100),
+  gauge_type VARCHAR(50),
+  location VARCHAR(100),
+  calibration_cycle_days INT NOT NULL DEFAULT 365,
+  last_calibrated DATE,
+  next_due DATE NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'VALID' CHECK (status IN ('VALID','DUE_SOON','EXPIRED','IN_CALIBRATION')),
+  is_blocked BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_calib_due ON calibrations(next_due);
+
+CREATE TABLE IF NOT EXISTS calibration_records (
+  record_id SERIAL PRIMARY KEY,
+  calibration_id INT NOT NULL REFERENCES calibrations(calibration_id),
+  performed_date DATE NOT NULL,
+  performed_by VARCHAR(50),
+  result VARCHAR(10) NOT NULL CHECK (result IN ('PASS','FAIL','ADJUSTED')),
+  certificate_no VARCHAR(100),
+  deviation DECIMAL(12,6),
+  notes TEXT,
+  next_due DATE
+);
+CREATE INDEX IF NOT EXISTS idx_calib_rec ON calibration_records(calibration_id);
+
+-- SQM 공급업체 품질 (REQ-065)
+CREATE TABLE IF NOT EXISTS suppliers (
+  supplier_id SERIAL PRIMARY KEY,
+  supplier_code VARCHAR(30) NOT NULL UNIQUE,
+  name VARCHAR(200) NOT NULL,
+  contact_person VARCHAR(100),
+  phone VARCHAR(50),
+  email VARCHAR(100),
+  asl_status VARCHAR(20) DEFAULT 'APPROVED' CHECK (asl_status IN ('APPROVED','CONDITIONAL','PROBATION','DISQUALIFIED')),
+  quality_score DECIMAL(5,2),
+  delivery_score DECIMAL(5,2),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS scar (
+  scar_id SERIAL PRIMARY KEY,
+  scar_code VARCHAR(30) NOT NULL UNIQUE,
+  supplier_id INT NOT NULL REFERENCES suppliers(supplier_id),
+  issue_type VARCHAR(30) NOT NULL CHECK (issue_type IN ('QUALITY','DELIVERY','DOCUMENTATION','PACKAGING')),
+  description TEXT NOT NULL,
+  severity VARCHAR(10) NOT NULL CHECK (severity IN ('CRITICAL','MAJOR','MINOR')),
+  status VARCHAR(20) NOT NULL DEFAULT 'ISSUED' CHECK (status IN ('ISSUED','RESPONSE_PENDING','UNDER_REVIEW','ACCEPTED','CLOSED')),
+  response_due DATE,
+  root_cause TEXT,
+  corrective_action TEXT,
+  issued_by VARCHAR(50),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_scar_supplier ON scar(supplier_id);
+
+-- 셋업시간 매트릭스 (REQ-067)
+CREATE TABLE IF NOT EXISTS setup_matrix (
+  setup_id SERIAL PRIMARY KEY,
+  equip_code VARCHAR(20) NOT NULL,
+  from_item_code VARCHAR(20) NOT NULL,
+  to_item_code VARCHAR(20) NOT NULL,
+  planned_minutes INT NOT NULL,
+  actual_avg_minutes DECIMAL(8,2),
+  sample_count INT DEFAULT 0,
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(equip_code, from_item_code, to_item_code)
+);
+CREATE INDEX IF NOT EXISTS idx_setup_equip ON setup_matrix(equip_code);
+
+-- WO 원가추적 (REQ-068)
+CREATE TABLE IF NOT EXISTS wo_costs (
+  cost_id SERIAL PRIMARY KEY,
+  wo_code VARCHAR(30) NOT NULL,
+  cost_type VARCHAR(20) NOT NULL CHECK (cost_type IN ('LABOR','MATERIAL','OVERHEAD','OTHER')),
+  description VARCHAR(200),
+  quantity DECIMAL(12,4),
+  unit_cost DECIMAL(12,4),
+  total_cost DECIMAL(14,2) GENERATED ALWAYS AS (quantity * unit_cost) STORED,
+  is_standard BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_wo_costs_wo ON wo_costs(wo_code);
+
+-- 대시보드 빌더 (REQ-069)
+CREATE TABLE IF NOT EXISTS dashboard_layouts (
+  layout_id SERIAL PRIMARY KEY,
+  user_id VARCHAR(50) NOT NULL,
+  layout_name VARCHAR(100) NOT NULL,
+  is_preset BOOLEAN NOT NULL DEFAULT FALSE,
+  is_shared BOOLEAN NOT NULL DEFAULT FALSE,
+  layout_config JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_dash_user ON dashboard_layouts(user_id);
+
+CREATE TABLE IF NOT EXISTS dashboard_widgets (
+  widget_id SERIAL PRIMARY KEY,
+  layout_id INT NOT NULL REFERENCES dashboard_layouts(layout_id) ON DELETE CASCADE,
+  widget_type VARCHAR(30) NOT NULL CHECK (widget_type IN ('KPI_GAUGE','LINE_CHART','BAR_CHART','PIE_CHART','TABLE','HEATMAP','TEXT')),
+  title VARCHAR(100),
+  data_source VARCHAR(100) NOT NULL,
+  config JSONB NOT NULL DEFAULT '{}',
+  position_x INT NOT NULL DEFAULT 0,
+  position_y INT NOT NULL DEFAULT 0,
+  width INT NOT NULL DEFAULT 4,
+  height INT NOT NULL DEFAULT 3
+);
+CREATE INDEX IF NOT EXISTS idx_widget_layout ON dashboard_widgets(layout_id);
+
+-- 리포트 빌더 (REQ-070)
+CREATE TABLE IF NOT EXISTS report_templates (
+  template_id SERIAL PRIMARY KEY,
+  template_code VARCHAR(30) NOT NULL UNIQUE,
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  data_source VARCHAR(100) NOT NULL,
+  columns JSONB NOT NULL DEFAULT '[]',
+  filters JSONB DEFAULT '[]',
+  grouping JSONB DEFAULT '[]',
+  sorting JSONB DEFAULT '[]',
+  output_format VARCHAR(10) NOT NULL DEFAULT 'PDF' CHECK (output_format IN ('PDF','EXCEL','CSV')),
+  schedule_cron VARCHAR(50),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by VARCHAR(50),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_rpt_tmpl_active ON report_templates(is_active);
