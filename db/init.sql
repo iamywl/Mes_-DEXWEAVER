@@ -1742,3 +1742,105 @@ CREATE TABLE IF NOT EXISTS report_templates (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_rpt_tmpl_active ON report_templates(is_active);
+
+-- ================================================================
+-- Phase 3+ Tables (REQ-071~075)
+-- ================================================================
+
+-- 배치실행엔진 ISA-88 (REQ-071)
+CREATE TABLE IF NOT EXISTS batch_orders (
+  batch_id SERIAL PRIMARY KEY,
+  batch_code VARCHAR(30) NOT NULL UNIQUE,
+  recipe_id INT REFERENCES recipes(recipe_id),
+  item_code VARCHAR(20) NOT NULL,
+  batch_size DECIMAL(12,4) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'IDLE'
+    CHECK (status IN ('IDLE','RUNNING','HELD','COMPLETE','ABORTED')),
+  current_phase VARCHAR(50),
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  operator_id VARCHAR(50),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_batch_status ON batch_orders(status);
+
+CREATE TABLE IF NOT EXISTS batch_phases (
+  phase_id SERIAL PRIMARY KEY,
+  batch_id INT NOT NULL REFERENCES batch_orders(batch_id),
+  phase_name VARCHAR(100) NOT NULL,
+  phase_order INT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING'
+    CHECK (status IN ('PENDING','RUNNING','COMPLETE','SKIPPED','FAILED')),
+  params JSONB DEFAULT '{}',
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_bphase_batch ON batch_phases(batch_id);
+
+-- 전자배치기록 eBR (REQ-072)
+CREATE TABLE IF NOT EXISTS ebr_records (
+  ebr_id SERIAL PRIMARY KEY,
+  batch_id INT NOT NULL REFERENCES batch_orders(batch_id),
+  record_type VARCHAR(30) NOT NULL CHECK (record_type IN ('PARAM','EVENT','DEVIATION','SIGN')),
+  phase_id INT REFERENCES batch_phases(phase_id),
+  param_name VARCHAR(100),
+  param_value VARCHAR(200),
+  recorded_by VARCHAR(50),
+  recorded_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  signature_hash VARCHAR(256),
+  notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ebr_batch ON ebr_records(batch_id);
+
+-- 설계변경관리 ECM (REQ-073)
+CREATE TABLE IF NOT EXISTS ecm_requests (
+  ecr_id SERIAL PRIMARY KEY,
+  ecr_code VARCHAR(30) NOT NULL UNIQUE,
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  change_type VARCHAR(20) NOT NULL CHECK (change_type IN ('DESIGN','PROCESS','MATERIAL','SPEC')),
+  priority VARCHAR(10) DEFAULT 'NORMAL' CHECK (priority IN ('LOW','NORMAL','HIGH','CRITICAL')),
+  status VARCHAR(20) NOT NULL DEFAULT 'SUBMITTED'
+    CHECK (status IN ('SUBMITTED','UNDER_REVIEW','APPROVED','ECN_ISSUED','ECO_COMPLETE','REJECTED')),
+  affected_items JSONB DEFAULT '[]',
+  impact_analysis TEXT,
+  requested_by VARCHAR(50),
+  approved_by VARCHAR(50),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ecm_status ON ecm_requests(status);
+
+-- 복합라우팅 (REQ-074)
+CREATE TABLE IF NOT EXISTS complex_routings (
+  routing_id SERIAL PRIMARY KEY,
+  routing_code VARCHAR(30) NOT NULL UNIQUE,
+  item_code VARCHAR(20) NOT NULL,
+  step_order INT NOT NULL,
+  process_code VARCHAR(20) NOT NULL,
+  step_type VARCHAR(20) NOT NULL DEFAULT 'SEQUENTIAL'
+    CHECK (step_type IN ('SEQUENTIAL','PARALLEL','CONDITIONAL','REWORK','REENTRANT')),
+  condition_expr TEXT,
+  rework_target_step INT,
+  max_reentry INT DEFAULT 1,
+  setup_minutes INT DEFAULT 0,
+  cycle_minutes INT DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  UNIQUE(routing_code, step_order)
+);
+CREATE INDEX IF NOT EXISTS idx_crouting_item ON complex_routings(item_code);
+
+-- 멀티사이트 관리 ISA-95 (REQ-075)
+CREATE TABLE IF NOT EXISTS sites (
+  site_id SERIAL PRIMARY KEY,
+  site_code VARCHAR(20) NOT NULL UNIQUE,
+  site_name VARCHAR(100) NOT NULL,
+  site_type VARCHAR(20) NOT NULL DEFAULT 'FACTORY'
+    CHECK (site_type IN ('ENTERPRISE','SITE','AREA','WORK_CENTER','UNIT')),
+  parent_site_id INT REFERENCES sites(site_id),
+  timezone VARCHAR(50) DEFAULT 'Asia/Seoul',
+  address TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_site_parent ON sites(parent_site_id);

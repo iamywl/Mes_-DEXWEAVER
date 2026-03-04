@@ -74,6 +74,10 @@ from api_modules import mes_setup
 from api_modules import mes_costing
 from api_modules import mes_dashboard_builder
 from api_modules import mes_report_builder
+from api_modules import mes_batch
+from api_modules import mes_ecm
+from api_modules import mes_complex_routing
+from api_modules import mes_multisite
 
 log = logging.getLogger(__name__)
 
@@ -1296,6 +1300,87 @@ async def list_rpt(request: Request = None, user=Depends(auth_required)):
 async def exec_rpt(template_id: int, request: Request,
                    user=Depends(auth_required)):
     return await mes_report_builder.execute_report(template_id)
+
+
+# ── Phase 3+: 배치실행엔진 + eBR (REQ-071/072) ──────────────
+
+@app.post("/api/batch")
+async def create_batch_ep(request: Request, user=Depends(auth_required)):
+    return await mes_batch.create_batch(await request.json())
+
+
+@app.get("/api/batch")
+async def list_batch(status: str = None, request: Request = None,
+                     user=Depends(auth_required)):
+    return await mes_batch.get_batches(status)
+
+
+@app.put("/api/batch/{batch_id}/transition")
+async def transition_batch_ep(batch_id: int, request: Request,
+                              user=Depends(auth_required)):
+    return await mes_batch.transition_batch(batch_id, await request.json())
+
+
+@app.post("/api/batch/{batch_id}/ebr")
+async def add_ebr(batch_id: int, request: Request,
+                  user=Depends(auth_required)):
+    return await mes_batch.add_ebr_record(batch_id, await request.json())
+
+
+@app.get("/api/batch/{batch_id}/ebr")
+async def get_ebr_ep(batch_id: int, request: Request = None,
+                     user=Depends(auth_required)):
+    return await mes_batch.get_ebr(batch_id)
+
+
+# ── Phase 3+: 설계변경관리 ECM (REQ-073) ────────────────────
+
+@app.post("/api/ecm")
+async def create_ecr_ep(request: Request, user=Depends(auth_required)):
+    return await mes_ecm.create_ecr(await request.json())
+
+
+@app.get("/api/ecm")
+async def list_ecr(status: str = None, change_type: str = None,
+                   request: Request = None, user=Depends(auth_required)):
+    return await mes_ecm.get_ecr_list(status, change_type)
+
+
+@app.put("/api/ecm/{ecr_id}/transition")
+async def transition_ecr_ep(ecr_id: int, request: Request,
+                            user=Depends(admin_required)):
+    return await mes_ecm.transition_ecr(ecr_id, await request.json())
+
+
+# ── Phase 3+: 복합라우팅 (REQ-074) ──────────────────────────
+
+@app.post("/api/complex-routing")
+async def create_crouting(request: Request, user=Depends(admin_required)):
+    return await mes_complex_routing.create_routing(await request.json())
+
+
+@app.get("/api/complex-routing")
+async def get_crouting(routing_code: str = None, item_code: str = None,
+                       request: Request = None, user=Depends(auth_required)):
+    return await mes_complex_routing.get_routing(routing_code, item_code)
+
+
+# ── Phase 3+: 멀티사이트 관리 (REQ-075) ─────────────────────
+
+@app.post("/api/sites")
+async def create_site_ep(request: Request, user=Depends(admin_required)):
+    return await mes_multisite.create_site(await request.json())
+
+
+@app.get("/api/sites")
+async def list_sites(request: Request = None, user=Depends(auth_required)):
+    return await mes_multisite.get_sites()
+
+
+@app.get("/api/sites/{site_id}/dashboard")
+async def site_dashboard(site_id: int, request: Request = None,
+                         user=Depends(auth_required)):
+    return await mes_multisite.get_site_dashboard(site_id)
 
 
 # ── Health Check (no auth) ───────────────────────────────────

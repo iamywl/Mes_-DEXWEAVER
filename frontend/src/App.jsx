@@ -463,6 +463,10 @@ const App = () => {
     {id:'COSTING',      label:'원가추적'},
     {id:'DASHBUILDER',  label:'대시보드 빌더'},
     {id:'RPTBUILDER',   label:'리포트 빌더'},
+    {id:'BATCH',        label:'배치 실행'},
+    {id:'ECM',          label:'설계변경'},
+    {id:'CROUTING',     label:'복합라우팅'},
+    {id:'MULTISITE',    label:'멀티사이트'},
   ];
 
   /* ── 로그인/회원가입 화면 (미인증 상태) ────────────── */
@@ -3755,6 +3759,140 @@ const App = () => {
                   </tbody></table></div>
                 </div>
               )}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 3+: 배치 실행 ────────────────────── */}
+        {menu==='BATCH' && (() => {
+          const [batches, setBatches] = useState({items:[]});
+          const [batchLoading, setBatchLoading] = useState(false);
+          const loadBatch = async () => { setBatchLoading(true); try { const r = await api.get('/api/batch'); setBatches(r.data); } catch {} setBatchLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadBatch(); }, []);
+          const stColors = {IDLE:'text-slate-400',RUNNING:'text-blue-400',HELD:'text-yellow-400',COMPLETE:'text-emerald-400',ABORTED:'text-red-400'};
+          const doTransition = async (id, st) => { try { await api.put(`/api/batch/${id}/transition`, {status:st}); showToast(`배치 → ${st}`); loadBatch(); } catch(e) { showToast(e.response?.data?.error||'실패',false); } };
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">배치 실행 엔진 (ISA-88)</h3>
+              {batchLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">품목</th><th className="text-right py-2 px-2">크기</th><th className="text-left py-2 px-2">상태</th><th className="text-left py-2 px-2">시작</th><th className="py-2 px-2">제어</th>
+              </tr></thead><tbody>
+                {batches.items?.map(b=><tr key={b.batch_id} className="border-b border-slate-800/50 text-slate-300">
+                  <td className="py-1.5 px-2 text-blue-400">{b.batch_code}</td>
+                  <td className="py-1.5 px-2">{b.item_code}</td>
+                  <td className="py-1.5 px-2 text-right">{b.batch_size}</td>
+                  <td className={`py-1.5 px-2 font-bold ${stColors[b.status]||''}`}>{b.status}</td>
+                  <td className="py-1.5 px-2">{b.started_at?.slice(0,16)||'-'}</td>
+                  <td className="py-1.5 px-2 text-center space-x-1">
+                    {b.status==='IDLE' && <button onClick={()=>doTransition(b.batch_id,'RUNNING')} className="text-blue-400 cursor-pointer text-[9px]">시작</button>}
+                    {b.status==='RUNNING' && <><button onClick={()=>doTransition(b.batch_id,'HELD')} className="text-yellow-400 cursor-pointer text-[9px]">홀드</button><button onClick={()=>doTransition(b.batch_id,'COMPLETE')} className="text-emerald-400 cursor-pointer text-[9px] ml-1">완료</button></>}
+                    {b.status==='HELD' && <button onClick={()=>doTransition(b.batch_id,'RUNNING')} className="text-blue-400 cursor-pointer text-[9px]">재개</button>}
+                  </td>
+                </tr>)}
+              </tbody></table></div>
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 3+: 설계변경관리 ECM ─────────────── */}
+        {menu==='ECM' && (() => {
+          const [ecmData, setEcmData] = useState({items:[]});
+          const [ecmLoading, setEcmLoading] = useState(false);
+          const loadEcm = async () => { setEcmLoading(true); try { const r = await api.get('/api/ecm'); setEcmData(r.data); } catch {} setEcmLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadEcm(); }, []);
+          const ecmColors = {SUBMITTED:'text-slate-400',UNDER_REVIEW:'text-blue-400',APPROVED:'text-emerald-400',ECN_ISSUED:'text-purple-400',ECO_COMPLETE:'text-emerald-300',REJECTED:'text-red-400'};
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">설계변경관리 (ECR→ECN→ECO)</h3>
+              {ecmLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">제목</th><th className="text-left py-2 px-2">유형</th><th className="text-left py-2 px-2">우선순위</th><th className="text-left py-2 px-2">상태</th><th className="text-left py-2 px-2">요청자</th>
+              </tr></thead><tbody>
+                {ecmData.items?.map(e=><tr key={e.ecr_id} className="border-b border-slate-800/50 text-slate-300">
+                  <td className="py-1.5 px-2 text-blue-400">{e.ecr_code}</td>
+                  <td className="py-1.5 px-2 text-white">{e.title}</td>
+                  <td className="py-1.5 px-2">{e.change_type}</td>
+                  <td className={`py-1.5 px-2 ${e.priority==='CRITICAL'?'text-red-400':e.priority==='HIGH'?'text-yellow-400':'text-slate-400'}`}>{e.priority}</td>
+                  <td className={`py-1.5 px-2 font-bold ${ecmColors[e.status]||''}`}>{e.status}</td>
+                  <td className="py-1.5 px-2">{e.requested_by||'-'}</td>
+                </tr>)}
+              </tbody></table></div>
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 3+: 복합라우팅 ───────────────────── */}
+        {menu==='CROUTING' && (() => {
+          const [crData, setCrData] = useState({routings:[]});
+          const [crLoading, setCrLoading] = useState(false);
+          const loadCr = async () => { setCrLoading(true); try { const r = await api.get('/api/complex-routing'); setCrData(r.data); } catch {} setCrLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadCr(); }, []);
+          const typeColors = {SEQUENTIAL:'text-slate-400',PARALLEL:'text-blue-400',CONDITIONAL:'text-yellow-400',REWORK:'text-red-400',REENTRANT:'text-purple-400'};
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">복합라우팅</h3>
+              {crLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {crData.routings?.map(rt=>(
+                <div key={rt.routing_code} className="bg-[#1e293b]/10 p-3 rounded-xl border border-slate-800/50">
+                  <p className="text-blue-400 font-bold text-xs mb-2">{rt.routing_code} — {rt.item_code}</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {rt.steps?.map((s,i)=>(
+                      <div key={i} className="bg-slate-800/50 px-3 py-2 rounded-lg text-[9px] border border-slate-700 min-w-[100px]">
+                        <p className="text-white font-bold">{s.step_order}. {s.process_code}</p>
+                        <p className={`font-bold ${typeColors[s.step_type]||''}`}>{s.step_type}</p>
+                        <p className="text-slate-500">{s.total_minutes}분</p>
+                        {s.condition_expr && <p className="text-yellow-400 text-[8px]">조건: {s.condition_expr}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 3+: 멀티사이트 ──────────────────── */}
+        {menu==='MULTISITE' && (() => {
+          const [siteData, setSiteData] = useState({sites:[], tree:[]});
+          const [siteLoading, setSiteLoading] = useState(false);
+          const loadSites = async () => { setSiteLoading(true); try { const r = await api.get('/api/sites'); setSiteData(r.data); } catch {} setSiteLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadSites(); }, []);
+          const typeIcons = {ENTERPRISE:'🏢',SITE:'🏭',AREA:'📍',WORK_CENTER:'⚙️',UNIT:'🔧'};
+          const RenderTree = ({nodes, depth=0}) => nodes?.map(n=>(
+            <div key={n.site_id} style={{marginLeft:depth*16}} className="py-1">
+              <div className="flex items-center gap-2 text-[10px]">
+                <span>{typeIcons[n.site_type]||'📁'}</span>
+                <span className="text-blue-400 font-bold">{n.site_code}</span>
+                <span className="text-white">{n.site_name}</span>
+                <span className="text-slate-500">({n.site_type})</span>
+              </div>
+              {n.children?.length > 0 && <RenderTree nodes={n.children} depth={depth+1} />}
+            </div>
+          ));
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">멀티사이트 관리 (ISA-95)</h3>
+              {siteLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              <div className="bg-[#1e293b]/20 p-4 rounded-xl border border-slate-800">
+                <p className="text-slate-400 text-[10px] font-bold mb-2">ISA-95 계층 구조</p>
+                {siteData.tree?.length > 0 ? <RenderTree nodes={siteData.tree} /> : <p className="text-slate-500 text-xs">사이트가 없습니다.</p>}
+              </div>
+              <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">이름</th><th className="text-left py-2 px-2">타입</th><th className="text-left py-2 px-2">시간대</th><th className="text-left py-2 px-2">주소</th>
+              </tr></thead><tbody>
+                {siteData.sites?.map(s=><tr key={s.site_id} className="border-b border-slate-800/50 text-slate-300">
+                  <td className="py-1.5 px-2 text-blue-400">{s.site_code}</td>
+                  <td className="py-1.5 px-2 text-white">{s.site_name}</td>
+                  <td className="py-1.5 px-2">{s.site_type}</td>
+                  <td className="py-1.5 px-2">{s.timezone}</td>
+                  <td className="py-1.5 px-2">{s.address||'-'}</td>
+                </tr>)}
+              </tbody></table></div>
             </div>
           );
         })()}
