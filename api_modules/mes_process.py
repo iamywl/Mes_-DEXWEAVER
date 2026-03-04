@@ -1,10 +1,15 @@
 """FN-010~012: Process and routing management module."""
 
 from api_modules.database import get_conn, release_conn
+from api_modules.cache import cache_get, cache_set, cache_delete
 
 
 async def list_processes() -> dict:
     """List all registered processes with equipment info."""
+    cached = cache_get("process:list")
+    if cached:
+        return cached
+
     conn = None
     try:
         conn = get_conn()
@@ -29,7 +34,9 @@ async def list_processes() -> dict:
             }
             for r in rows
         ]
-        return {"processes": processes, "total": len(processes)}
+        result = {"processes": processes, "total": len(processes)}
+        cache_set("process:list", result, ttl=300)
+        return result
     except Exception as e:
         return {"error": str(e), "processes": [], "total": 0}
     finally:
@@ -39,6 +46,10 @@ async def list_processes() -> dict:
 
 async def list_routings_summary() -> dict:
     """Summary of all item routings with step count and total time."""
+    cached = cache_get("routing:summary")
+    if cached:
+        return cached
+
     conn = None
     try:
         conn = get_conn()
@@ -62,7 +73,9 @@ async def list_routings_summary() -> dict:
             }
             for r in rows
         ]
-        return {"routings": summaries, "total": len(summaries)}
+        result = {"routings": summaries, "total": len(summaries)}
+        cache_set("routing:summary", result, ttl=300)
+        return result
     except Exception as e:
         return {"error": str(e), "routings": [], "total": 0}
     finally:
@@ -108,6 +121,7 @@ async def create_process(data: dict) -> dict:
         )
         conn.commit()
         cursor.close()
+        cache_delete("process:*")
         return {"process_code": process_code, "success": True}
     except Exception:
         if conn:
@@ -147,6 +161,7 @@ async def update_process(process_code: str, data: dict) -> dict:
             return {"error": "공정을 찾을 수 없습니다."}
         conn.commit()
         cursor.close()
+        cache_delete("process:*")
         return {"success": True, "process_code": process_code}
     except Exception:
         if conn:
@@ -182,6 +197,8 @@ async def delete_process(process_code: str) -> dict:
             return {"error": "공정을 찾을 수 없습니다."}
         conn.commit()
         cursor.close()
+        cache_delete("process:*")
+        cache_delete("routing:*")
         return {"success": True, "deleted": process_code}
     except Exception:
         if conn:
@@ -219,6 +236,7 @@ async def create_routing(data: dict) -> dict:
 
         conn.commit()
         cursor.close()
+        cache_delete("routing:*")
         return {"routing_id": routing_id, "success": True}
     except Exception as e:
         if conn:

@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta
 
 from api_modules.database import get_conn, release_conn
+from api_modules.cache import cache_get, cache_set, cache_delete
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ async def create_equipment(data: dict) -> dict:
         )
         conn.commit()
         cursor.close()
+        cache_delete("equip:*")
         return {"equip_code": equip_code, "success": True}
     except Exception as e:
         if conn:
@@ -66,6 +68,11 @@ async def create_equipment(data: dict) -> dict:
 async def get_equipments(process_code: str = None,
                          status: str = None) -> dict:
     """FN-014: List equipments with optional filters."""
+    cache_key = f"equip:list:{process_code}:{status}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     conn = None
     try:
         conn = get_conn()
@@ -103,7 +110,9 @@ async def get_equipments(process_code: str = None,
             }
             for r in rows
         ]
-        return {"equipments": equipments}
+        result = {"equipments": equipments}
+        cache_set(cache_key, result, ttl=30)
+        return result
     except Exception as e:
         return {"error": str(e)}
     finally:
@@ -150,6 +159,7 @@ async def update_status(equip_code: str, data: dict) -> dict:
         conn.commit()
         cursor.close()
 
+        cache_delete("equip:*")
         result = {"success": True, "changed_at": now.isoformat()}
         if downtime_minutes is not None:
             result["downtime_minutes"] = downtime_minutes

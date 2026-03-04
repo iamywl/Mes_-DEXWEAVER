@@ -19,6 +19,7 @@ import jwt
 from fastapi import Request
 
 from api_modules.database import get_conn, release_conn
+from api_modules import security
 
 log = logging.getLogger(__name__)
 
@@ -146,6 +147,12 @@ async def login(user_id: str, password: str) -> dict:
         if not password or len(password) < 1:
             return {"error": "비밀번호를 입력해주세요."}
 
+        # NFR-013: 계정 잠금 확인
+        lock_msg = security.check_login_lock(user_id)
+        if lock_msg:
+            security.log_security_event("LOGIN_BLOCKED", lock_msg, user_id=user_id)
+            return {"error": lock_msg}
+
         conn = get_conn()
         if not conn:
             return {"error": "데이터베이스 연결에 실패했습니다."}
@@ -161,6 +168,8 @@ async def login(user_id: str, password: str) -> dict:
 
         if not user:
             cursor.close()
+            security.record_login_failure(user_id)
+            security.log_security_event("LOGIN_FAIL", "사용자 없음", user_id=user_id)
             return {"error": "아이디 또는 비밀번호가 올바르지 않습니다."}
 
         # 승인 여부 확인
@@ -185,9 +194,13 @@ async def login(user_id: str, password: str) -> dict:
 
         if not authenticated:
             cursor.close()
+            security.record_login_failure(user_id)
+            security.log_security_event("LOGIN_FAIL", "비밀번호 불일치", user_id=user_id)
             return {"error": "아이디 또는 비밀번호가 올바르지 않습니다."}
 
         cursor.close()
+        security.record_login_success(user_id)
+        security.log_security_event("LOGIN_SUCCESS", f"role={user[2]}", user_id=user_id)
         token = _create_token(user[0], user[2])
         return {
             "token": token,

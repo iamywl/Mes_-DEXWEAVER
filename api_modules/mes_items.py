@@ -1,6 +1,7 @@
 """FN-004~007: Item master management module."""
 
 from api_modules.database import get_conn, release_conn
+from api_modules.cache import cache_get, cache_set, cache_delete
 
 
 async def create_item(data: dict) -> dict:
@@ -39,6 +40,7 @@ async def create_item(data: dict) -> dict:
         )
         conn.commit()
         cursor.close()
+        cache_delete("items:*")
         return {"item_code": item_code, "created_at": "now"}
     except Exception as e:
         if conn:
@@ -52,6 +54,11 @@ async def create_item(data: dict) -> dict:
 async def get_items(keyword: str = None, category: str = None,
                     page: int = 1, size: int = 20) -> dict:
     """FN-005: List items with search and pagination."""
+    cache_key = f"items:list:{keyword}:{category}:{page}:{size}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     conn = None
     try:
         conn = get_conn()
@@ -100,7 +107,9 @@ async def get_items(keyword: str = None, category: str = None,
             }
             for r in rows
         ]
-        return {"items": items, "total": total, "page": page}
+        result = {"items": items, "total": total, "page": page}
+        cache_set(cache_key, result, ttl=60)
+        return result
     except Exception as e:
         return {"error": str(e)}
     finally:
@@ -110,6 +119,11 @@ async def get_items(keyword: str = None, category: str = None,
 
 async def get_item_detail(item_code: str) -> dict:
     """FN-006: Get item detail."""
+    cache_key = f"items:detail:{item_code}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     conn = None
     try:
         conn = get_conn()
@@ -128,11 +142,13 @@ async def get_item_detail(item_code: str) -> dict:
         if not row:
             return {"error": "Item not found."}
 
-        return {
+        result = {
             "item_code": row[0], "name": row[1], "category": row[2],
             "unit": row[3], "spec": row[4], "safety_stock": row[5],
             "created_at": str(row[6]),
         }
+        cache_set(cache_key, result, ttl=120)
+        return result
     except Exception as e:
         return {"error": str(e)}
     finally:
@@ -173,6 +189,7 @@ async def update_item(item_code: str, data: dict) -> dict:
         )
         conn.commit()
         cursor.close()
+        cache_delete("items:*")
         return {"success": True, "updated_at": "now"}
     except Exception as e:
         if conn:
@@ -200,6 +217,7 @@ async def delete_item(item_code: str) -> dict:
         cursor.execute("DELETE FROM items WHERE item_code = %s", (item_code,))
         conn.commit()
         cursor.close()
+        cache_delete("items:*")
         return {"success": True, "deleted": item_code}
     except Exception as e:
         if conn:

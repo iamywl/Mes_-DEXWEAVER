@@ -120,6 +120,16 @@ if _HAS_PROMETHEUS:
     ).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
+# ── NFR-018: API Versioning Middleware (/api/v1/* → /api/*) ──
+@app.middleware("http")
+async def api_version_rewrite(request: Request, call_next):
+    """Support /api/v1/ prefix — rewrite to /api/ for backward compatibility."""
+    path = request.scope.get("path", "")
+    if path.startswith("/api/v1/"):
+        request.scope["path"] = "/api/" + path[8:]
+    return await call_next(request)
+
+
 # ── KISA: Global Exception Handler (Stack Trace 노출 방지) ──
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -1403,6 +1413,16 @@ async def site_dashboard(site_id: int, request: Request = None,
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok", "version": "6.0"}
+
+
+@app.get("/api/version")
+async def api_version():
+    """NFR-018: API version info. Supports /api/v1/ prefix via middleware."""
+    return {
+        "api_version": "v1",
+        "app_version": "6.0",
+        "supported_versions": ["v1"],
+    }
 
 
 if __name__ == "__main__":

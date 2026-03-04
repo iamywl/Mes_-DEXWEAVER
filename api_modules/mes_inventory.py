@@ -3,6 +3,7 @@
 from datetime import date
 
 from api_modules.database import get_conn, release_conn
+from api_modules.cache import cache_get, cache_set, cache_delete
 
 
 def _slip_no(prefix: str, cur) -> str:
@@ -58,6 +59,8 @@ async def inventory_in(data: dict) -> dict:
         )
         conn.commit()
         cur.close()
+        cache_delete("inventory:*")
+        cache_delete("items:*")
         return {"lot_no": lot_no, "slip_no": slip_no}
     except Exception as e:
         if conn:
@@ -132,6 +135,8 @@ async def inventory_out(data: dict) -> dict:
         )
         conn.commit()
         cur.close()
+        cache_delete("inventory:*")
+        cache_delete("items:*")
         return {"slip_no": slip_no, "lots_used": lots_used}
     except Exception:
         if conn:
@@ -145,6 +150,11 @@ async def inventory_out(data: dict) -> dict:
 async def get_inventory(warehouse: str = None,
                         category: str = None) -> dict:
     """FN-031: Current inventory status."""
+    cache_key = f"inventory:list:{warehouse}:{category}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     conn = None
     try:
         conn = get_conn()
@@ -198,7 +208,9 @@ async def get_inventory(warehouse: str = None,
                 "stock": stock, "available": available,
                 "safety": safety, "status": st,
             })
-        return {"items": items}
+        result = {"items": items}
+        cache_set(cache_key, result, ttl=30)
+        return result
     except Exception:
         return {"error": "재고 현황 조회 중 오류가 발생했습니다."}
     finally:
