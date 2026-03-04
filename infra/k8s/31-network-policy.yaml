@@ -1,0 +1,113 @@
+# Cilium NetworkPolicy — 네임스페이스 보안
+# 기본: 모든 Ingress 차단 후 필요한 경로만 허용
+
+# ── 기본 정책: 전체 Ingress 차단 ──
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: mes-production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# ── PostgreSQL: API에서만 접근 ──
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-from-api
+  namespace: mes-production
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: mes-api
+      ports:
+        - port: 5432
+          protocol: TCP
+---
+# ── Redis: API에서만 접근 ──
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-from-api
+  namespace: mes-production
+spec:
+  podSelector:
+    matchLabels:
+      app: mes-redis
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: mes-api
+      ports:
+        - port: 6379
+          protocol: TCP
+---
+# ── MQTT: API에서만 접근 ──
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mqtt-from-api
+  namespace: mes-production
+spec:
+  podSelector:
+    matchLabels:
+      app: mes-mqtt
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: mes-api
+      ports:
+        - port: 1883
+          protocol: TCP
+        - port: 9883
+          protocol: TCP
+---
+# ── API: Ingress Controller + Frontend에서 접근 ──
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-ingress
+  namespace: mes-production
+spec:
+  podSelector:
+    matchLabels:
+      app: mes-api
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: mes-frontend
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8000
+          protocol: TCP
+---
+# ── Frontend: Ingress Controller에서만 접근 ──
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-ingress
+  namespace: mes-production
+spec:
+  podSelector:
+    matchLabels:
+      app: mes-frontend
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 80
+          protocol: TCP

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mes-production
+  labels:
+    app.kubernetes.io/part-of: dexweaver-mes
+    environment: production

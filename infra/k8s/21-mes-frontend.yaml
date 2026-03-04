@@ -1,0 +1,87 @@
+# MES Frontend — Deployment + Service + HPA
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mes-frontend
+  namespace: mes-production
+  labels:
+    app: mes-frontend
+    tier: frontend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: mes-frontend
+  template:
+    metadata:
+      labels:
+        app: mes-frontend
+        tier: frontend
+    spec:
+      containers:
+        - name: nginx
+          image: ghcr.io/your-org/dexweaver-mes-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+      imagePullSecrets:
+        - name: ghcr-credentials
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mes-frontend-service
+  namespace: mes-production
+spec:
+  type: ClusterIP
+  selector:
+    app: mes-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mes-frontend-hpa
+  namespace: mes-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mes-frontend
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80

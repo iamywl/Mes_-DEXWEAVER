@@ -1,14 +1,47 @@
-__pycache__
-*.pyc
+# Git
 .git
 .gitignore
-node_modules
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+htmlcov
+.coverage
+*.egg-info
+
+# Node (frontend is separate context)
 frontend/node_modules
 frontend/dist
-*.md
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Docs & Research
 doc/
 research/
+*.md
+
+# Infra
+infra/
+.github/
+
+# Temp
 tmp/
-.claude/
-.env
 *.log
+.env
+.env.*
+!.env.example
+
+# Claude
+.claude/

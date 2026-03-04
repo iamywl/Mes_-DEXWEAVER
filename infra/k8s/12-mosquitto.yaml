@@ -1,0 +1,96 @@
+# Eclipse Mosquitto MQTT — ConfigMap + Deployment + Service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-config
+  namespace: mes-production
+data:
+  mosquitto.conf: |
+    listener 1883
+    protocol mqtt
+    listener 9883
+    protocol websockets
+    allow_anonymous false
+    password_file /mosquitto/config/passwd
+    persistence true
+    persistence_location /mosquitto/data/
+    log_dest stdout
+    log_type all
+    max_inflight_messages 200
+    max_queued_messages 5000
+    message_size_limit 1048576
+    max_keepalive 120
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mes-mqtt
+  namespace: mes-production
+  labels:
+    app: mes-mqtt
+    tier: broker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mes-mqtt
+  template:
+    metadata:
+      labels:
+        app: mes-mqtt
+        tier: broker
+    spec:
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto:2
+          ports:
+            - containerPort: 1883
+              name: mqtt
+            - containerPort: 9883
+              name: mqtt-ws
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: mosquitto-config
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+            - name: mosquitto-data
+              mountPath: /mosquitto/data
+          livenessProbe:
+            tcpSocket:
+              port: 1883
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            tcpSocket:
+              port: 1883
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: mosquitto-config
+          configMap:
+            name: mosquitto-config
+        - name: mosquitto-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mes-mqtt-service
+  namespace: mes-production
+spec:
+  type: ClusterIP
+  selector:
+    app: mes-mqtt
+  ports:
+    - port: 1883
+      targetPort: 1883
+      name: mqtt
+    - port: 9883
+      targetPort: 9883
+      name: mqtt-ws

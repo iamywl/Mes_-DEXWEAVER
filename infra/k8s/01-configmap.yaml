@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mes-config
+  namespace: mes-production
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  JWT_ALGORITHM: "HS256"
+  JWT_EXPIRE_MINUTES: "60"
+  CORS_ORIGINS: "https://mes.example.com"
+  UVICORN_WORKERS: "4"
+  DB_POOL_MIN: "5"
+  DB_POOL_MAX: "20"
+  MQTT_BROKER_HOST: "mes-mqtt-service"
+  MQTT_BROKER_PORT: "1883"
+  REDIS_DB: "0"
+  REDIS_MAX_CONNECTIONS: "50"

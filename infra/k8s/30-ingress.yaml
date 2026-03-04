@@ -1,0 +1,55 @@
+# Ingress — TLS + WebSocket + Rate Limiting
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mes-ingress
+  namespace: mes-production
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # WebSocket 지원 (REQ-038)
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+    # Rate Limiting
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    # TLS 자동 발급 (cert-manager)
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - mes.example.com
+      secretName: mes-tls-secret
+  rules:
+    - host: mes.example.com
+      http:
+        paths:
+          # API 백엔드
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: mes-api-service
+                port:
+                  number: 8000
+          # WebSocket
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: mes-api-service
+                port:
+                  number: 8000
+          # Frontend (기본 — 마지막)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mes-frontend-service
+                port:
+                  number: 80
