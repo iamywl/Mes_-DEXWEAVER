@@ -448,6 +448,11 @@ const App = () => {
     {id:'SENSOR',       label:'센서 모니터링'},
     {id:'DMS',          label:'문서 관리'},
     {id:'LABOR',        label:'스킬 매트릭스'},
+    {id:'ERP',          label:'ERP 연동'},
+    {id:'OPCUA',        label:'OPC-UA'},
+    {id:'AUDIT',        label:'감사 추적'},
+    {id:'I18N',         label:'다국어 설정'},
+    {id:'RESOURCE',     label:'리소스 관리'},
   ];
 
   /* ── 로그인/회원가입 화면 (미인증 상태) ────────────── */
@@ -3111,6 +3116,276 @@ const App = () => {
                   </tbody></table>
                 </div>
               )}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 3: ERP 연동 ──────────────────────── */}
+        {menu==='ERP' && (() => {
+          const [erpData, setErpData] = useState({configs:[], logs:[]});
+          const [erpTab, setErpTab] = useState('config');
+          const [erpLoading, setErpLoading] = useState(false);
+
+          const loadErp = async () => { setErpLoading(true); try { const [c, l] = await Promise.all([api.get('/api/erp/sync-config'), api.get('/api/erp/sync-logs')]); setErpData({configs: c.data.items||[], logs: l.data.items||[]}); } catch {} setErpLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadErp(); }, []);
+
+          const doSync = async (id) => { try { const r = await api.post(`/api/erp/sync/${id}/execute`); showToast(`동기화 ${r.data.status}`); loadErp(); } catch(e) { showToast(e.response?.data?.error||'실패',false); } };
+
+          const dirColors = {INBOUND:'text-blue-400',OUTBOUND:'text-emerald-400',BIDIRECTIONAL:'text-purple-400'};
+          return (
+            <div className="space-y-4">
+              <div className="flex gap-2 mb-3">
+                <button onClick={()=>setErpTab('config')} className={`px-3 py-1 rounded text-xs font-bold cursor-pointer ${erpTab==='config'?'bg-blue-600 text-white':'bg-slate-800 text-slate-400'}`}>설정</button>
+                <button onClick={()=>setErpTab('logs')} className={`px-3 py-1 rounded text-xs font-bold cursor-pointer ${erpTab==='logs'?'bg-blue-600 text-white':'bg-slate-800 text-slate-400'}`}>동기화 로그</button>
+              </div>
+              {erpLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {erpTab==='config' && (
+                <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                  <th className="text-left py-2 px-2">설정</th><th className="text-left py-2 px-2">ERP</th><th className="text-left py-2 px-2">방향</th><th className="text-left py-2 px-2">엔티티</th><th className="text-left py-2 px-2">활성</th><th className="py-2 px-2">동기화</th>
+                </tr></thead><tbody>
+                  {erpData.configs.map(c=><tr key={c.config_id} className="border-b border-slate-800/50 text-slate-300">
+                    <td className="py-1.5 px-2 text-blue-400">{c.config_id}</td>
+                    <td className="py-1.5 px-2">{c.erp_type}</td>
+                    <td className={`py-1.5 px-2 font-bold ${dirColors[c.direction]||''}`}>{c.direction}</td>
+                    <td className="py-1.5 px-2">{c.entity_type}</td>
+                    <td className="py-1.5 px-2">{c.is_active?'✓':'✗'}</td>
+                    <td className="py-1.5 px-2 text-center"><button onClick={()=>doSync(c.config_id)} className="text-emerald-400 hover:underline cursor-pointer text-[9px]">실행</button></td>
+                  </tr>)}
+                </tbody></table></div>
+              )}
+              {erpTab==='logs' && (
+                <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                  <th className="text-left py-2 px-2">설정</th><th className="text-left py-2 px-2">상태</th><th className="text-left py-2 px-2">처리</th><th className="text-left py-2 px-2">시작</th><th className="text-left py-2 px-2">오류</th>
+                </tr></thead><tbody>
+                  {erpData.logs.map(l=><tr key={l.sync_id} className="border-b border-slate-800/50 text-slate-300">
+                    <td className="py-1.5 px-2">{l.config_id}</td>
+                    <td className={`py-1.5 px-2 font-bold ${l.status==='SUCCESS'?'text-emerald-400':'text-red-400'}`}>{l.status}</td>
+                    <td className="py-1.5 px-2">{l.records_processed||0}</td>
+                    <td className="py-1.5 px-2">{l.started_at?.slice(0,19)}</td>
+                    <td className="py-1.5 px-2 text-red-400">{l.error_message||'-'}</td>
+                  </tr>)}
+                </tbody></table></div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 3: OPC-UA ────────────────────────── */}
+        {menu==='OPCUA' && (() => {
+          const [opcData, setOpcData] = useState({configs:[], status:null});
+          const [opcLoading, setOpcLoading] = useState(false);
+
+          const loadOpc = async () => { setOpcLoading(true); try { const [c, s] = await Promise.all([api.get('/api/opcua/config'), api.get('/api/opcua/status')]); setOpcData({configs: c.data.items||[], status: s.data}); } catch {} setOpcLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadOpc(); }, []);
+
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">OPC-UA 연결 현황</h3>
+              {opcLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {opcData.status && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                    <p className="text-slate-500 text-[9px] mb-1">연결 상태</p>
+                    <p className={`font-black text-sm ${opcData.status.status==='CONNECTED'?'text-emerald-400':'text-red-400'}`}>{opcData.status.status}</p>
+                  </div>
+                  <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                    <p className="text-slate-500 text-[9px] mb-1">전체 설정</p>
+                    <p className="font-black text-sm text-white">{opcData.status.total_configs}</p>
+                  </div>
+                  <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                    <p className="text-slate-500 text-[9px] mb-1">활성 구독</p>
+                    <p className="font-black text-sm text-blue-400">{opcData.status.active_configs}</p>
+                  </div>
+                </div>
+              )}
+              <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                <th className="text-left py-2 px-2">서버</th><th className="text-left py-2 px-2">설비</th><th className="text-left py-2 px-2">노드</th><th className="text-left py-2 px-2">센서</th><th className="text-left py-2 px-2">활성</th>
+              </tr></thead><tbody>
+                {opcData.configs.map(c=><tr key={c.config_id} className="border-b border-slate-800/50 text-slate-300">
+                  <td className="py-1.5 px-2 text-blue-400 truncate max-w-[200px]">{c.server_url}</td>
+                  <td className="py-1.5 px-2">{c.equip_code}</td>
+                  <td className="py-1.5 px-2 font-mono text-[9px]">{c.node_id}</td>
+                  <td className="py-1.5 px-2">{c.sensor_type}</td>
+                  <td className="py-1.5 px-2">{c.is_active?'✓':'✗'}</td>
+                </tr>)}
+              </tbody></table></div>
+              {/* 최근 수집 데이터 */}
+              {opcData.status?.recent_data?.length > 0 && (
+                <div>
+                  <h4 className="text-slate-400 text-[10px] font-bold mb-2">최근 수집 현황</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {opcData.status.recent_data.map(d=>(
+                      <div key={d.equip_code} className="bg-slate-800/30 p-2 rounded-lg text-[9px]">
+                        <span className="text-blue-400">{d.equip_code}</span>
+                        <span className="text-slate-500 ml-2">{d.last_received?.slice(11,19)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 3: 감사 추적 ─────────────────────── */}
+        {menu==='AUDIT' && (() => {
+          const [auditData, setAuditData] = useState({items:[], total:0});
+          const [auditSum, setAuditSum] = useState(null);
+          const [auditPage, setAuditPage] = useState(1);
+          const [auditLoading, setAuditLoading] = useState(false);
+
+          const loadAudit = async (p=1) => { setAuditLoading(true); try { const [r, s] = await Promise.all([api.get(`/api/audit?page=${p}&page_size=30`), api.get('/api/audit/summary')]); setAuditData(r.data); setAuditSum(s.data); setAuditPage(p); } catch {} setAuditLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadAudit(); }, []);
+
+          const actColors = {CREATE:'text-emerald-400',UPDATE:'text-yellow-400',DELETE:'text-red-400',LOGIN:'text-blue-400'};
+          return (
+            <div className="space-y-4">
+              <h3 className="text-white font-bold text-sm">감사 추적 (Audit Trail)</h3>
+              {auditLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {auditSum && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                    <p className="text-slate-500 text-[9px] mb-1">전체 기록</p>
+                    <p className="font-black text-sm text-white">{auditSum.total_records?.toLocaleString()}</p>
+                  </div>
+                  {auditSum.today_by_action?.slice(0,3).map(a=>(
+                    <div key={a.action} className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                      <p className="text-slate-500 text-[9px] mb-1">오늘 {a.action}</p>
+                      <p className={`font-black text-sm ${actColors[a.action]||'text-white'}`}>{a.count}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                <th className="text-left py-2 px-2">시각</th><th className="text-left py-2 px-2">사용자</th><th className="text-left py-2 px-2">액션</th><th className="text-left py-2 px-2">대상</th><th className="text-left py-2 px-2">IP</th><th className="text-left py-2 px-2">사유</th>
+              </tr></thead><tbody>
+                {auditData.items?.map(a=><tr key={a.audit_id} className="border-b border-slate-800/50 text-slate-300">
+                  <td className="py-1.5 px-2 text-slate-500">{a.created_at?.slice(0,19)}</td>
+                  <td className="py-1.5 px-2 text-blue-400">{a.user_id}</td>
+                  <td className={`py-1.5 px-2 font-bold ${actColors[a.action]||''}`}>{a.action}</td>
+                  <td className="py-1.5 px-2">{a.entity_type}{a.entity_id?`#${a.entity_id}`:''}</td>
+                  <td className="py-1.5 px-2 font-mono text-[9px]">{a.ip_address||'-'}</td>
+                  <td className="py-1.5 px-2">{a.reason||'-'}</td>
+                </tr>)}
+              </tbody></table></div>
+              {auditData.total_pages > 1 && (
+                <div className="flex gap-2 justify-center">
+                  {auditPage > 1 && <button onClick={()=>loadAudit(auditPage-1)} className="px-2 py-1 rounded bg-slate-800 text-slate-400 text-[10px] cursor-pointer">이전</button>}
+                  <span className="text-slate-500 text-[10px] py-1">{auditPage}/{auditData.total_pages}</span>
+                  {auditPage < auditData.total_pages && <button onClick={()=>loadAudit(auditPage+1)} className="px-2 py-1 rounded bg-slate-800 text-slate-400 text-[10px] cursor-pointer">다음</button>}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 3: 다국어 설정 ───────────────────── */}
+        {menu==='I18N' && (() => {
+          const [i18nData, setI18nData] = useState(null);
+          const [locales, setLocales] = useState([]);
+          const [selLocale, setSelLocale] = useState('ko');
+          const [i18nLoading, setI18nLoading] = useState(false);
+
+          const loadI18n = async (loc='ko') => { setI18nLoading(true); try { const [t, l] = await Promise.all([api.get(`/api/i18n/translations?locale=${loc}`), api.get('/api/i18n/locales')]); setI18nData(t.data); setLocales(l.data.locales||[]); } catch {} setI18nLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadI18n(selLocale); }, []);
+
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <h3 className="text-white font-bold text-sm">다국어 번역 관리</h3>
+                <select value={selLocale} onChange={e=>{setSelLocale(e.target.value); loadI18n(e.target.value);}} className="bg-slate-800 text-white text-xs rounded px-2 py-1 border border-slate-700">
+                  {locales.map(l=><option key={l.locale} value={l.locale}>{l.locale} ({l.key_count})</option>)}
+                  {locales.length===0 && <option value="ko">ko</option>}
+                </select>
+              </div>
+              {i18nLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {i18nData && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                    <p className="text-slate-500 text-[9px] mb-1">로케일</p>
+                    <p className="font-black text-sm text-blue-400">{i18nData.locale}</p>
+                  </div>
+                  <div className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                    <p className="text-slate-500 text-[9px] mb-1">번역 키 수</p>
+                    <p className="font-black text-sm text-white">{i18nData.total}</p>
+                  </div>
+                </div>
+              )}
+              {i18nData?.by_category && Object.entries(i18nData.by_category).map(([cat, msgs])=>(
+                <div key={cat} className="bg-[#1e293b]/10 p-3 rounded-xl border border-slate-800/50">
+                  <p className="text-blue-400 font-bold text-xs mb-2">{cat}</p>
+                  <div className="space-y-1">
+                    {Object.entries(msgs).map(([k,v])=>(
+                      <div key={k} className="flex justify-between text-[10px] py-0.5 border-b border-slate-800/30">
+                        <span className="text-slate-400 font-mono">{k}</span>
+                        <span className="text-white">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* ── Phase 3: 리소스 관리 ───────────────────── */}
+        {menu==='RESOURCE' && (() => {
+          const [resData, setResData] = useState({items:[], summary:[]});
+          const [resFilter, setResFilter] = useState('');
+          const [resLoading, setResLoading] = useState(false);
+
+          const loadRes = async (rt='') => { setResLoading(true); try { const [r, s] = await Promise.all([api.get(`/api/resources${rt?`?resource_type=${rt}`:''}`), api.get('/api/resources/summary')]); setResData({items: r.data.items||[], summary: s.data.summary||[]}); } catch {} setResLoading(false); };
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useEffect(() => { loadRes(); }, []);
+
+          const typeColors = {EQUIPMENT:'text-blue-400',WORKER:'text-emerald-400',MOLD:'text-purple-400',TOOL:'text-yellow-400',GAUGE:'text-pink-400'};
+          const statColors = {AVAILABLE:'text-emerald-400',IN_USE:'text-blue-400',MAINTENANCE:'text-yellow-400',UNAVAILABLE:'text-red-400'};
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <h3 className="text-white font-bold text-sm">통합 리소스 관리</h3>
+                <select value={resFilter} onChange={e=>{setResFilter(e.target.value); loadRes(e.target.value);}} className="bg-slate-800 text-white text-xs rounded px-2 py-1 border border-slate-700">
+                  <option value="">전체</option>
+                  <option value="EQUIPMENT">설비</option>
+                  <option value="WORKER">작업자</option>
+                  <option value="MOLD">금형</option>
+                  <option value="TOOL">치공구</option>
+                  <option value="GAUGE">게이지</option>
+                </select>
+              </div>
+              {resLoading && <p className="text-slate-500 text-xs">로딩 중...</p>}
+              {/* 타입별 요약 */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {resData.summary.map(s=>(
+                  <div key={s.type} className="bg-[#1e293b]/20 p-3 rounded-xl border border-slate-800">
+                    <p className={`font-bold text-xs mb-1 ${typeColors[s.type]||'text-white'}`}>{s.type}</p>
+                    <p className="text-white font-black text-sm">{s.total}</p>
+                    {s.avg_utilization!=null && <p className="text-slate-500 text-[9px]">가동률 {s.avg_utilization}%</p>}
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {Object.entries(s.by_status||{}).map(([st,cnt])=>(
+                        <span key={st} className={`text-[8px] ${statColors[st]||'text-slate-400'}`}>{st}:{cnt}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* 리소스 목록 */}
+              <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="border-b border-slate-800 text-slate-500">
+                <th className="text-left py-2 px-2">코드</th><th className="text-left py-2 px-2">타입</th><th className="text-left py-2 px-2">이름</th><th className="text-left py-2 px-2">상태</th><th className="text-left py-2 px-2">위치</th><th className="text-right py-2 px-2">가동률</th>
+              </tr></thead><tbody>
+                {resData.items.map(r=><tr key={r.resource_id} className="border-b border-slate-800/50 text-slate-300">
+                  <td className="py-1.5 px-2 text-blue-400">{r.resource_code}</td>
+                  <td className={`py-1.5 px-2 font-bold ${typeColors[r.resource_type]||''}`}>{r.resource_type}</td>
+                  <td className="py-1.5 px-2 text-white">{r.name}</td>
+                  <td className={`py-1.5 px-2 font-bold ${statColors[r.status]||''}`}>{r.status}</td>
+                  <td className="py-1.5 px-2">{r.location||'-'}</td>
+                  <td className="py-1.5 px-2 text-right">{r.utilization>0?`${r.utilization}%`:'-'}</td>
+                </tr>)}
+              </tbody></table></div>
             </div>
           );
         })()}

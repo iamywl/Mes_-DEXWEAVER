@@ -59,6 +59,11 @@ from api_modules import mes_recipe
 from api_modules import mes_datacollect
 from api_modules import mes_document
 from api_modules import mes_labor
+from api_modules import mes_erp
+from api_modules import mes_opcua
+from api_modules import mes_i18n
+from api_modules import mes_audit
+from api_modules import mes_resource
 
 log = logging.getLogger(__name__)
 
@@ -964,6 +969,113 @@ async def get_skills(process_code: str = None, skill_level: str = None,
 @app.post("/api/labor/skills")
 async def upsert_skill(request: Request, user=Depends(admin_required)):
     return await mes_labor.upsert_worker_skill(await request.json())
+
+
+# ── Phase 3: ERP 연동 (FN-059) ──────────────────────────────
+
+@app.post("/api/erp/sync-config")
+async def create_erp_sync(request: Request, user=Depends(admin_required)):
+    return await mes_erp.create_sync_config(await request.json())
+
+
+@app.get("/api/erp/sync-config")
+async def get_erp_syncs(request: Request = None, user=Depends(auth_required)):
+    return await mes_erp.get_sync_configs()
+
+
+@app.post("/api/erp/sync/{config_id}/execute")
+async def execute_erp_sync(config_id: int, request: Request,
+                           user=Depends(admin_required)):
+    return await mes_erp.execute_sync(config_id, user.get("user_id", "system"))
+
+
+@app.get("/api/erp/sync-logs")
+async def get_erp_logs(config_id: int = None, status: str = None,
+                       request: Request = None, user=Depends(auth_required)):
+    return await mes_erp.get_sync_logs(config_id, status)
+
+
+# ── Phase 3: OPC-UA 연동 (FN-060~061) ───────────────────────
+
+@app.post("/api/opcua/config")
+async def create_opcua_cfg(request: Request, user=Depends(admin_required)):
+    return await mes_opcua.save_opcua_config(await request.json())
+
+
+@app.get("/api/opcua/config")
+async def get_opcua_cfgs(request: Request = None, user=Depends(auth_required)):
+    return await mes_opcua.get_opcua_configs()
+
+
+@app.get("/api/opcua/status")
+async def opcua_status(request: Request = None, user=Depends(auth_required)):
+    return await mes_opcua.get_opcua_status()
+
+
+# ── Phase 3: 감사 추적 (FN-062~063) ─────────────────────────
+
+@app.get("/api/audit")
+async def get_audits(entity_type: str = None, entity_id: str = None,
+                     user_id: str = None, action: str = None,
+                     date_from: str = None, date_to: str = None,
+                     page: int = 1, page_size: int = 50,
+                     request: Request = None, user=Depends(admin_required)):
+    return await mes_audit.get_audit_logs(
+        entity_type, entity_id, user_id, action, date_from, date_to, page, page_size)
+
+
+@app.get("/api/audit/summary")
+async def audit_summary(request: Request = None, user=Depends(admin_required)):
+    return await mes_audit.get_audit_summary()
+
+
+# ── Phase 3: 다국어 i18n (FN-064) ───────────────────────────
+
+@app.get("/api/i18n/translations")
+async def get_i18n(locale: str = None, request: Request = None,
+                   user=Depends(auth_required)):
+    return await mes_i18n.get_translations(locale)
+
+
+@app.get("/api/i18n/locales")
+async def get_locales(request: Request = None, user=Depends(auth_required)):
+    return await mes_i18n.get_supported_locales()
+
+
+@app.post("/api/i18n/translations")
+async def upsert_i18n(request: Request, user=Depends(admin_required)):
+    return await mes_i18n.upsert_translation(await request.json())
+
+
+@app.delete("/api/i18n/translations/{locale}/{msg_key}")
+async def delete_i18n(locale: str, msg_key: str, request: Request,
+                      user=Depends(admin_required)):
+    return await mes_i18n.delete_translation(locale, msg_key)
+
+
+# ── Phase 3: 리소스 관리 (FN-066) ───────────────────────────
+
+@app.get("/api/resources")
+async def get_res(resource_type: str = None, status: str = None,
+                  keyword: str = None, request: Request = None,
+                  user=Depends(auth_required)):
+    return await mes_resource.get_resources(resource_type, status, keyword)
+
+
+@app.post("/api/resources")
+async def create_res(request: Request, user=Depends(admin_required)):
+    return await mes_resource.create_resource(await request.json())
+
+
+@app.put("/api/resources/{resource_id}/status")
+async def update_res_status(resource_id: int, request: Request,
+                            user=Depends(admin_required)):
+    return await mes_resource.update_resource_status(resource_id, await request.json())
+
+
+@app.get("/api/resources/summary")
+async def res_summary(request: Request = None, user=Depends(auth_required)):
+    return await mes_resource.get_resource_summary()
 
 
 # ── Health Check (no auth) ───────────────────────────────────

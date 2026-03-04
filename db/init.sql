@@ -606,6 +606,99 @@ CREATE INDEX IF NOT EXISTS idx_doc_item ON documents(item_code);
 CREATE INDEX IF NOT EXISTS idx_ws_user ON worker_skills(user_id);
 CREATE INDEX IF NOT EXISTS idx_ws_process ON worker_skills(process_code);
 
+-- =============================================================
+-- ██  PHASE 3 TABLES (4+2)  ██
+-- =============================================================
+
+-- ── ERP 연동 설정 (REQ-045, FN-059) ──────────────────────
+CREATE TABLE IF NOT EXISTS erp_sync_config (
+    sync_id           SERIAL       PRIMARY KEY,
+    erp_type          VARCHAR(30)  NOT NULL,
+    connection_url    VARCHAR(500) NOT NULL,
+    sync_direction    VARCHAR(15)  DEFAULT 'INBOUND'
+                      CHECK (sync_direction IN ('INBOUND','OUTBOUND','BIDIRECTIONAL')),
+    entity_type       VARCHAR(30)  NOT NULL
+                      CHECK (entity_type IN ('ORDER','INVENTORY','BOM','ITEM')),
+    mapping_config    JSONB        DEFAULT '{}',
+    sync_interval_min INTEGER      DEFAULT 60,
+    is_active         BOOLEAN      DEFAULT TRUE,
+    created_at        TIMESTAMP    DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS erp_sync_log (
+    log_id            SERIAL       PRIMARY KEY,
+    sync_id           INTEGER      REFERENCES erp_sync_config(sync_id),
+    direction         VARCHAR(15)  NOT NULL,
+    entity_type       VARCHAR(30)  NOT NULL,
+    records_processed INTEGER      DEFAULT 0,
+    records_success   INTEGER      DEFAULT 0,
+    records_failed    INTEGER      DEFAULT 0,
+    error_detail      TEXT,
+    synced_at         TIMESTAMP    DEFAULT NOW()
+);
+
+-- ── OPC-UA 설정 (REQ-046, FN-060) ────────────────────────
+CREATE TABLE IF NOT EXISTS opcua_config (
+    config_id             SERIAL       PRIMARY KEY,
+    server_url            VARCHAR(500) NOT NULL,
+    equip_code            VARCHAR(20)  NOT NULL,
+    node_id               VARCHAR(200) NOT NULL,
+    sensor_type           VARCHAR(50)  NOT NULL,
+    subscribe_interval_ms INTEGER      DEFAULT 1000,
+    is_active             BOOLEAN      DEFAULT TRUE,
+    created_at            TIMESTAMP    DEFAULT NOW()
+);
+
+-- ── 감사 추적 (REQ-049, FN-063) ──────────────────────────
+CREATE TABLE IF NOT EXISTS audit_trail (
+    audit_id    BIGSERIAL    PRIMARY KEY,
+    table_name  VARCHAR(50)  NOT NULL,
+    record_id   VARCHAR(100) NOT NULL,
+    action      VARCHAR(10)  NOT NULL
+                CHECK (action IN ('INSERT','UPDATE','DELETE')),
+    old_value   JSONB,
+    new_value   JSONB,
+    changed_by  VARCHAR(50)  NOT NULL,
+    changed_at  TIMESTAMP    DEFAULT NOW(),
+    ip_address  VARCHAR(45),
+    reason      TEXT
+);
+
+-- ── 다국어 지원 (REQ-047, FN-062) ────────────────────────
+CREATE TABLE IF NOT EXISTS translations (
+    trans_id    SERIAL       PRIMARY KEY,
+    locale      VARCHAR(5)   NOT NULL DEFAULT 'ko',
+    key         VARCHAR(200) NOT NULL,
+    value       TEXT         NOT NULL,
+    UNIQUE (locale, key)
+);
+
+-- ── 자원 통합 관리 (REQ-051) ─────────────────────────────
+CREATE TABLE IF NOT EXISTS resources (
+    resource_id     SERIAL       PRIMARY KEY,
+    resource_code   VARCHAR(30)  NOT NULL UNIQUE,
+    resource_type   VARCHAR(20)  NOT NULL
+                    CHECK (resource_type IN ('EQUIPMENT','WORKER','MOLD','TOOL','GAUGE')),
+    resource_name   VARCHAR(100),
+    process_codes   JSONB        DEFAULT '[]',
+    status          VARCHAR(20)  DEFAULT 'AVAILABLE'
+                    CHECK (status IN ('AVAILABLE','IN_USE','MAINTENANCE','RETIRED')),
+    capabilities    JSONB        DEFAULT '[]',
+    created_at      TIMESTAMP    DEFAULT NOW()
+);
+
+-- ── Phase 3 인덱스 ────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_erp_cfg_active ON erp_sync_config(is_active);
+CREATE INDEX IF NOT EXISTS idx_erp_log_sync ON erp_sync_log(sync_id);
+CREATE INDEX IF NOT EXISTS idx_erp_log_time ON erp_sync_log(synced_at);
+CREATE INDEX IF NOT EXISTS idx_opcua_equip ON opcua_config(equip_code);
+CREATE INDEX IF NOT EXISTS idx_audit_table ON audit_trail(table_name);
+CREATE INDEX IF NOT EXISTS idx_audit_record ON audit_trail(table_name, record_id);
+CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_trail(changed_at);
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_trail(changed_by);
+CREATE INDEX IF NOT EXISTS idx_trans_locale ON translations(locale);
+CREATE INDEX IF NOT EXISTS idx_resource_type ON resources(resource_type);
+
 
 -- =============================================================
 -- ██  MASSIVE SEED DATA  ██
