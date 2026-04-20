@@ -1,0 +1,199 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 600" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .ent{font-size:11px;font-weight:700;fill:#111}
+    .col{font-size:9.5px;fill:#222}
+    .pk{font-weight:700}
+    .box{fill:#fff;stroke:#222;stroke-width:1.2}
+    .head{fill:#eef2f8;stroke:#222;stroke-width:1.2}
+    .rel{stroke:#222;stroke-width:1;fill:none}
+    .crow{font-size:10px;fill:#444}
+  </style>
+
+  <text x="460" y="22" text-anchor="middle" class="ttl">Fig. 3  Entity-Relationship Diagram (Phase-0, 21 tables — core subset shown)</text>
+
+  <!-- users -->
+  <rect x="30" y="50" width="150" height="20" class="head"/>
+  <text x="105" y="65" text-anchor="middle" class="ent">users</text>
+  <rect x="30" y="70" width="150" height="78" class="box"/>
+  <text x="38" y="84" class="col pk">PK  user_id</text>
+  <text x="38" y="98" class="col">password_hash (bcrypt)</text>
+  <text x="38" y="112" class="col">name, email, role</text>
+  <text x="38" y="126" class="col">created_at, last_login</text>
+  <text x="38" y="140" class="col">is_active</text>
+
+  <!-- user_permissions -->
+  <rect x="30" y="170" width="150" height="20" class="head"/>
+  <text x="105" y="185" text-anchor="middle" class="ent">user_permissions</text>
+  <rect x="30" y="190" width="150" height="62" class="box"/>
+  <text x="38" y="204" class="col pk">PK  perm_id</text>
+  <text x="38" y="218" class="col">FK  user_id</text>
+  <text x="38" y="232" class="col">menu, can_read, can_write</text>
+
+  <!-- items -->
+  <rect x="220" y="50" width="160" height="20" class="head"/>
+  <text x="300" y="65" text-anchor="middle" class="ent">items</text>
+  <rect x="220" y="70" width="160" height="92" class="box"/>
+  <text x="228" y="84" class="col pk">PK  item_code</text>
+  <text x="228" y="98" class="col">name, category</text>
+  <text x="228" y="112" class="col">unit, spec</text>
+  <text x="228" y="126" class="col">safety_stock</text>
+  <text x="228" y="140" class="col">created_at</text>
+
+  <!-- bom -->
+  <rect x="220" y="180" width="160" height="20" class="head"/>
+  <text x="300" y="195" text-anchor="middle" class="ent">bom</text>
+  <rect x="220" y="200" width="160" height="78" class="box"/>
+  <text x="228" y="214" class="col pk">PK  bom_id</text>
+  <text x="228" y="228" class="col">FK  parent_item</text>
+  <text x="228" y="242" class="col">FK  child_item</text>
+  <text x="228" y="256" class="col">qty_per_unit, loss_rate</text>
+  <text x="228" y="270" class="col">level (auto)</text>
+
+  <!-- processes -->
+  <rect x="420" y="50" width="160" height="20" class="head"/>
+  <text x="500" y="65" text-anchor="middle" class="ent">processes</text>
+  <rect x="420" y="70" width="160" height="78" class="box"/>
+  <text x="428" y="84" class="col pk">PK  process_code</text>
+  <text x="428" y="98" class="col">name, std_time_min</text>
+  <text x="428" y="112" class="col">description</text>
+  <text x="428" y="126" class="col">FK  equip_code</text>
+
+  <!-- routings -->
+  <rect x="420" y="170" width="160" height="20" class="head"/>
+  <text x="500" y="185" text-anchor="middle" class="ent">routings</text>
+  <rect x="420" y="190" width="160" height="78" class="box"/>
+  <text x="428" y="204" class="col pk">PK  routing_id</text>
+  <text x="428" y="218" class="col">FK  item_code</text>
+  <text x="428" y="232" class="col">FK  process_code</text>
+  <text x="428" y="246" class="col">seq, cycle_time</text>
+
+  <!-- equipments -->
+  <rect x="620" y="50" width="160" height="20" class="head"/>
+  <text x="700" y="65" text-anchor="middle" class="ent">equipments</text>
+  <rect x="620" y="70" width="160" height="92" class="box"/>
+  <text x="628" y="84" class="col pk">PK  equip_code</text>
+  <text x="628" y="98" class="col">name, capacity_per_hour</text>
+  <text x="628" y="112" class="col">FK  process_code</text>
+  <text x="628" y="126" class="col">install_date, status</text>
+
+  <!-- equip_status_log -->
+  <rect x="620" y="180" width="160" height="20" class="head"/>
+  <text x="700" y="195" text-anchor="middle" class="ent">equip_status_log</text>
+  <rect x="620" y="200" width="160" height="78" class="box"/>
+  <text x="628" y="214" class="col pk">PK  log_id</text>
+  <text x="628" y="228" class="col">FK  equip_code</text>
+  <text x="628" y="242" class="col">status, reason</text>
+  <text x="628" y="256" class="col">started_at, ended_at</text>
+
+  <!-- production_plans -->
+  <rect x="30" y="290" width="160" height="20" class="head"/>
+  <text x="110" y="305" text-anchor="middle" class="ent">production_plans</text>
+  <rect x="30" y="310" width="160" height="92" class="box"/>
+  <text x="38" y="324" class="col pk">PK  plan_id</text>
+  <text x="38" y="338" class="col">FK  item_code</text>
+  <text x="38" y="352" class="col">plan_qty, due_date</text>
+  <text x="38" y="366" class="col">priority, status</text>
+  <text x="38" y="380" class="col">created_at</text>
+
+  <!-- work_orders -->
+  <rect x="220" y="290" width="160" height="20" class="head"/>
+  <text x="300" y="305" text-anchor="middle" class="ent">work_orders</text>
+  <rect x="220" y="310" width="160" height="92" class="box"/>
+  <text x="228" y="324" class="col pk">PK  wo_id</text>
+  <text x="228" y="338" class="col">FK  plan_id</text>
+  <text x="228" y="352" class="col">FK  equip_code</text>
+  <text x="228" y="366" class="col">work_date, line_id</text>
+  <text x="228" y="380" class="col">status, progress_pct</text>
+
+  <!-- work_results -->
+  <rect x="420" y="290" width="160" height="20" class="head"/>
+  <text x="500" y="305" text-anchor="middle" class="ent">work_results</text>
+  <rect x="420" y="310" width="160" height="92" class="box"/>
+  <text x="428" y="324" class="col pk">PK  result_id</text>
+  <text x="428" y="338" class="col">FK  wo_id</text>
+  <text x="428" y="352" class="col">good_qty, defect_qty</text>
+  <text x="428" y="366" class="col">FK  defect_code</text>
+  <text x="428" y="380" class="col">start_time, end_time</text>
+
+  <!-- inspections -->
+  <rect x="620" y="290" width="160" height="20" class="head"/>
+  <text x="700" y="305" text-anchor="middle" class="ent">inspections</text>
+  <rect x="620" y="310" width="160" height="92" class="box"/>
+  <text x="628" y="324" class="col pk">PK  inspection_id</text>
+  <text x="628" y="338" class="col">FK  item_code, lot_no</text>
+  <text x="628" y="352" class="col">type (IN / PROC / OUT)</text>
+  <text x="628" y="366" class="col">judgment, fail_items</text>
+  <text x="628" y="380" class="col">inspector, created_at</text>
+
+  <!-- inventory -->
+  <rect x="30" y="430" width="160" height="20" class="head"/>
+  <text x="110" y="445" text-anchor="middle" class="ent">inventory</text>
+  <rect x="30" y="450" width="160" height="78" class="box"/>
+  <text x="38" y="464" class="col pk">PK  inv_id</text>
+  <text x="38" y="478" class="col">FK  item_code</text>
+  <text x="38" y="492" class="col">warehouse, location</text>
+  <text x="38" y="506" class="col">qty, reserved_qty</text>
+  <text x="38" y="520" class="col">updated_at</text>
+
+  <!-- inventory_transactions -->
+  <rect x="220" y="430" width="160" height="20" class="head"/>
+  <text x="300" y="445" text-anchor="middle" class="ent">inventory_transactions</text>
+  <rect x="220" y="450" width="160" height="78" class="box"/>
+  <text x="228" y="464" class="col pk">PK  tx_id</text>
+  <text x="228" y="478" class="col">FK  item_code, lot_no</text>
+  <text x="228" y="492" class="col">tx_type (IN / OUT)</text>
+  <text x="228" y="506" class="col">qty, slip_no</text>
+  <text x="228" y="520" class="col">tx_date</text>
+
+  <!-- equip_sensors -->
+  <rect x="420" y="430" width="160" height="20" class="head"/>
+  <text x="500" y="445" text-anchor="middle" class="ent">equip_sensors</text>
+  <rect x="420" y="450" width="160" height="78" class="box"/>
+  <text x="428" y="464" class="col pk">PK  sensor_id</text>
+  <text x="428" y="478" class="col">FK  equip_code</text>
+  <text x="428" y="492" class="col">vibration, temperature</text>
+  <text x="428" y="506" class="col">current, pressure</text>
+  <text x="428" y="520" class="col">collected_at (1 Hz)</text>
+
+  <!-- ai_forecasts -->
+  <rect x="620" y="430" width="160" height="20" class="head"/>
+  <text x="700" y="445" text-anchor="middle" class="ent">ai_forecasts</text>
+  <rect x="620" y="450" width="160" height="78" class="box"/>
+  <text x="628" y="464" class="col pk">PK  forecast_id</text>
+  <text x="628" y="478" class="col">model (Prophet/XGB/IF)</text>
+  <text x="628" y="492" class="col">target_id, target_type</text>
+  <text x="628" y="506" class="col">prediction, confidence</text>
+  <text x="628" y="520" class="col">created_at</text>
+
+  <!-- relations -->
+  <line x1="180" y1="120" x2="180" y2="200" class="rel"/>
+  <line x1="180" y1="200" x2="220" y2="220" class="rel"/>
+  <text x="190" y="180" class="crow">1 : N</text>
+
+  <line x1="380" y1="100" x2="420" y2="100" class="rel"/>
+  <text x="385" y="94" class="crow">1 : N</text>
+  <line x1="380" y1="220" x2="420" y2="220" class="rel"/>
+  <text x="385" y="214" class="crow">1 : N</text>
+
+  <line x1="580" y1="100" x2="620" y2="100" class="rel"/>
+  <line x1="700" y1="162" x2="700" y2="200" class="rel"/>
+  <text x="710" y="184" class="crow">1 : N</text>
+
+  <line x1="190" y1="350" x2="220" y2="350" class="rel"/>
+  <text x="195" y="344" class="crow">1 : N</text>
+  <line x1="380" y1="350" x2="420" y2="350" class="rel"/>
+  <text x="385" y="344" class="crow">1 : N</text>
+  <line x1="580" y1="350" x2="620" y2="350" class="rel"/>
+  <text x="585" y="344" class="crow">N : 1</text>
+
+  <line x1="190" y1="490" x2="220" y2="490" class="rel"/>
+  <text x="195" y="484" class="crow">1 : N</text>
+
+  <line x1="700" y1="278" x2="700" y2="430" class="rel"/>
+  <text x="710" y="410" class="crow">1 : N (sensors)</text>
+  <line x1="500" y1="402" x2="500" y2="430" class="rel"/>
+
+  <text x="40" y="555" class="crow">▸ ACID guarantee via PostgreSQL row-level locks    ▸ FK ON DELETE RESTRICT    ▸ B-Tree index on (item_code, work_date, lot_no)</text>
+  <text x="40" y="572" class="crow">▸ Phase-1 extends schema to 40 tables : capa_master, spc_rule_settings, oee_daily, notifications, lot_genealogy</text>
+</svg>

@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 600" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#222"/>
+    </marker>
+    <symbol id="ic-k8s" viewBox="-50 -50 100 100">
+      <polygon points="0,-44 38,-22 38,22 0,44 -38,22 -38,-22" fill="#326CE5" stroke="#fff" stroke-width="3"/>
+      <circle cx="0" cy="0" r="14" fill="none" stroke="#fff" stroke-width="2.5"/>
+      <g stroke="#fff" stroke-width="2.5">
+        <line x1="0" y1="-14" x2="0" y2="-32"/>
+        <line x1="14" y1="0" x2="32" y2="0"/>
+        <line x1="0" y1="14" x2="0" y2="32"/>
+        <line x1="-14" y1="0" x2="-32" y2="0"/>
+      </g>
+    </symbol>
+    <symbol id="ic-cilium" viewBox="-50 -50 100 100">
+      <ellipse cx="0" cy="5" rx="34" ry="28" fill="#F8C517"/>
+      <rect x="-30" y="-12" width="60" height="8" fill="#111"/>
+      <rect x="-30" y="6"  width="60" height="8" fill="#111"/>
+      <rect x="-30" y="22" width="60" height="8" fill="#111"/>
+      <ellipse cx="-22" cy="-18" rx="18" ry="10" fill="#fff" opacity="0.8" transform="rotate(-25)"/>
+      <ellipse cx="22"  cy="-18" rx="18" ry="10" fill="#fff" opacity="0.8" transform="rotate( 25)"/>
+      <circle cx="0" cy="-25" r="4" fill="#111"/>
+    </symbol>
+    <symbol id="ic-react" viewBox="-50 -50 100 100">
+      <circle r="6" fill="#61DAFB"/>
+      <ellipse rx="42" ry="16" fill="none" stroke="#61DAFB" stroke-width="3"/>
+      <ellipse rx="42" ry="16" fill="none" stroke="#61DAFB" stroke-width="3" transform="rotate(60)"/>
+      <ellipse rx="42" ry="16" fill="none" stroke="#61DAFB" stroke-width="3" transform="rotate(120)"/>
+    </symbol>
+    <symbol id="ic-fastapi" viewBox="-50 -50 100 100">
+      <circle r="42" fill="#009688"/>
+      <polygon points="-12,-30 18,-6 -2,-2 12,30 -18,6 2,2" fill="#fff"/>
+    </symbol>
+    <symbol id="ic-postgres" viewBox="-50 -50 100 100">
+      <ellipse cx="0" cy="0" rx="40" ry="38" fill="#336791"/>
+      <ellipse cx="-12" cy="-30" rx="10" ry="14" fill="#336791"/>
+      <ellipse cx="12" cy="-30" rx="10" ry="14" fill="#336791"/>
+      <circle cx="-10" cy="-8" r="5" fill="#fff"/>
+      <circle cx="-10" cy="-8" r="2" fill="#111"/>
+      <path d="M-30,15 Q-15,30 0,28 Q15,30 30,15" fill="none" stroke="#fff" stroke-width="2.5"/>
+    </symbol>
+    <symbol id="ic-prometheus" viewBox="-50 -50 100 100">
+      <path d="M0,-44 Q15,-20 22,-8 Q30,8 22,24 Q12,40 -12,40 Q-30,28 -28,8 Q-26,-12 -10,-22 Q0,-12 -4,0 Q-2,-22 0,-44 Z" fill="#E6522C"/>
+      <rect x="-22" y="14" width="44" height="6" fill="#111"/>
+      <circle cx="0" cy="6" r="6" fill="#fff"/>
+    </symbol>
+    <symbol id="ic-grafana" viewBox="-50 -50 100 100">
+      <circle r="38" fill="#F46800"/>
+      <path d="M-22,4 H22 L18,22 H-18 Z" fill="#fff"/>
+      <rect x="-3" y="-22" width="6" height="22" fill="#fff"/>
+      <circle cx="0" cy="-26" r="6" fill="#fff"/>
+    </symbol>
+  </defs>
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lbl{font-size:11px;fill:#111;font-weight:600}
+    .sub{font-size:10px;fill:#444}
+    .ns{font-size:11px;font-weight:700;fill:#666;letter-spacing:1px}
+    .pod{fill:#eaf1fb;stroke:#1f3a93;stroke-width:1.2}
+    .svc{fill:#fef7f0;stroke:#c0392b;stroke-width:1.2;stroke-dasharray:4,2}
+    .db{fill:#f0f6f0;stroke:#1e7c39;stroke-width:1.2}
+    .ingress{fill:#fff5d6;stroke:#b58800;stroke-width:1.4}
+    .cm{fill:#f6f0f6;stroke:#6f3a8c;stroke-width:1.2}
+    .arr{stroke:#222;stroke-width:1.1;fill:none}
+    .arrD{stroke:#777;stroke-width:1;fill:none;stroke-dasharray:3,3}
+    .ns-bg{fill:#fafafa;stroke:#aaa;stroke-width:1;stroke-dasharray:6,4}
+  </style>
+
+  <text x="460" y="22" text-anchor="middle" class="ttl">Fig. 2  Kubernetes Pod Topology &amp; Cilium eBPF NetworkPolicy</text>
+
+  <use href="#ic-k8s" x="780" y="36" width="36" height="36"/>
+  <text x="836" y="60" font-size="10" fill="#666">Kubernetes v1.30</text>
+
+  <!-- External -->
+  <ellipse cx="80" cy="130" rx="44" ry="24" fill="#fff" stroke="#222"/>
+  <text x="80" y="126" text-anchor="middle" class="lbl">User</text>
+  <text x="80" y="142" text-anchor="middle" class="sub">Browser</text>
+
+  <!-- Ingress -->
+  <rect x="170" y="100" width="140" height="60" rx="4" class="ingress"/>
+  <use href="#ic-cilium" x="178" y="110" width="38" height="38"/>
+  <text x="260" y="120" text-anchor="middle" class="lbl">Cilium Ingress</text>
+  <text x="260" y="134" text-anchor="middle" class="sub">L7 routing · TLS</text>
+  <text x="260" y="148" text-anchor="middle" class="sub">/api/* · /*</text>
+
+  <!-- Namespace -->
+  <rect x="160" y="180" width="730" height="290" rx="6" class="ns-bg"/>
+  <use href="#ic-k8s" x="170" y="186" width="22" height="22"/>
+  <text x="200" y="202" class="ns">NAMESPACE :  mes-system</text>
+
+  <!-- Frontend -->
+  <rect x="200" y="220" width="200" height="40" rx="3" class="svc"/>
+  <text x="300" y="236" text-anchor="middle" class="lbl">svc/mes-frontend</text>
+  <text x="300" y="250" text-anchor="middle" class="sub">ClusterIP : 80</text>
+
+  <rect x="200" y="270" width="95" height="60" rx="3" class="pod"/>
+  <use href="#ic-react" x="208" y="278" width="36" height="36"/>
+  <text x="247" y="294" text-anchor="middle" class="sub">pod/fe-1</text>
+  <text x="247" y="308" text-anchor="middle" class="sub">React</text>
+  <text x="247" y="322" text-anchor="middle" class="sub">Ready ✓</text>
+
+  <rect x="305" y="270" width="95" height="60" rx="3" class="pod"/>
+  <use href="#ic-react" x="312" y="278" width="36" height="36"/>
+  <text x="352" y="294" text-anchor="middle" class="sub">pod/fe-2</text>
+  <text x="352" y="308" text-anchor="middle" class="sub">React</text>
+  <text x="352" y="322" text-anchor="middle" class="sub">Ready ✓</text>
+
+  <!-- Backend -->
+  <rect x="430" y="220" width="220" height="40" rx="3" class="svc"/>
+  <text x="540" y="236" text-anchor="middle" class="lbl">svc/mes-api</text>
+  <text x="540" y="250" text-anchor="middle" class="sub">ClusterIP : 8000</text>
+
+  <rect x="425" y="270" width="78" height="60" rx="3" class="pod"/>
+  <use href="#ic-fastapi" x="438" y="278" width="32" height="32"/>
+  <text x="464" y="294" text-anchor="middle" class="sub">api-1</text>
+  <text x="464" y="308" text-anchor="middle" class="sub">FastAPI</text>
+  <text x="464" y="322" text-anchor="middle" class="sub">Ready ✓</text>
+  <rect x="510" y="270" width="78" height="60" rx="3" class="pod"/>
+  <use href="#ic-fastapi" x="523" y="278" width="32" height="32"/>
+  <text x="549" y="294" text-anchor="middle" class="sub">api-2</text>
+  <text x="549" y="308" text-anchor="middle" class="sub">FastAPI</text>
+  <text x="549" y="322" text-anchor="middle" class="sub">Ready ✓</text>
+  <rect x="595" y="270" width="78" height="60" rx="3" class="pod"/>
+  <use href="#ic-fastapi" x="608" y="278" width="32" height="32"/>
+  <text x="634" y="294" text-anchor="middle" class="sub">api-3</text>
+  <text x="634" y="308" text-anchor="middle" class="sub">FastAPI</text>
+  <text x="634" y="322" text-anchor="middle" class="sub">Ready ✓</text>
+
+  <!-- DB -->
+  <rect x="430" y="350" width="220" height="80" rx="3" class="db"/>
+  <use href="#ic-postgres" x="440" y="358" width="50" height="50"/>
+  <text x="570" y="372" text-anchor="middle" class="lbl">StatefulSet : postgres-0</text>
+  <text x="570" y="388" text-anchor="middle" class="sub">PostgreSQL 15</text>
+  <text x="570" y="402" text-anchor="middle" class="sub">PVC 50 Gi (RWO)</text>
+  <text x="570" y="416" text-anchor="middle" class="sub">primary · WAL streaming</text>
+
+  <!-- ConfigMap / Secret -->
+  <rect x="700" y="220" width="170" height="50" rx="3" class="cm"/>
+  <text x="785" y="240" text-anchor="middle" class="lbl">ConfigMap</text>
+  <text x="785" y="256" text-anchor="middle" class="sub">app source / env / nginx</text>
+
+  <rect x="700" y="280" width="170" height="50" rx="3" class="cm"/>
+  <text x="785" y="300" text-anchor="middle" class="lbl">Secret</text>
+  <text x="785" y="316" text-anchor="middle" class="sub">DB pwd · JWT key · TLS</text>
+
+  <!-- Monitoring -->
+  <rect x="200" y="350" width="200" height="80" rx="3" class="pod"/>
+  <use href="#ic-prometheus" x="208" y="358" width="44" height="44"/>
+  <use href="#ic-grafana"    x="252" y="358" width="44" height="44"/>
+  <text x="320" y="372" text-anchor="middle" class="lbl">Prometheus + Grafana</text>
+  <text x="320" y="388" text-anchor="middle" class="sub">/metrics scrape · alerts</text>
+  <text x="320" y="402" text-anchor="middle" class="sub">OEE · latency · 5xx rate</text>
+  <text x="320" y="418" text-anchor="middle" class="sub">PagerDuty integration</text>
+
+  <!-- arrows -->
+  <line x1="124" y1="130" x2="170" y2="130" class="arr" marker-end="url(#arr2)"/>
+  <line x1="260" y1="160" x2="260" y2="220" class="arr" marker-end="url(#arr2)"/>
+  <line x1="300" y1="260" x2="300" y2="270" class="arr" marker-end="url(#arr2)"/>
+  <line x1="352" y1="260" x2="352" y2="270" class="arr" marker-end="url(#arr2)"/>
+  <line x1="352" y1="280" x2="430" y2="236" class="arr" marker-end="url(#arr2)"/>
+
+  <line x1="464" y1="260" x2="464" y2="270" class="arr" marker-end="url(#arr2)"/>
+  <line x1="549" y1="260" x2="549" y2="270" class="arr" marker-end="url(#arr2)"/>
+  <line x1="634" y1="260" x2="634" y2="270" class="arr" marker-end="url(#arr2)"/>
+
+  <line x1="540" y1="330" x2="540" y2="350" class="arr" marker-end="url(#arr2)"/>
+  <line x1="700" y1="305" x2="640" y2="300" class="arrD"/>
+
+  <!-- NetworkPolicy callout -->
+  <rect x="170" y="490" width="720" height="90" rx="3" fill="#fff" stroke="#326CE5" stroke-width="1.4"/>
+  <use href="#ic-cilium" x="180" y="500" width="40" height="40"/>
+  <text x="232" y="508" class="lbl">Cilium NetworkPolicy (eBPF, kernel-level enforcement)</text>
+  <text x="232" y="525" class="sub">• ingress → frontend : allow tcp/80     • frontend → api : allow tcp/8000     • api → postgres : allow tcp/5432</text>
+  <text x="232" y="541" class="sub">• default-deny all other Pod-to-Pod traffic   • L7 policy : per-endpoint HTTP method/path inspection</text>
+  <text x="232" y="557" class="sub">• Hubble flow visibility : drop / allow events streamed to Grafana for forensics</text>
+  <text x="232" y="573" class="sub">• Replaces iptables — measured 35 % lower p99 latency on api-to-postgres calls</text>
+</svg>

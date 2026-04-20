@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <symbol id="ic-fastapi" viewBox="-50 -50 100 100"><circle r="42" fill="#009688"/><polygon points="-12,-30 18,-6 -2,-2 12,30 -18,6 2,2" fill="#fff"/></symbol>
+  </defs>
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:12px;fill:#111}
+    .sm{font-size:10px;fill:#666}
+    .frame{fill:#f7f9fd;stroke:#222;stroke-width:1.2}
+    .card{fill:#fff;stroke:#bbb}
+    .input{fill:#fff;stroke:#888}
+    .btn{fill:#1f3a93;stroke:#0f2870}
+  </style>
+
+  <text x="550" y="20" text-anchor="middle" class="ttl">Capture 1.  Login Screen — POST /api/auth/login (FN-001) bcrypt + JWT</text>
+  <rect x="20" y="40" width="1060" height="640" class="frame"/>
+
+  <!-- top bar -->
+  <rect x="20" y="40" width="1060" height="40" fill="#1f3a93"/>
+  <text x="40" y="65" fill="#fff" font-size="13" font-weight="700">DEXWEAVER MES</text>
+  <text x="900" y="65" fill="#fff" font-size="11">v6.0  ·  GS-certified  ·  KISA-49</text>
+
+  <!-- centered card -->
+  <rect x="380" y="180" width="340" height="380" rx="6" class="card"/>
+  <use href="#ic-fastapi" x="510" y="200" width="80" height="80"/>
+  <text x="550" y="310" text-anchor="middle" font-size="16" font-weight="700" fill="#111">DEXWEAVER MES</text>
+  <text x="550" y="328" text-anchor="middle" class="sm">Smart Factory Manufacturing Execution System</text>
+
+  <text x="410" y="360" class="lb">아이디 (User ID)</text>
+  <rect x="410" y="370" width="280" height="36" class="input"/>
+  <text x="420" y="392" font-size="12" fill="#111">admin</text>
+
+  <text x="410" y="425" class="lb">비밀번호 (Password)</text>
+  <rect x="410" y="435" width="280" height="36" class="input"/>
+  <text x="420" y="457" font-size="12" fill="#111">●●●●●●●●●●</text>
+
+  <rect x="410" y="490" width="280" height="40" rx="3" class="btn"/>
+  <text x="550" y="515" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">로그인</text>
+
+  <text x="410" y="546" class="sm">▸ JWT(HS256, 24h) 발급 후 localStorage 저장</text>
+  <text x="410" y="560" class="sm">▸ 로그인 5회 실패시 5분 잠금 (rate-limit)</text>
+
+  <!-- footer -->
+  <text x="40" y="660" class="sm">URL : https://mes.dexweaver.local        method : POST  /api/auth/login        latency : 248 ms (bcrypt cost 12)</text>
+</svg>

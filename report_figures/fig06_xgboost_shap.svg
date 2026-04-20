@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 500" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#222"/>
+    </marker>
+  </defs>
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#444}
+    .stage{fill:#eaf1fb;stroke:#1f3a93;stroke-width:1.2}
+    .data{fill:#f0f6f0;stroke:#1e7c39;stroke-width:1.2}
+    .out{fill:#fef7f0;stroke:#c0392b;stroke-width:1.2}
+    .arr{stroke:#222;stroke-width:1.2;fill:none}
+    .barP{fill:#c0392b}
+    .barN{fill:#1f3a93}
+  </style>
+
+  <text x="440" y="22" text-anchor="middle" class="ttl">Fig. 6  Defect-Risk Predictor (FN-028) — XGBoost Classifier  +  SHAP Explanation</text>
+
+  <!-- pipeline -->
+  <rect x="30" y="50" width="160" height="60" rx="4" class="data"/>
+  <text x="110" y="72" text-anchor="middle" class="lb">Process Telemetry</text>
+  <text x="110" y="88" text-anchor="middle" class="sm">temp · pressure · speed</text>
+  <text x="110" y="102" text-anchor="middle" class="sm">humidity · LOT history</text>
+
+  <rect x="220" y="50" width="160" height="60" rx="4" class="stage"/>
+  <text x="300" y="72" text-anchor="middle" class="lb">Feature Engineering</text>
+  <text x="300" y="88" text-anchor="middle" class="sm">12 features</text>
+  <text x="300" y="102" text-anchor="middle" class="sm">rolling-window aggregates</text>
+
+  <rect x="410" y="50" width="160" height="60" rx="4" class="stage"/>
+  <text x="490" y="72" text-anchor="middle" class="lb">XGBoost Classifier</text>
+  <text x="490" y="88" text-anchor="middle" class="sm">300 trees · max_depth 6</text>
+  <text x="490" y="102" text-anchor="middle" class="sm">log-loss objective</text>
+
+  <rect x="600" y="50" width="160" height="60" rx="4" class="stage"/>
+  <text x="680" y="72" text-anchor="middle" class="lb">SHAP TreeExplainer</text>
+  <text x="680" y="88" text-anchor="middle" class="sm">per-feature contribution</text>
+  <text x="680" y="102" text-anchor="middle" class="sm">model-agnostic interpret.</text>
+
+  <line x1="190" y1="80" x2="220" y2="80" class="arr" marker-end="url(#arr6)"/>
+  <line x1="380" y1="80" x2="410" y2="80" class="arr" marker-end="url(#arr6)"/>
+  <line x1="570" y1="80" x2="600" y2="80" class="arr" marker-end="url(#arr6)"/>
+
+  <rect x="600" y="130" width="160" height="60" rx="4" class="out"/>
+  <text x="680" y="152" text-anchor="middle" class="lb">Prediction + Reason</text>
+  <text x="680" y="168" text-anchor="middle" class="sm">defect_prob = 0.34</text>
+  <text x="680" y="182" text-anchor="middle" class="sm">risk = MEDIUM</text>
+  <line x1="680" y1="110" x2="680" y2="130" class="arr" marker-end="url(#arr6)"/>
+
+  <!-- SHAP waterfall -->
+  <text x="40" y="220" class="lb">SHAP waterfall  —  contribution of each feature to a single prediction (lot WO-20260418-007)</text>
+  <line x1="280" y1="240" x2="280" y2="450" stroke="#888"/>
+  <text x="278" y="455" text-anchor="end" class="sm">base value  E[f(X)] = 0.18</text>
+
+  <g font-size="11">
+    <!-- temperature high → +0.12 -->
+    <text x="270" y="258" text-anchor="end" fill="#111">temperature = 192 °C</text>
+    <rect x="280" y="248" width="120" height="14" class="barP"/>
+    <text x="408" y="258" fill="#111">+0.12</text>
+
+    <text x="270" y="280" text-anchor="end" fill="#111">vibration_rms = 3.4 mm/s</text>
+    <rect x="280" y="270" width="80" height="14" class="barP"/>
+    <text x="368" y="280" fill="#111">+0.08</text>
+
+    <text x="270" y="302" text-anchor="end" fill="#111">cycle_time_var = 1.7 s</text>
+    <rect x="280" y="292" width="55" height="14" class="barP"/>
+    <text x="343" y="302" fill="#111">+0.05</text>
+
+    <text x="270" y="324" text-anchor="end" fill="#111">operator_skill = 0.62</text>
+    <rect x="280" y="314" width="40" height="14" class="barP"/>
+    <text x="328" y="324" fill="#111">+0.03</text>
+
+    <text x="270" y="346" text-anchor="end" fill="#111">humidity = 45 %</text>
+    <rect x="240" y="336" width="40" height="14" class="barN"/>
+    <text x="225" y="346" text-anchor="end" fill="#111">−0.04</text>
+
+    <text x="270" y="368" text-anchor="end" fill="#111">setup_age_days = 2</text>
+    <rect x="252" y="358" width="28" height="14" class="barN"/>
+    <text x="240" y="368" text-anchor="end" fill="#111">−0.02</text>
+
+    <text x="270" y="390" text-anchor="end" fill="#111">lot_supplier_grade = A</text>
+    <rect x="262" y="380" width="18" height="14" class="barN"/>
+    <text x="252" y="390" text-anchor="end" fill="#111">−0.01</text>
+  </g>
+
+  <text x="280" y="425" fill="#111" font-size="11" font-weight="700">Σ shap = +0.21  →  P(defect) = sigmoid(logit_base + 0.21) = 0.34</text>
+
+  <!-- recommendation box -->
+  <rect x="40" y="445" width="800" height="40" rx="3" fill="#fff8d8" stroke="#b58800"/>
+  <text x="50" y="462" class="lb">Recommendation generated by rule-engine on top of SHAP : "온도 5 °C 인하 + 진동 점검 → 예상 P(defect) 0.34 → 0.18"</text>
+  <text x="50" y="478" class="sm">Operators see the explanation panel before issuing the next work order ; this turns the model from a black-box into a decision aid.</text>
+</svg>

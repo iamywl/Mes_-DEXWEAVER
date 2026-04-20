@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 460" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#444}
+    .axis{stroke:#333;stroke-width:1}
+    .ucl{stroke:#c0392b;stroke-width:1.2;stroke-dasharray:6,3}
+    .lcl{stroke:#c0392b;stroke-width:1.2;stroke-dasharray:6,3}
+    .cl{stroke:#1f3a93;stroke-width:1.2;stroke-dasharray:3,3}
+    .pt{fill:#111}
+    .ptv{fill:#c0392b}
+    .line{stroke:#111;stroke-width:1.2;fill:none}
+  </style>
+
+  <text x="440" y="22" text-anchor="middle" class="ttl">Fig. 11  Statistical Process Control — X̄-R Control Chart (FN-038, Western Electric rules)</text>
+
+  <!-- chart frame X-bar -->
+  <rect x="60" y="60" width="760" height="180" fill="#fff" stroke="#888"/>
+  <text x="55" y="60" text-anchor="end" class="sm">UCL 10.15</text>
+  <text x="55" y="150" text-anchor="end" class="sm">CL  10.00</text>
+  <text x="55" y="240" text-anchor="end" class="sm">LCL 9.85</text>
+
+  <line x1="60" y1="80" x2="820" y2="80" class="ucl"/>
+  <line x1="60" y1="150" x2="820" y2="150" class="cl"/>
+  <line x1="60" y1="220" x2="820" y2="220" class="lcl"/>
+
+  <!-- xbar points -->
+  <polyline points="80,160 120,148 160,140 200,158 240,142 280,150 320,138 360,144 400,160 440,135 480,128 520,118 560,90 600,140 640,150 680,148 720,142 760,150 800,158" class="line"/>
+
+  <g>
+    <circle cx="80" cy="160" r="3" class="pt"/>
+    <circle cx="120" cy="148" r="3" class="pt"/>
+    <circle cx="160" cy="140" r="3" class="pt"/>
+    <circle cx="200" cy="158" r="3" class="pt"/>
+    <circle cx="240" cy="142" r="3" class="pt"/>
+    <circle cx="280" cy="150" r="3" class="pt"/>
+    <circle cx="320" cy="138" r="3" class="pt"/>
+    <circle cx="360" cy="144" r="3" class="pt"/>
+    <circle cx="400" cy="160" r="3" class="pt"/>
+    <circle cx="440" cy="135" r="3" class="pt"/>
+    <circle cx="480" cy="128" r="3" class="pt"/>
+    <circle cx="520" cy="118" r="3" class="pt"/>
+    <circle cx="560" cy="90" r="4" class="ptv"/>
+    <text x="560" y="80" text-anchor="middle" class="sm" fill="#c0392b">WE-1 violation</text>
+    <circle cx="600" cy="140" r="3" class="pt"/>
+    <circle cx="640" cy="150" r="3" class="pt"/>
+    <circle cx="680" cy="148" r="3" class="pt"/>
+    <circle cx="720" cy="142" r="3" class="pt"/>
+    <circle cx="760" cy="150" r="3" class="pt"/>
+    <circle cx="800" cy="158" r="3" class="pt"/>
+  </g>
+
+  <text x="60" y="258" class="sm">subgroup #1</text>
+  <text x="800" y="258" text-anchor="end" class="sm">#19</text>
+
+  <!-- R chart -->
+  <rect x="60" y="280" width="760" height="100" fill="#fff" stroke="#888"/>
+  <line x1="60" y1="296" x2="820" y2="296" class="ucl"/>
+  <line x1="60" y1="340" x2="820" y2="340" class="cl"/>
+  <line x1="60" y1="372" x2="820" y2="372" class="lcl"/>
+  <text x="55" y="298" text-anchor="end" class="sm">UCL 0.32</text>
+  <text x="55" y="343" text-anchor="end" class="sm">R̄  0.16</text>
+  <text x="55" y="375" text-anchor="end" class="sm">LCL 0.0</text>
+
+  <polyline points="80,355 120,348 160,340 200,344 240,338 280,332 320,330 360,338 400,344 440,330 480,322 520,316 560,308 600,330 640,338 680,340 720,335 760,342 800,348" class="line"/>
+
+  <!-- legend -->
+  <rect x="60" y="400" width="760" height="50" fill="#fff" stroke="#222"/>
+  <text x="70" y="418" class="sm">Western Electric rules implemented :  WE-1 (1 pt &gt; 3σ)  ·  WE-2 (9 consec. one side)  ·  WE-3 (6 consec. trending)  ·  WE-4 (14 alternating)</text>
+  <text x="70" y="432" class="sm">Cp = (USL − LSL) / 6σ_within = 1.90    Cpk = min(Cpu, Cpl) = 1.86    grade A    Shapiro-Wilk p = 0.45 (normal)    →  /api/quality/cpk</text>
+  <text x="70" y="446" class="sm">Violations trigger CAPA workflow (FN-041) and WebSocket alert (FN-046, severity = WARNING).</text>
+</svg>

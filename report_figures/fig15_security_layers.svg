@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 460" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#444}
+    .l1{fill:#fde2c8;stroke:#c05a00;stroke-width:1.4}
+    .l2{fill:#dfe7f5;stroke:#1f3a93;stroke-width:1.4}
+    .l3{fill:#cfe3cf;stroke:#1e7c39;stroke-width:1.4}
+    .l4{fill:#f3d9d9;stroke:#c0392b;stroke-width:1.4}
+    .l5{fill:#e7d8ee;stroke:#6f3a8c;stroke-width:1.4}
+  </style>
+
+  <text x="440" y="22" text-anchor="middle" class="ttl">Fig. 15  Defense-in-Depth Security Stack — KISA-49 / OWASP Top-10 Compliance</text>
+
+  <!-- concentric rectangles -->
+  <rect x="40"  y="60"  width="800" height="380" rx="6" class="l1"/>
+  <rect x="80"  y="100" width="720" height="300" rx="6" class="l2"/>
+  <rect x="120" y="140" width="640" height="220" rx="6" class="l3"/>
+  <rect x="160" y="180" width="560" height="140" rx="6" class="l4"/>
+  <rect x="200" y="220" width="480" height="60"  rx="6" class="l5"/>
+
+  <text x="440" y="80"  text-anchor="middle" class="lb">L1  Network Edge — TLS 1.3 + Cilium NetworkPolicy (default-deny)</text>
+  <text x="440" y="120" text-anchor="middle" class="lb">L2  Identity — JWT (HS256, 24h TTL) + RBAC (admin / manager / worker)</text>
+  <text x="440" y="160" text-anchor="middle" class="lb">L3  API Gateway — input validation (pydantic) · rate-limit · CSRF token</text>
+  <text x="440" y="200" text-anchor="middle" class="lb">L4  Application — parameterised SQL · escape HTML · audit log every mutation</text>
+  <text x="440" y="240" text-anchor="middle" class="lb">L5  Data — bcrypt(cost 12) for pw · AES-256 column-level for PII</text>
+  <text x="440" y="262" text-anchor="middle" class="sm">PostgreSQL TDE optional · daily encrypted backup off-cluster</text>
+
+  <text x="50" y="430" class="sm">▸ Mapped to OWASP Top-10 :  A01 broken access (L2/L3)  A02 crypto (L5)  A03 injection (L4)  A05 misconfig (L1)  A07 auth fail (L2)</text>
+</svg>

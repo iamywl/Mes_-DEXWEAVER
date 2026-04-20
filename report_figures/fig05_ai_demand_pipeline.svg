@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 460" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#222"/>
+    </marker>
+  </defs>
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#444}
+    .stage{fill:#eaf1fb;stroke:#1f3a93;stroke-width:1.2}
+    .data{fill:#f0f6f0;stroke:#1e7c39;stroke-width:1.2}
+    .out{fill:#fef7f0;stroke:#c0392b;stroke-width:1.2}
+    .arr{stroke:#222;stroke-width:1.2;fill:none}
+  </style>
+
+  <text x="440" y="22" text-anchor="middle" class="ttl">Fig. 5  AI Demand-Forecast Pipeline (FN-018)  —  Prophet  Time-Series Decomposition</text>
+
+  <!-- stages -->
+  <rect x="30" y="60" width="140" height="70" rx="4" class="data"/>
+  <text x="100" y="82" text-anchor="middle" class="lb">shipments</text>
+  <text x="100" y="98" text-anchor="middle" class="sm">12-month history</text>
+  <text x="100" y="114" text-anchor="middle" class="sm">(item_code, ds, y)</text>
+
+  <rect x="200" y="60" width="140" height="70" rx="4" class="stage"/>
+  <text x="270" y="82" text-anchor="middle" class="lb">① Pre-process</text>
+  <text x="270" y="98" text-anchor="middle" class="sm">resample daily</text>
+  <text x="270" y="114" text-anchor="middle" class="sm">outlier clip (3σ)</text>
+
+  <rect x="370" y="60" width="140" height="70" rx="4" class="stage"/>
+  <text x="440" y="82" text-anchor="middle" class="lb">② Prophet.fit()</text>
+  <text x="440" y="98" text-anchor="middle" class="sm">trend + weekly</text>
+  <text x="440" y="114" text-anchor="middle" class="sm">+ yearly + holidays</text>
+
+  <rect x="540" y="60" width="140" height="70" rx="4" class="stage"/>
+  <text x="610" y="82" text-anchor="middle" class="lb">③ predict()</text>
+  <text x="610" y="98" text-anchor="middle" class="sm">horizon = 90 d</text>
+  <text x="610" y="114" text-anchor="middle" class="sm">CI 80% &amp; 95%</text>
+
+  <rect x="710" y="60" width="140" height="70" rx="4" class="out"/>
+  <text x="780" y="82" text-anchor="middle" class="lb">ai_forecasts</text>
+  <text x="780" y="98" text-anchor="middle" class="sm">yhat, yhat_lower</text>
+  <text x="780" y="114" text-anchor="middle" class="sm">yhat_upper, MAPE</text>
+
+  <line x1="170" y1="95" x2="200" y2="95" class="arr" marker-end="url(#arr5)"/>
+  <line x1="340" y1="95" x2="370" y2="95" class="arr" marker-end="url(#arr5)"/>
+  <line x1="510" y1="95" x2="540" y2="95" class="arr" marker-end="url(#arr5)"/>
+  <line x1="680" y1="95" x2="710" y2="95" class="arr" marker-end="url(#arr5)"/>
+
+  <!-- decomposition mini chart -->
+  <text x="440" y="160" text-anchor="middle" class="lb">y(t)  =  Trend g(t)  +  Seasonality s(t)  +  Holiday h(t)  +  ε</text>
+
+  <g transform="translate(60,180)">
+    <text x="0" y="0" class="sm">Trend g(t)</text>
+    <rect x="0" y="10" width="220" height="50" fill="#fff" stroke="#888"/>
+    <polyline points="0,55 30,50 60,46 90,40 120,34 150,28 180,22 220,15" fill="none" stroke="#1f3a93" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(330,180)">
+    <text x="0" y="0" class="sm">Seasonality s(t) (weekly)</text>
+    <rect x="0" y="10" width="220" height="50" fill="#fff" stroke="#888"/>
+    <polyline points="0,35 22,20 44,40 66,18 88,42 110,22 132,38 154,20 176,40 198,22 220,35" fill="none" stroke="#1e7c39" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(610,180)">
+    <text x="0" y="0" class="sm">Holiday h(t)</text>
+    <rect x="0" y="10" width="220" height="50" fill="#fff" stroke="#888"/>
+    <line x1="40" y1="55" x2="40" y2="20" stroke="#c0392b" stroke-width="1.5"/>
+    <line x1="120" y1="55" x2="120" y2="15" stroke="#c0392b" stroke-width="1.5"/>
+    <line x1="180" y1="55" x2="180" y2="25" stroke="#c0392b" stroke-width="1.5"/>
+  </g>
+
+  <!-- forecast chart -->
+  <g transform="translate(60,260)">
+    <text x="0" y="0" class="lb">Forecast plot — actual (—) vs prediction (--) with 95 % confidence band</text>
+    <rect x="0" y="10" width="780" height="160" fill="#fff" stroke="#888"/>
+    <!-- band -->
+    <polygon points="0,90 60,82 120,76 180,68 240,60 300,55 360,48 420,42 480,40 540,38 600,40 660,44 720,50 780,58
+                     780,108 720,100 660,96 600,90 540,86 480,84 420,82 360,86 300,92 240,100 180,108 120,116 60,122 0,128"
+             fill="#dfe7f5" stroke="none"/>
+    <!-- actual -->
+    <polyline points="0,110 30,108 60,104 90,98 120,100 150,92 180,86 210,82 240,80 270,72 300,70 330,66 360,62 390,60"
+              fill="none" stroke="#222" stroke-width="1.6"/>
+    <!-- forecast -->
+    <polyline points="390,60 420,55 450,50 480,46 510,42 540,40 570,42 600,44 630,46 660,50 690,54 720,58 750,64 780,70"
+              fill="none" stroke="#1f3a93" stroke-width="1.6" stroke-dasharray="6,3"/>
+    <line x1="390" y1="10" x2="390" y2="170" stroke="#aaa" stroke-dasharray="3,3"/>
+    <text x="395" y="22" class="sm">today</text>
+    <text x="0" y="180" class="sm">t-365 d</text>
+    <text x="380" y="180" class="sm">t = 0</text>
+    <text x="755" y="180" class="sm">t+90 d</text>
+  </g>
+
+  <text x="40" y="450" class="sm">▸ MAPE benchmarked at 8.7 % on internal seed dataset.   ▸ When prophet pkg is unavailable → fallback to 7-day moving average + linear regression.</text>
+</svg>

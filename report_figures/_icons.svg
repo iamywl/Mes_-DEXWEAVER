@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute">
+  <!-- Reusable open-source brand glyphs (geometry-only re-creation, no copyrighted assets) -->
+  <defs>
+    <!-- Kubernetes wheel (heptagon with spokes) #326CE5 -->
+    <symbol id="ic-k8s" viewBox="-50 -50 100 100">
+      <polygon points="0,-44 38,-22 38,22 0,44 -38,22 -38,-22"
+               fill="#326CE5" stroke="#fff" stroke-width="3"/>
+      <circle cx="0" cy="0" r="14" fill="none" stroke="#fff" stroke-width="2.5"/>
+      <g stroke="#fff" stroke-width="2.5">
+        <line x1="0" y1="-14" x2="0" y2="-32"/>
+        <line x1="14" y1="0" x2="32" y2="0"/>
+        <line x1="0" y1="14" x2="0" y2="32"/>
+        <line x1="-14" y1="0" x2="-32" y2="0"/>
+        <line x1="10" y1="-10" x2="22" y2="-22"/>
+        <line x1="-10" y1="10" x2="-22" y2="22"/>
+      </g>
+    </symbol>
+
+    <!-- React atom #61DAFB -->
+    <symbol id="ic-react" viewBox="-50 -50 100 100">
+      <circle r="6" fill="#61DAFB"/>
+      <ellipse rx="42" ry="16" fill="none" stroke="#61DAFB" stroke-width="3"/>
+      <ellipse rx="42" ry="16" fill="none" stroke="#61DAFB" stroke-width="3" transform="rotate(60)"/>
+      <ellipse rx="42" ry="16" fill="none" stroke="#61DAFB" stroke-width="3" transform="rotate(120)"/>
+    </symbol>
+
+    <!-- FastAPI lightning teal #009688 -->
+    <symbol id="ic-fastapi" viewBox="-50 -50 100 100">
+      <circle r="42" fill="#009688"/>
+      <polygon points="-12,-30 18,-6 -2,-2 12,30 -18,6 2,2" fill="#fff"/>
+    </symbol>
+
+    <!-- Python double snake #3776AB / #FFD43B -->
+    <symbol id="ic-python" viewBox="-50 -50 100 100">
+      <path d="M0,-40 Q-30,-40 -30,-15 V-5 H10 V0 H-30 Q-40,0 -40,10 V25 Q-40,40 -15,40 H5 V25 Q5,15 15,15 H35 Q40,15 40,5 V-15 Q40,-40 0,-40 Z"
+            fill="#3776AB"/>
+      <circle cx="-18" cy="-25" r="4" fill="#fff"/>
+      <path d="M0,40 Q30,40 30,15 V5 H-10 V0 H30 Q40,0 40,-10 V-25 Q40,-40 15,-40 H-5 V-25 Q-5,-15 -15,-15 H-35 Q-40,-15 -40,-5 V15 Q-40,40 0,40 Z"
+            fill="#FFD43B" opacity="0.95"/>
+      <circle cx="18" cy="25" r="4" fill="#fff"/>
+    </symbol>
+
+    <!-- PostgreSQL elephant blue #336791 -->
+    <symbol id="ic-postgres" viewBox="-50 -50 100 100">
+      <ellipse cx="0" cy="0" rx="40" ry="38" fill="#336791"/>
+      <ellipse cx="-12" cy="-30" rx="10" ry="14" fill="#336791"/>
+      <ellipse cx="12" cy="-30" rx="10" ry="14" fill="#336791"/>
+      <circle cx="-10" cy="-8" r="5" fill="#fff"/>
+      <circle cx="-10" cy="-8" r="2" fill="#111"/>
+      <path d="M-30,15 Q-15,30 0,28 Q15,30 30,15" fill="none" stroke="#fff" stroke-width="2.5"/>
+      <path d="M22,5 Q35,15 30,25" fill="none" stroke="#fff" stroke-width="2.5"/>
+    </symbol>
+
+    <!-- Cilium bee yellow #F8C517 -->
+    <symbol id="ic-cilium" viewBox="-50 -50 100 100">
+      <ellipse cx="0" cy="5" rx="34" ry="28" fill="#F8C517"/>
+      <rect x="-30" y="-12" width="60" height="8" fill="#111"/>
+      <rect x="-30" y="6"  width="60" height="8" fill="#111"/>
+      <rect x="-30" y="22" width="60" height="8" fill="#111"/>
+      <ellipse cx="-22" cy="-18" rx="18" ry="10" fill="#fff" opacity="0.8" transform="rotate(-25)"/>
+      <ellipse cx="22"  cy="-18" rx="18" ry="10" fill="#fff" opacity="0.8" transform="rotate( 25)"/>
+      <circle cx="0" cy="-25" r="4" fill="#111"/>
+    </symbol>
+
+    <!-- Jenkins butler red #D33833 -->
+    <symbol id="ic-jenkins" viewBox="-50 -50 100 100">
+      <ellipse cx="0" cy="-12" rx="22" ry="26" fill="#F0DDB1"/>
+      <path d="M-22,-18 Q-22,-44 0,-44 Q22,-44 22,-18 Q22,-30 0,-32 Q-22,-30 -22,-18 Z" fill="#111"/>
+      <circle cx="-9"  cy="-12" r="2.5" fill="#111"/>
+      <circle cx="9"   cy="-12" r="2.5" fill="#111"/>
+      <path d="M-6,0 Q0,5 6,0"     stroke="#111" stroke-width="1.5" fill="none"/>
+      <path d="M-22,18 Q0,28 22,18 L24,42 L-24,42 Z" fill="#D33833"/>
+      <rect x="-3" y="20" width="6" height="22" fill="#fff"/>
+      <circle cx="0" cy="26" r="2" fill="#D33833"/>
+    </symbol>
+
+    <!-- Docker whale blue #2496ED -->
+    <symbol id="ic-docker" viewBox="-50 -50 100 100">
+      <g fill="#2496ED">
+        <rect x="-40" y="-2"  width="12" height="12"/>
+        <rect x="-26" y="-2"  width="12" height="12"/>
+        <rect x="-12" y="-2"  width="12" height="12"/>
+        <rect x="2"   y="-2"  width="12" height="12"/>
+        <rect x="-26" y="-16" width="12" height="12"/>
+        <rect x="-12" y="-16" width="12" height="12"/>
+        <rect x="2"   y="-16" width="12" height="12"/>
+        <rect x="-12" y="-30" width="12" height="12"/>
+        <path d="M-44,12 Q-30,28 0,28 Q30,28 38,8 L42,12 Q40,30 22,38 L-30,38 Q-46,30 -46,16 Z"/>
+      </g>
+    </symbol>
+
+    <!-- Prometheus flame orange #E6522C -->
+    <symbol id="ic-prometheus" viewBox="-50 -50 100 100">
+      <path d="M0,-44 Q15,-20 22,-8 Q30,8 22,24 Q12,40 -12,40 Q-30,28 -28,8 Q-26,-12 -10,-22 Q0,-12 -4,0 Q-2,-22 0,-44 Z" fill="#E6522C"/>
+      <rect x="-22" y="14" width="44" height="6" fill="#111"/>
+      <circle cx="0" cy="6" r="6" fill="#fff"/>
+    </symbol>
+
+    <!-- Grafana lamp orange #F46800 -->
+    <symbol id="ic-grafana" viewBox="-50 -50 100 100">
+      <circle r="38" fill="#F46800"/>
+      <path d="M-22,4 H22 L18,22 H-18 Z" fill="#fff"/>
+      <rect x="-3" y="-22" width="6" height="22" fill="#fff"/>
+      <circle cx="0" cy="-26" r="6" fill="#fff"/>
+    </symbol>
+
+    <!-- Tailwind wave cyan #38BDF8 -->
+    <symbol id="ic-tailwind" viewBox="-50 -50 100 100">
+      <path d="M-44,-6 Q-22,-32 0,-12 Q22,8 44,-12 Q22,16 0,-4 Q-22,-26 -44,-6 Z" fill="#38BDF8"/>
+      <path d="M-44,18 Q-22,-8 0,12 Q22,32 44,12 Q22,40 0,20 Q-22,-2 -44,18 Z" fill="#38BDF8" opacity="0.8"/>
+    </symbol>
+
+    <!-- Vite lightning #646CFF / #FFCA28 -->
+    <symbol id="ic-vite" viewBox="-50 -50 100 100">
+      <polygon points="-32,-30 32,-30 0,40" fill="#646CFF"/>
+      <polygon points="-14,-12 18,-30 4,18 -8,30" fill="#FFCA28"/>
+    </symbol>
+
+    <!-- GitHub octocat gray #181717 -->
+    <symbol id="ic-git" viewBox="-50 -50 100 100">
+      <circle r="40" fill="#F05033"/>
+      <path d="M-26,0 L0,-26 L26,0 L0,26 Z" fill="#fff"/>
+      <circle cx="0"   cy="-10" r="5" fill="#F05033"/>
+      <circle cx="-10" cy="0"   r="5" fill="#F05033"/>
+      <circle cx="10"  cy="0"   r="5" fill="#F05033"/>
+      <circle cx="0"   cy="10"  r="5" fill="#F05033"/>
+    </symbol>
+
+    <!-- Prophet (Meta blue F-shape) #1877F2 -->
+    <symbol id="ic-prophet" viewBox="-50 -50 100 100">
+      <rect x="-40" y="-40" width="80" height="80" rx="8" fill="#1877F2"/>
+      <polyline points="-30,28 -10,8 5,18 28,-22" fill="none" stroke="#fff" stroke-width="4"/>
+      <circle cx="-30" cy="28" r="3" fill="#fff"/>
+      <circle cx="-10" cy="8"  r="3" fill="#fff"/>
+      <circle cx="5"   cy="18" r="3" fill="#fff"/>
+      <circle cx="28"  cy="-22" r="3" fill="#fff"/>
+      <text x="0" y="-26" text-anchor="middle" font-family="Helvetica" font-size="14" font-weight="700" fill="#fff">F</text>
+    </symbol>
+
+    <!-- XGBoost dark green #1A1A1A -->
+    <symbol id="ic-xgboost" viewBox="-50 -50 100 100">
+      <rect x="-40" y="-40" width="80" height="80" rx="6" fill="#0a4f3a"/>
+      <text x="0" y="6" text-anchor="middle" font-family="Helvetica" font-size="22" font-weight="800" fill="#9ee493">XGB</text>
+      <text x="0" y="26" text-anchor="middle" font-family="Helvetica" font-size="9" fill="#9ee493">gradient boost</text>
+    </symbol>
+
+    <!-- scikit-learn orange #F7931E -->
+    <symbol id="ic-sklearn" viewBox="-50 -50 100 100">
+      <circle r="40" fill="#3499CD"/>
+      <text x="0" y="-2" text-anchor="middle" font-family="Helvetica" font-size="14" font-weight="700" fill="#F7931E">scikit</text>
+      <text x="0" y="14" text-anchor="middle" font-family="Helvetica" font-size="14" font-weight="700" fill="#F7931E">learn</text>
+    </symbol>
+
+    <!-- OR-Tools (Google blue G) -->
+    <symbol id="ic-ortools" viewBox="-50 -50 100 100">
+      <circle r="40" fill="#fff" stroke="#4285F4" stroke-width="6"/>
+      <path d="M0,-32 A32,32 0 1,1 -23,23 L0,0 H32 A32,32 0 0,0 0,-32 Z" fill="#4285F4"/>
+      <text x="0" y="6" text-anchor="middle" font-family="Helvetica" font-size="20" font-weight="800" fill="#fff">G</text>
+    </symbol>
+
+    <!-- SHAP -->
+    <symbol id="ic-shap" viewBox="-50 -50 100 100">
+      <rect x="-40" y="-40" width="80" height="80" rx="6" fill="#7d2da3"/>
+      <text x="0" y="8" text-anchor="middle" font-family="Helvetica" font-size="22" font-weight="800" fill="#fff">SHAP</text>
+    </symbol>
+  </defs>
+</svg>

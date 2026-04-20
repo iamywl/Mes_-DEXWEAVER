@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 460" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#222"/>
+    </marker>
+  </defs>
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#444}
+    .l0{fill:#fef7f0;stroke:#c0392b;stroke-width:1.4}
+    .l1{fill:#eaf1fb;stroke:#1f3a93;stroke-width:1.2}
+    .l2{fill:#f0f6f0;stroke:#1e7c39;stroke-width:1.2}
+    .l3{fill:#f6f0f6;stroke:#6f3a8c;stroke-width:1.2}
+    .lin{stroke:#222;stroke-width:1.2;fill:none}
+  </style>
+
+  <text x="440" y="22" text-anchor="middle" class="ttl">Fig. 9  BOM Recursive Explosion (FN-009) — Multi-level Bill-of-Materials Tree</text>
+
+  <!-- root -->
+  <rect x="360" y="50" width="160" height="46" rx="4" class="l0"/>
+  <text x="440" y="68" text-anchor="middle" class="lb">PROD-A1 / Smart Sensor</text>
+  <text x="440" y="84" text-anchor="middle" class="sm">Level 0 · qty 100</text>
+
+  <!-- level 1 -->
+  <rect x="80" y="150" width="160" height="46" rx="4" class="l1"/>
+  <text x="160" y="168" text-anchor="middle" class="lb">SEMI-B1 / Housing</text>
+  <text x="160" y="184" text-anchor="middle" class="sm">qty/unit 1 · loss 2 % → 102</text>
+
+  <rect x="280" y="150" width="160" height="46" rx="4" class="l1"/>
+  <text x="360" y="168" text-anchor="middle" class="lb">SEMI-B2 / PCB Assy</text>
+  <text x="360" y="184" text-anchor="middle" class="sm">qty/unit 1 · loss 1 % → 101</text>
+
+  <rect x="480" y="150" width="160" height="46" rx="4" class="l1"/>
+  <text x="560" y="168" text-anchor="middle" class="lb">SEMI-B3 / Battery Pack</text>
+  <text x="560" y="184" text-anchor="middle" class="sm">qty/unit 1 · loss 0 % → 100</text>
+
+  <rect x="680" y="150" width="160" height="46" rx="4" class="l1"/>
+  <text x="760" y="168" text-anchor="middle" class="lb">SEMI-B4 / Cable Set</text>
+  <text x="760" y="184" text-anchor="middle" class="sm">qty/unit 2 · loss 3 % → 206</text>
+
+  <line x1="440" y1="96" x2="160" y2="150" class="lin" marker-end="url(#arr9)"/>
+  <line x1="440" y1="96" x2="360" y2="150" class="lin" marker-end="url(#arr9)"/>
+  <line x1="440" y1="96" x2="560" y2="150" class="lin" marker-end="url(#arr9)"/>
+  <line x1="440" y1="96" x2="760" y2="150" class="lin" marker-end="url(#arr9)"/>
+
+  <!-- level 2 -->
+  <rect x="40" y="250" width="120" height="40" rx="4" class="l2"/>
+  <text x="100" y="266" text-anchor="middle" class="sm">RAW-C1 ABS resin</text>
+  <text x="100" y="282" text-anchor="middle" class="sm">3.2 kg ea → 326 kg</text>
+
+  <rect x="170" y="250" width="120" height="40" rx="4" class="l2"/>
+  <text x="230" y="266" text-anchor="middle" class="sm">RAW-C2 colorant</text>
+  <text x="230" y="282" text-anchor="middle" class="sm">0.05 kg → 5.1 kg</text>
+
+  <rect x="300" y="250" width="120" height="40" rx="4" class="l2"/>
+  <text x="360" y="266" text-anchor="middle" class="sm">RAW-D1 PCB blank</text>
+  <text x="360" y="282" text-anchor="middle" class="sm">1 ea → 102</text>
+
+  <rect x="430" y="250" width="120" height="40" rx="4" class="l2"/>
+  <text x="490" y="266" text-anchor="middle" class="sm">RAW-D2 IC chip</text>
+  <text x="490" y="282" text-anchor="middle" class="sm">3 ea → 304</text>
+
+  <rect x="560" y="250" width="120" height="40" rx="4" class="l2"/>
+  <text x="620" y="266" text-anchor="middle" class="sm">RAW-E1 Cell 18650</text>
+  <text x="620" y="282" text-anchor="middle" class="sm">2 ea → 200</text>
+
+  <rect x="690" y="250" width="160" height="40" rx="4" class="l2"/>
+  <text x="770" y="266" text-anchor="middle" class="sm">RAW-F1 copper wire</text>
+  <text x="770" y="282" text-anchor="middle" class="sm">0.5 m → 103 m (loss incl.)</text>
+
+  <line x1="160" y1="196" x2="100" y2="250" class="lin" marker-end="url(#arr9)"/>
+  <line x1="160" y1="196" x2="230" y2="250" class="lin" marker-end="url(#arr9)"/>
+  <line x1="360" y1="196" x2="360" y2="250" class="lin" marker-end="url(#arr9)"/>
+  <line x1="360" y1="196" x2="490" y2="250" class="lin" marker-end="url(#arr9)"/>
+  <line x1="560" y1="196" x2="620" y2="250" class="lin" marker-end="url(#arr9)"/>
+  <line x1="760" y1="196" x2="770" y2="250" class="lin" marker-end="url(#arr9)"/>
+
+  <!-- algorithm callout -->
+  <rect x="40" y="320" width="800" height="120" rx="4" fill="#fff" stroke="#222"/>
+  <text x="50" y="338" class="lb">Recursive expansion algorithm  ( O(N) where N = total BOM nodes )</text>
+  <text x="50" y="356" class="sm">def explode(item, qty, depth=0):</text>
+  <text x="50" y="370" class="sm">    rows = SELECT child_item, qty_per_unit, loss_rate FROM bom WHERE parent_item = item</text>
+  <text x="50" y="384" class="sm">    for r in rows:</text>
+  <text x="50" y="398" class="sm">        required = qty × r.qty_per_unit × (1 + r.loss_rate)</text>
+  <text x="50" y="412" class="sm">        emit(depth, r.child_item, required)</text>
+  <text x="50" y="426" class="sm">        explode(r.child_item, required, depth + 1)         ← guard against cycles via visited-set</text>
+</svg>

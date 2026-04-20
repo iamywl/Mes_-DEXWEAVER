@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#444}
+    .frame{fill:#fff;stroke:#222;stroke-width:1.2}
+    .top{fill:#1f3a93;stroke:#1f3a93}
+    .side{fill:#243155}
+    .menu{fill:#fff;font-size:11px}
+    .card{fill:#fff;stroke:#bbb;stroke-width:1}
+    .kpi{font-size:18px;font-weight:700;fill:#1f3a93}
+    .kpiR{font-size:18px;font-weight:700;fill:#c0392b}
+    .kpiG{font-size:18px;font-weight:700;fill:#1e7c39}
+    .h{fill:#fafafa;stroke:#bbb}
+  </style>
+
+  <text x="550" y="20" text-anchor="middle" class="ttl">Fig. 13  Manager Dashboard Wireframe — 14 menus, real-time KPI grid, AI insight panel</text>
+
+  <!-- frame -->
+  <rect x="20" y="40" width="1060" height="640" class="frame"/>
+
+  <!-- top bar -->
+  <rect x="20" y="40" width="1060" height="40" class="top"/>
+  <text x="40" y="65" fill="#fff" font-size="13" font-weight="700">DEXWEAVER MES</text>
+  <text x="240" y="65" fill="#dde" font-size="11">실시간 모니터링  ·  2026-04-20 13:42 KST</text>
+  <text x="900" y="65" fill="#fff" font-size="11">🔔 3   |   user : ywlee (admin)   |   ⎋ logout</text>
+
+  <!-- side menu -->
+  <rect x="20" y="80" width="200" height="600" class="side"/>
+  <text x="35" y="105" class="menu">📊 대시보드</text>
+  <text x="35" y="128" class="menu">📦 품목 관리</text>
+  <text x="35" y="151" class="menu">🧬 BOM</text>
+  <text x="35" y="174" class="menu">🔄 공정 / 라우팅</text>
+  <text x="35" y="197" class="menu">🏭 설비 관리</text>
+  <text x="35" y="220" class="menu">📅 생산 계획</text>
+  <text x="35" y="243" class="menu">📝 작업 지시</text>
+  <text x="35" y="266" class="menu">✅ 품질 / SPC</text>
+  <text x="35" y="289" class="menu">⚠ CAPA</text>
+  <text x="35" y="312" class="menu">📈 OEE</text>
+  <text x="35" y="335" class="menu">📦 재고</text>
+  <text x="35" y="358" class="menu">🔍 LOT 추적</text>
+  <text x="35" y="381" class="menu">🧠 AI 인사이트</text>
+  <text x="35" y="404" class="menu">📑 리포트</text>
+
+  <text x="35" y="450" class="menu" fill="#aaa">─ 시스템 ─</text>
+  <text x="35" y="473" class="menu">👥 사용자 / 권한</text>
+  <text x="35" y="496" class="menu">⚙ 알림 설정</text>
+
+  <!-- KPI cards row -->
+  <rect x="240" y="100" width="180" height="80" class="card"/>
+  <text x="252" y="120" class="sm">생산 달성률</text>
+  <text x="252" y="148" class="kpiG">92.4 %</text>
+  <text x="252" y="170" class="sm">▲ 2.1 %p vs yesterday</text>
+
+  <rect x="430" y="100" width="180" height="80" class="card"/>
+  <text x="442" y="120" class="sm">불량률</text>
+  <text x="442" y="148" class="kpiR">1.8 %</text>
+  <text x="442" y="170" class="sm">▼ 0.3 %p vs target</text>
+
+  <rect x="620" y="100" width="180" height="80" class="card"/>
+  <text x="632" y="120" class="sm">설비 가동률 (OEE)</text>
+  <text x="632" y="148" class="kpi">84.9 %</text>
+  <text x="632" y="170" class="sm">≈ world-class 85 %</text>
+
+  <rect x="810" y="100" width="250" height="80" class="card"/>
+  <text x="822" y="120" class="sm">재고 회전율</text>
+  <text x="822" y="148" class="kpi">6.2 ×</text>
+  <text x="822" y="170" class="sm">안전재고 미달 품목 : 3</text>
+
+  <!-- production chart -->
+  <rect x="240" y="200" width="500" height="220" class="card"/>
+  <text x="252" y="220" class="lb">시간대별 생산량 (라인 A · 4월 20일)</text>
+  <line x1="270" y1="400" x2="720" y2="400" stroke="#888"/>
+  <line x1="270" y1="240" x2="270" y2="400" stroke="#888"/>
+  <g fill="#1f3a93">
+    <rect x="280" y="370" width="20" height="30"/>
+    <rect x="320" y="350" width="20" height="50"/>
+    <rect x="360" y="335" width="20" height="65"/>
+    <rect x="400" y="320" width="20" height="80"/>
+    <rect x="440" y="305" width="20" height="95"/>
+    <rect x="480" y="295" width="20" height="105"/>
+    <rect x="520" y="290" width="20" height="110"/>
+    <rect x="560" y="300" width="20" height="100"/>
+    <rect x="600" y="320" width="20" height="80"/>
+    <rect x="640" y="335" width="20" height="65"/>
+    <rect x="680" y="350" width="20" height="50"/>
+  </g>
+  <text x="280" y="415" class="sm">08</text>
+  <text x="480" y="415" class="sm">14</text>
+  <text x="680" y="415" class="sm">19</text>
+
+  <!-- AI insight panel -->
+  <rect x="760" y="200" width="300" height="220" class="card"/>
+  <rect x="760" y="200" width="300" height="24" class="h"/>
+  <text x="775" y="217" class="lb">🧠 AI 인사이트 (FN-037)</text>
+  <text x="775" y="244" class="sm">▸ 이번 주 EQP-003 진동 score 0.62 ↑</text>
+  <text x="775" y="262" class="sm">  → 48 h 내 점검 권장 (Conf 0.81)</text>
+  <text x="775" y="284" class="sm">▸ ITM-PROD-A1 수요 +8.7 % 예상</text>
+  <text x="775" y="302" class="sm">  → 다음 주 라인 가동률 94 % 필요</text>
+  <text x="775" y="324" class="sm">▸ 불량 TOP-1 : 외관 (38 %)</text>
+  <text x="775" y="342" class="sm">  → CAPA-20260418-002 진행 중</text>
+  <text x="775" y="364" class="sm">▸ 재고 부족 임박 : RAW-D2 IC chip</text>
+  <text x="775" y="382" class="sm">  → 발주 권장 (ETA 5 d)</text>
+  <text x="775" y="402" class="sm" fill="#1f3a93">[ 자세히 보기 ]</text>
+
+  <!-- Equipment status grid -->
+  <rect x="240" y="440" width="820" height="220" class="card"/>
+  <text x="252" y="460" class="lb">설비 가동 현황 (실시간 — Cilium eBPF L7 실시간 push)</text>
+
+  <g font-size="10">
+    <rect x="260" y="475" width="100" height="60" fill="#cfe3cf" stroke="#1e7c39"/>
+    <text x="310" y="492" text-anchor="middle">EQP-001</text>
+    <text x="310" y="510" text-anchor="middle">RUNNING 96 %</text>
+    <text x="310" y="525" text-anchor="middle" class="sm">WO-007</text>
+
+    <rect x="370" y="475" width="100" height="60" fill="#cfe3cf" stroke="#1e7c39"/>
+    <text x="420" y="492" text-anchor="middle">EQP-002</text>
+    <text x="420" y="510" text-anchor="middle">RUNNING 92 %</text>
+    <text x="420" y="525" text-anchor="middle" class="sm">WO-008</text>
+
+    <rect x="480" y="475" width="100" height="60" fill="#fff5d6" stroke="#b58800"/>
+    <text x="530" y="492" text-anchor="middle">EQP-003</text>
+    <text x="530" y="510" text-anchor="middle">WARNING 78 %</text>
+    <text x="530" y="525" text-anchor="middle" class="sm">vibration ↑</text>
+
+    <rect x="590" y="475" width="100" height="60" fill="#cfe3cf" stroke="#1e7c39"/>
+    <text x="640" y="492" text-anchor="middle">EQP-004</text>
+    <text x="640" y="510" text-anchor="middle">RUNNING 88 %</text>
+    <text x="640" y="525" text-anchor="middle" class="sm">WO-010</text>
+
+    <rect x="700" y="475" width="100" height="60" fill="#f3d9d9" stroke="#c0392b"/>
+    <text x="750" y="492" text-anchor="middle">EQP-005</text>
+    <text x="750" y="510" text-anchor="middle">DOWN —</text>
+    <text x="750" y="525" text-anchor="middle" class="sm">setup change</text>
+
+    <rect x="810" y="475" width="100" height="60" fill="#cfe3cf" stroke="#1e7c39"/>
+    <text x="860" y="492" text-anchor="middle">EQP-006</text>
+    <text x="860" y="510" text-anchor="middle">RUNNING 91 %</text>
+    <text x="860" y="525" text-anchor="middle" class="sm">WO-011</text>
+
+    <rect x="920" y="475" width="100" height="60" fill="#cfe3cf" stroke="#1e7c39"/>
+    <text x="970" y="492" text-anchor="middle">EQP-007</text>
+    <text x="970" y="510" text-anchor="middle">RUNNING 86 %</text>
+    <text x="970" y="525" text-anchor="middle" class="sm">WO-012</text>
+  </g>
+
+  <text x="252" y="565" class="lb">최근 알림 (WebSocket FN-046)</text>
+  <text x="260" y="585" class="sm">⚠ 13:38 EQP-003  진동 score 0.62  → 48 h 내 점검 권장</text>
+  <text x="260" y="602" class="sm">⚠ 13:25 SPC violation : ITM-PROD-A1 #12 1pt &gt; 3σ  → CAPA-20260420-005 자동 생성</text>
+  <text x="260" y="619" class="sm">ℹ 13:10 WO-20260420-007 완료 (양품 98 %, 불량 2 %)</text>
+  <text x="260" y="636" class="sm">⚠ 12:55 RAW-D2 안전재고 미달 (현재 24 ea / 안전 50 ea)</text>
+</svg>

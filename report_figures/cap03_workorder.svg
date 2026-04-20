@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#666}
+    .menu{fill:#fff;font-size:11px}
+    .frame{fill:#fff;stroke:#222;stroke-width:1.2}
+    .card{fill:#fff;stroke:#bbb}
+    .h{fill:#eef2f8;stroke:#bbb}
+    .input{fill:#fff;stroke:#888}
+    .btn{fill:#1f3a93}
+    .btnG{fill:#1e7c39}
+  </style>
+
+  <text x="550" y="20" text-anchor="middle" class="ttl">Capture 3.  작업 지시 상세  —  GET /api/work-orders/{wo_id} (FN-022) · 라우팅 · 실적 · 진척률</text>
+  <rect x="20" y="40" width="1060" height="640" class="frame"/>
+  <rect x="20" y="40" width="1060" height="40" fill="#1f3a93"/>
+  <text x="40" y="65" fill="#fff" font-size="13" font-weight="700">DEXWEAVER MES  ›  📝 작업 지시  ›  WO-20260420-007</text>
+  <rect x="20" y="80" width="200" height="600" fill="#243155"/>
+  <text x="35" y="105" class="menu">📊 대시보드</text>
+  <text x="35" y="128" class="menu">📦 품목 관리</text>
+  <text x="35" y="151" class="menu">🧬 BOM</text>
+  <text x="35" y="174" class="menu">🔄 공정 / 라우팅</text>
+  <text x="35" y="197" class="menu">🏭 설비 관리</text>
+  <text x="35" y="220" class="menu">📅 생산 계획</text>
+  <text x="35" y="243" class="menu" fill="#fff" font-weight="700">📝 작업 지시</text>
+  <text x="35" y="266" class="menu">✅ 품질 / SPC</text>
+  <text x="35" y="289" class="menu">📈 OEE</text>
+  <text x="35" y="312" class="menu">📦 재고</text>
+  <text x="35" y="335" class="menu">🔍 LOT 추적</text>
+  <text x="35" y="358" class="menu">🧠 AI 인사이트</text>
+
+  <!-- WO Header -->
+  <rect x="240" y="100" width="820" height="84" class="card"/>
+  <text x="252" y="124" font-size="14" font-weight="700" fill="#111">WO-20260420-007  /  PROD-A1 Smart Sensor</text>
+  <rect x="500" y="108" width="64" height="22" rx="11" fill="#fff5d6" stroke="#b58800"/>
+  <text x="532" y="123" text-anchor="middle" fill="#b58800" font-weight="700" font-size="11">진행중</text>
+
+  <text x="252" y="150" class="sm">계획수량</text>  <text x="252" y="168" class="lb">100 ea</text>
+  <text x="360" y="150" class="sm">생산수량</text>  <text x="360" y="168" class="lb">68 ea (양품 67 / 불량 1)</text>
+  <text x="600" y="150" class="sm">담당설비</text>  <text x="600" y="168" class="lb">EQP-001 / EQP-003</text>
+  <text x="780" y="150" class="sm">작업자</text>    <text x="780" y="168" class="lb">홍길동 (W-007)</text>
+  <text x="930" y="150" class="sm">진척률</text>    <text x="930" y="168" class="lb" font-weight="700" fill="#1f3a93">68 %</text>
+
+  <!-- routing gantt -->
+  <rect x="240" y="200" width="820" height="180" class="card"/>
+  <rect x="240" y="200" width="820" height="28" class="h"/>
+  <text x="252" y="219" class="lb">라우팅 (FN-012) · OR-Tools 최적 스케줄 (FN-019)</text>
+
+  <g font-size="10" fill="#222">
+    <text x="252" y="252">SEQ 1  PRC-001 사출</text>
+    <rect x="450" y="240" width="100" height="18" fill="#1e7c39"/>
+    <text x="500" y="253" text-anchor="middle" fill="#fff">EQP-001 · 08:00–09:40 · ✓ 완료</text>
+
+    <text x="252" y="282">SEQ 2  PRC-002 도색</text>
+    <rect x="560" y="270" width="80" height="18" fill="#1e7c39"/>
+    <text x="600" y="283" text-anchor="middle" fill="#fff">EQP-002 · 09:50–11:10 · ✓</text>
+
+    <text x="252" y="312">SEQ 3  PRC-003 PCB실장</text>
+    <rect x="650" y="300" width="120" height="18" fill="#b58800"/>
+    <text x="710" y="313" text-anchor="middle" fill="#fff">EQP-003 · 11:20–13:50 · ▶</text>
+
+    <text x="252" y="342">SEQ 4  PRC-004 조립</text>
+    <rect x="780" y="330" width="120" height="18" fill="#888"/>
+    <text x="840" y="343" text-anchor="middle" fill="#fff">EQP-004 · 14:00–16:00 · ⏳</text>
+
+    <text x="252" y="372">SEQ 5  PRC-005 검사</text>
+    <rect x="910" y="360" width="80" height="18" fill="#888"/>
+    <text x="950" y="373" text-anchor="middle" fill="#fff">QA · 16:10–17:30 · ⏳</text>
+  </g>
+
+  <!-- results table -->
+  <rect x="240" y="400" width="820" height="200" class="card"/>
+  <rect x="240" y="400" width="820" height="28" class="h"/>
+  <text x="252" y="419" class="lb">실적 입력 (FN-023)  /api/work-results</text>
+
+  <g font-size="11">
+    <rect x="240" y="428" width="820" height="24" fill="#fafafa"/>
+    <text x="252" y="445" class="sm">시간</text>
+    <text x="350" y="445" class="sm">공정</text>
+    <text x="450" y="445" class="sm">설비</text>
+    <text x="550" y="445" class="sm">양품</text>
+    <text x="640" y="445" class="sm">불량</text>
+    <text x="740" y="445" class="sm">불량코드</text>
+    <text x="900" y="445" class="sm">작업자</text>
+
+    <text x="252" y="469">09:40</text><text x="350" y="469">PRC-001 사출</text><text x="450" y="469">EQP-001</text><text x="550" y="469">100</text><text x="640" y="469">0</text><text x="740" y="469">—</text><text x="900" y="469">홍길동</text>
+    <text x="252" y="491">11:10</text><text x="350" y="491">PRC-002 도색</text><text x="450" y="491">EQP-002</text><text x="550" y="491">98</text><text x="640" y="491">2</text><text x="740" y="491">DC-01 표면결함</text><text x="900" y="491">홍길동</text>
+    <text x="252" y="513">13:32</text><text x="350" y="513">PRC-003 PCB</text><text x="450" y="513">EQP-003</text><text x="550" y="513">67</text><text x="640" y="513">1</text><text x="740" y="513">DC-04 솔더</text><text x="900" y="513">홍길동</text>
+  </g>
+
+  <!-- input -->
+  <rect x="252" y="538" width="100" height="26" class="input"/>
+  <text x="258" y="556" font-size="11" fill="#aaa">양품수량</text>
+  <rect x="362" y="538" width="100" height="26" class="input"/>
+  <text x="368" y="556" font-size="11" fill="#aaa">불량수량</text>
+  <rect x="472" y="538" width="160" height="26" class="input"/>
+  <text x="478" y="556" font-size="11" fill="#aaa">불량코드 ▾</text>
+
+  <rect x="900" y="538" width="80" height="26" rx="3" class="btnG"/>
+  <text x="940" y="556" text-anchor="middle" fill="#fff" font-weight="700" font-size="11">실적 등록</text>
+  <rect x="985" y="538" width="60" height="26" rx="3" class="btn"/>
+  <text x="1015" y="556" text-anchor="middle" fill="#fff" font-weight="700" font-size="11">완료</text>
+
+  <text x="252" y="590" class="sm">▸ 실적 입력 시 자동 처리 : ① work_orders.progress_pct 갱신   ② inventory 차감(FIFO 로트)   ③ 불량시 defect_history 기록   ④ 진척률 100%면 status=COMPLETED</text>
+</svg>

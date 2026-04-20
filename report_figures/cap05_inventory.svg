@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#666}
+    .menu{fill:#fff;font-size:11px}
+    .frame{fill:#fff;stroke:#222;stroke-width:1.2}
+    .card{fill:#fff;stroke:#bbb}
+    .h{fill:#eef2f8;stroke:#bbb}
+    .input{fill:#fff;stroke:#888}
+    .btn{fill:#1f3a93}
+    .btnG{fill:#1e7c39}
+    .btnR{fill:#c0392b}
+  </style>
+
+  <text x="550" y="20" text-anchor="middle" class="ttl">Capture 5.  재고 / 입출고  —  POST /api/inventory/in /out (FN-029, 030, 031) · FIFO LOT</text>
+  <rect x="20" y="40" width="1060" height="640" class="frame"/>
+  <rect x="20" y="40" width="1060" height="40" fill="#1f3a93"/>
+  <text x="40" y="65" fill="#fff" font-size="13" font-weight="700">DEXWEAVER MES  ›  📦 재고</text>
+  <rect x="20" y="80" width="200" height="600" fill="#243155"/>
+  <text x="35" y="105" class="menu">📊 대시보드</text>
+  <text x="35" y="128" class="menu">📦 품목 관리</text>
+  <text x="35" y="151" class="menu">🧬 BOM</text>
+  <text x="35" y="174" class="menu">🔄 공정 / 라우팅</text>
+  <text x="35" y="197" class="menu">🏭 설비 관리</text>
+  <text x="35" y="220" class="menu">📅 생산 계획</text>
+  <text x="35" y="243" class="menu">📝 작업 지시</text>
+  <text x="35" y="266" class="menu">✅ 품질 / SPC</text>
+  <text x="35" y="289" class="menu">📈 OEE</text>
+  <text x="35" y="312" class="menu" fill="#fff" font-weight="700">📦 재고</text>
+  <text x="35" y="335" class="menu">🔍 LOT 추적</text>
+  <text x="35" y="358" class="menu">🧠 AI 인사이트</text>
+
+  <!-- KPI -->
+  <rect x="240" y="100" width="200" height="80" class="card"/>
+  <text x="250" y="120" class="sm">총 품목수</text>
+  <text x="250" y="148" font-size="22" font-weight="700" fill="#1f3a93">248</text>
+  <text x="250" y="170" class="sm">제품 / 반제품 / 원재료</text>
+
+  <rect x="450" y="100" width="200" height="80" class="card"/>
+  <text x="460" y="120" class="sm">안전재고 미달</text>
+  <text x="460" y="148" font-size="22" font-weight="700" fill="#c0392b">3</text>
+  <text x="460" y="170" class="sm">자동 발주 권장</text>
+
+  <rect x="660" y="100" width="200" height="80" class="card"/>
+  <text x="670" y="120" class="sm">재고 회전율</text>
+  <text x="670" y="148" font-size="22" font-weight="700" fill="#1e7c39">6.2 ×</text>
+  <text x="670" y="170" class="sm">월 평균 (목표 5.0)</text>
+
+  <rect x="870" y="100" width="190" height="80" class="card"/>
+  <text x="880" y="120" class="sm">금일 입/출고</text>
+  <text x="880" y="148" font-size="22" font-weight="700" fill="#111">12 / 18</text>
+  <text x="880" y="170" class="sm">건  ·  실시간 동기화</text>
+
+  <!-- 입출고 form -->
+  <rect x="240" y="195" width="500" height="200" class="card"/>
+  <rect x="240" y="195" width="500" height="28" class="h"/>
+  <text x="252" y="214" class="lb">입고 등록  /api/inventory/in  (FN-029)</text>
+
+  <text x="252" y="246" class="sm">품목</text>
+  <rect x="252" y="252" width="220" height="26" class="input"/>
+  <text x="258" y="270" font-size="11">RAW-D2 / IC chip ▾</text>
+
+  <text x="490" y="246" class="sm">수량</text>
+  <rect x="490" y="252" width="100" height="26" class="input"/>
+  <text x="496" y="270" font-size="11">500</text>
+
+  <text x="610" y="246" class="sm">단위</text>
+  <text x="610" y="270" font-size="11" fill="#111">EA</text>
+
+  <text x="252" y="300" class="sm">공급사</text>
+  <rect x="252" y="306" width="220" height="26" class="input"/>
+  <text x="258" y="324" font-size="11">㈜아이커넥트 부품</text>
+
+  <text x="490" y="300" class="sm">창고 / 위치</text>
+  <rect x="490" y="306" width="100" height="26" class="input"/>
+  <text x="496" y="324" font-size="11">WH01 / A-03-12</text>
+
+  <rect x="610" y="306" width="120" height="26" rx="3" class="btnG"/>
+  <text x="670" y="324" text-anchor="middle" fill="#fff" font-weight="700" font-size="11">＋ 입고 등록</text>
+
+  <text x="252" y="360" class="sm">발급 LOT 번호  →  LOT-20260420-A12   (자동 생성)</text>
+  <text x="252" y="378" class="sm">입고 전표  →  IN-20260420-007</text>
+
+  <!-- 출고 -->
+  <rect x="760" y="195" width="300" height="200" class="card"/>
+  <rect x="760" y="195" width="300" height="28" class="h"/>
+  <text x="772" y="214" class="lb">출고 등록  (FN-030)</text>
+  <text x="772" y="246" class="sm">품목 ▾  RAW-D2 / IC chip</text>
+  <text x="772" y="266" class="sm">수량         24 EA</text>
+  <text x="772" y="286" class="sm">출고유형 ▾  PRODUCTION</text>
+  <text x="772" y="306" class="sm">참조 작업지시  WO-20260420-007</text>
+  <rect x="772" y="318" width="120" height="26" rx="3" class="btnR"/>
+  <text x="832" y="336" text-anchor="middle" fill="#fff" font-weight="700" font-size="11">＋ 출고 처리</text>
+  <text x="772" y="368" class="sm">FIFO 적용 LOT  :  LOT-20260309-C  (24 ea)</text>
+  <text x="772" y="385" class="sm">전표  →  OUT-20260420-018</text>
+
+  <!-- 현황 -->
+  <rect x="240" y="410" width="820" height="240" class="card"/>
+  <rect x="240" y="410" width="820" height="28" class="h"/>
+  <text x="252" y="429" class="lb">재고 현황 (FN-031)</text>
+
+  <g font-size="11">
+    <rect x="240" y="438" width="820" height="24" fill="#fafafa"/>
+    <text x="252" y="455" class="sm">품목코드</text>
+    <text x="380" y="455" class="sm">품목명</text>
+    <text x="600" y="455" class="sm">현재고</text>
+    <text x="700" y="455" class="sm">예약</text>
+    <text x="780" y="455" class="sm">가용</text>
+    <text x="870" y="455" class="sm">안전재고</text>
+    <text x="980" y="455" class="sm">상태</text>
+
+    <text x="252" y="480">ITM-00001</text><text x="380" y="480">PROD-A1 / Smart Sensor</text><text x="600" y="480">186</text><text x="700" y="480">40</text><text x="780" y="480">146</text><text x="870" y="480">100</text>
+    <rect x="970" y="466" width="60" height="20" rx="10" fill="#cfe3cf" stroke="#1e7c39"/><text x="1000" y="480" text-anchor="middle" fill="#1e7c39" font-weight="700">정상</text>
+
+    <text x="252" y="504">ITM-00002</text><text x="380" y="504">SEMI-B2 / PCB Assy</text><text x="600" y="504">42</text><text x="700" y="504">8</text><text x="780" y="504">34</text><text x="870" y="504">50</text>
+    <rect x="970" y="490" width="60" height="20" rx="10" fill="#fff5d6" stroke="#b58800"/><text x="1000" y="504" text-anchor="middle" fill="#b58800" font-weight="700">부족</text>
+
+    <text x="252" y="528">ITM-00003</text><text x="380" y="528">RAW-D2 / IC chip</text><text x="600" y="528">24</text><text x="700" y="528">24</text><text x="780" y="528">0</text><text x="870" y="528">50</text>
+    <rect x="970" y="514" width="60" height="20" rx="10" fill="#f3d9d9" stroke="#c0392b"/><text x="1000" y="528" text-anchor="middle" fill="#c0392b" font-weight="700">위험</text>
+
+    <text x="252" y="552">ITM-00004</text><text x="380" y="552">RAW-C1 / ABS resin</text><text x="600" y="552">820 kg</text><text x="700" y="552">52 kg</text><text x="780" y="552">768</text><text x="870" y="552">200</text>
+    <rect x="970" y="538" width="60" height="20" rx="10" fill="#cfe3cf" stroke="#1e7c39"/><text x="1000" y="552" text-anchor="middle" fill="#1e7c39" font-weight="700">정상</text>
+
+    <text x="252" y="576">ITM-00005</text><text x="380" y="576">SEMI-B1 / Housing</text><text x="600" y="576">312</text><text x="700" y="576">100</text><text x="780" y="576">212</text><text x="870" y="576">150</text>
+    <rect x="970" y="562" width="60" height="20" rx="10" fill="#cfe3cf" stroke="#1e7c39"/><text x="1000" y="576" text-anchor="middle" fill="#1e7c39" font-weight="700">정상</text>
+
+    <text x="252" y="600">ITM-00006</text><text x="380" y="600">RAW-E1 / Cell 18650</text><text x="600" y="600">450</text><text x="700" y="600">200</text><text x="780" y="600">250</text><text x="870" y="600">300</text>
+    <rect x="970" y="586" width="60" height="20" rx="10" fill="#fff5d6" stroke="#b58800"/><text x="1000" y="600" text-anchor="middle" fill="#b58800" font-weight="700">부족</text>
+  </g>
+
+  <text x="252" y="640" class="sm">▸ 안전재고 미달 자동 알림 (FN-046, channel=INVENTORY) → 구매팀 / 자재팀에게 WebSocket 발송</text>
+</svg>

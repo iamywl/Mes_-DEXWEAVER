@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <symbol id="ic-prophet" viewBox="-50 -50 100 100"><rect x="-40" y="-40" width="80" height="80" rx="8" fill="#1877F2"/><polyline points="-30,28 -10,8 5,18 28,-22" fill="none" stroke="#fff" stroke-width="4"/></symbol>
+    <symbol id="ic-xgboost" viewBox="-50 -50 100 100"><rect x="-40" y="-40" width="80" height="80" rx="6" fill="#0a4f3a"/><text x="0" y="6" text-anchor="middle" font-size="22" font-weight="800" fill="#9ee493">XGB</text></symbol>
+    <symbol id="ic-shap" viewBox="-50 -50 100 100"><rect x="-40" y="-40" width="80" height="80" rx="6" fill="#7d2da3"/><text x="0" y="8" text-anchor="middle" font-size="22" font-weight="800" fill="#fff">SHAP</text></symbol>
+  </defs>
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#666}
+    .menu{fill:#fff;font-size:11px}
+    .frame{fill:#fff;stroke:#222;stroke-width:1.2}
+    .card{fill:#fff;stroke:#bbb}
+    .h{fill:#eef2f8;stroke:#bbb}
+  </style>
+
+  <text x="550" y="20" text-anchor="middle" class="ttl">Capture 7.  AI 인사이트  —  Prophet · XGBoost · SHAP 통합 화면 (FN-018, 028, 037)</text>
+  <rect x="20" y="40" width="1060" height="640" class="frame"/>
+  <rect x="20" y="40" width="1060" height="40" fill="#1f3a93"/>
+  <text x="40" y="65" fill="#fff" font-size="13" font-weight="700">DEXWEAVER MES  ›  🧠 AI 인사이트</text>
+  <rect x="20" y="80" width="200" height="600" fill="#243155"/>
+  <text x="35" y="105" class="menu">📊 대시보드</text>
+  <text x="35" y="128" class="menu">📦 품목 관리</text>
+  <text x="35" y="151" class="menu">🧬 BOM</text>
+  <text x="35" y="174" class="menu">🔄 공정 / 라우팅</text>
+  <text x="35" y="197" class="menu">🏭 설비 관리</text>
+  <text x="35" y="220" class="menu">📅 생산 계획</text>
+  <text x="35" y="243" class="menu">📝 작업 지시</text>
+  <text x="35" y="266" class="menu">✅ 품질 / SPC</text>
+  <text x="35" y="289" class="menu">📈 OEE</text>
+  <text x="35" y="312" class="menu">📦 재고</text>
+  <text x="35" y="335" class="menu">🔍 LOT 추적</text>
+  <text x="35" y="358" class="menu" fill="#fff" font-weight="700">🧠 AI 인사이트</text>
+
+  <!-- Forecast card -->
+  <rect x="240" y="100" width="500" height="280" class="card"/>
+  <rect x="240" y="100" width="500" height="28" class="h"/>
+  <use href="#ic-prophet" x="246" y="103" width="22" height="22"/>
+  <text x="276" y="119" class="lb">수요 예측 (FN-018)  ·  PROD-A1 향후 90일</text>
+
+  <!-- mini chart -->
+  <rect x="260" y="140" width="460" height="180" fill="#fff" stroke="#888"/>
+  <polygon points="260,250 320,240 380,228 440,212 500,202 560,196 620,200 680,210 720,220 720,260 680,250 620,242 560,238 500,236 440,242 380,260 320,272 260,278" fill="#dfe7f5"/>
+  <polyline points="260,260 320,250 380,238 440,222 500,212 560,206 620,210 680,220 720,230" fill="none" stroke="#1f3a93" stroke-width="2" stroke-dasharray="6,3"/>
+  <line x1="500" y1="140" x2="500" y2="320" stroke="#aaa" stroke-dasharray="3,3"/>
+  <text x="265" y="335" class="sm">2026-04</text>
+  <text x="490" y="135" class="sm">today</text>
+  <text x="710" y="335" class="sm" text-anchor="end">2026-07</text>
+
+  <text x="260" y="358" class="sm">▸ 평균 +8.7 % 증가, MAPE 8.7 % (정확도 91.3 %)</text>
+  <text x="260" y="372" class="sm">▸ 다음 주 라인 가동률 94 % 필요</text>
+
+  <!-- Defect predict -->
+  <rect x="760" y="100" width="300" height="280" class="card"/>
+  <rect x="760" y="100" width="300" height="28" class="h"/>
+  <use href="#ic-xgboost" x="766" y="103" width="22" height="22"/>
+  <text x="796" y="119" class="lb">불량 예측 (FN-028)</text>
+
+  <text x="772" y="150" class="sm">대상</text>
+  <text x="772" y="170" class="lb">WO-20260420-007</text>
+
+  <text x="772" y="200" class="sm">예측 결과</text>
+  <text x="772" y="226" font-size="22" font-weight="700" fill="#b58800">P(defect) = 0.34</text>
+  <rect x="772" y="232" width="200" height="14" fill="#eee"/>
+  <rect x="772" y="232" width="68" height="14" fill="#b58800"/>
+  <text x="772" y="266" class="sm">위험도 :  MEDIUM</text>
+
+  <text x="772" y="295" class="sm">권장 조치</text>
+  <text x="772" y="312" font-size="11" fill="#111">▸ 온도 5 °C 인하</text>
+  <text x="772" y="328" font-size="11" fill="#111">▸ 진동 센서 점검</text>
+  <text x="772" y="358" class="sm">→ 적용 시 P(defect) 0.18 (예상 ↓ 47 %)</text>
+
+  <!-- SHAP -->
+  <rect x="240" y="400" width="500" height="270" class="card"/>
+  <rect x="240" y="400" width="500" height="28" class="h"/>
+  <use href="#ic-shap" x="246" y="403" width="22" height="22"/>
+  <text x="276" y="419" class="lb">SHAP 설명 (waterfall)  ·  WO-20260420-007</text>
+
+  <line x1="400" y1="450" x2="400" y2="640" stroke="#888"/>
+  <text x="397" y="450" text-anchor="end" class="sm">base 0.18</text>
+
+  <g font-size="10">
+    <text x="395" y="468" text-anchor="end" fill="#111">temperature 192 °C</text>
+    <rect x="400" y="458" width="120" height="14" fill="#c0392b"/><text x="528" y="468">+0.12</text>
+
+    <text x="395" y="490" text-anchor="end" fill="#111">vibration 3.4 mm/s</text>
+    <rect x="400" y="480" width="80"  height="14" fill="#c0392b"/><text x="488" y="490">+0.08</text>
+
+    <text x="395" y="512" text-anchor="end" fill="#111">CT_var 1.7 s</text>
+    <rect x="400" y="502" width="55"  height="14" fill="#c0392b"/><text x="463" y="512">+0.05</text>
+
+    <text x="395" y="534" text-anchor="end" fill="#111">operator 0.62</text>
+    <rect x="400" y="524" width="40"  height="14" fill="#c0392b"/><text x="448" y="534">+0.03</text>
+
+    <text x="395" y="556" text-anchor="end" fill="#111">humidity 45 %</text>
+    <rect x="360" y="546" width="40"  height="14" fill="#1f3a93"/><text x="350" y="556" text-anchor="end">−0.04</text>
+
+    <text x="395" y="578" text-anchor="end" fill="#111">setup 2 d</text>
+    <rect x="372" y="568" width="28"  height="14" fill="#1f3a93"/><text x="362" y="578" text-anchor="end">−0.02</text>
+  </g>
+
+  <text x="252" y="615" class="lb" font-weight="700">Σ shap = +0.21  →  P(defect) = sigmoid(logit + 0.21) = 0.34</text>
+  <text x="252" y="633" class="sm">→ AI는 "왜?"를 함께 보여준다.   현장 작업자의 신뢰가 의사결정 도구로 변환되는 핵심 포인트.</text>
+
+  <!-- AI insight summary -->
+  <rect x="760" y="400" width="300" height="270" class="card"/>
+  <rect x="760" y="400" width="300" height="28" class="h"/>
+  <text x="772" y="419" class="lb">주간 AI 종합 인사이트 (FN-037)</text>
+
+  <text x="772" y="450" class="sm">생산성</text>
+  <text x="772" y="468" font-size="11">▸ 4월 1째주 대비 +3.2 %</text>
+  <text x="772" y="486" font-size="11">▸ 라인 A 가동률 86 % → 91 %</text>
+
+  <text x="772" y="516" class="sm">품질</text>
+  <text x="772" y="534" font-size="11">▸ 불량률 1.8 % (목표 1.5 %)</text>
+  <text x="772" y="552" font-size="11">▸ TOP-1 외관 (38 %), CAPA 진행</text>
+
+  <text x="772" y="582" class="sm">설비</text>
+  <text x="772" y="600" font-size="11">▸ EQP-003 진동 ↑ → 48 h 점검</text>
+  <text x="772" y="618" font-size="11">▸ EQP-005 setup 손실 60 분/일</text>
+
+  <text x="772" y="650" class="sm">▸ 권장 : 예방정비 주기 단축 (월 → 격주)</text>
+  <text x="772" y="666" class="sm">▸ 예상 효과 : 가동률 +3 %p</text>
+</svg>

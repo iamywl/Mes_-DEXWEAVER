@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 460" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrL2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#222"/>
+    </marker>
+  </defs>
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#444}
+    .raw{fill:#f0f6f0;stroke:#1e7c39;stroke-width:1.2}
+    .semi{fill:#eaf1fb;stroke:#1f3a93;stroke-width:1.2}
+    .prod{fill:#fef7f0;stroke:#c0392b;stroke-width:1.2}
+    .scope{fill:#fff8d8;stroke:#b58800;stroke-width:1.4;stroke-dasharray:5,3}
+    .lin{stroke:#222;stroke-width:1;fill:none}
+  </style>
+
+  <text x="440" y="22" text-anchor="middle" class="ttl">Fig. 12  LOT Genealogy &amp; Recall Impact (FN-048) — Bidirectional Trace</text>
+
+  <!-- Backward (raw materials) -->
+  <text x="60" y="60" class="lb">Backward trace ← (raw materials)</text>
+  <rect x="40" y="80" width="140" height="40" rx="3" class="raw"/>
+  <text x="110" y="98" text-anchor="middle" class="sm">LOT-R-2026-0312-A</text>
+  <text x="110" y="112" text-anchor="middle" class="sm">ABS resin · 320 kg</text>
+
+  <rect x="40" y="140" width="140" height="40" rx="3" class="raw"/>
+  <text x="110" y="158" text-anchor="middle" class="sm">LOT-R-2026-0314-B</text>
+  <text x="110" y="172" text-anchor="middle" class="sm">colorant · 5.0 kg</text>
+
+  <rect x="40" y="200" width="140" height="40" rx="3" class="raw"/>
+  <text x="110" y="218" text-anchor="middle" class="sm">LOT-R-2026-0309-C</text>
+  <text x="110" y="232" text-anchor="middle" class="sm">PCB blanks · 102 ea</text>
+
+  <rect x="40" y="260" width="140" height="40" rx="3" class="raw"/>
+  <text x="110" y="278" text-anchor="middle" class="sm">LOT-R-2026-0311-D</text>
+  <text x="110" y="292" text-anchor="middle" class="sm">IC chips · 304 ea</text>
+
+  <!-- Semi -->
+  <rect x="240" y="120" width="160" height="40" rx="3" class="semi"/>
+  <text x="320" y="138" text-anchor="middle" class="sm">LOT-S-2026-0316-H1</text>
+  <text x="320" y="152" text-anchor="middle" class="sm">Housing semi · 100 ea</text>
+
+  <rect x="240" y="220" width="160" height="40" rx="3" class="semi"/>
+  <text x="320" y="238" text-anchor="middle" class="sm">LOT-S-2026-0317-P2</text>
+  <text x="320" y="252" text-anchor="middle" class="sm">PCB assy · 100 ea</text>
+
+  <line x1="180" y1="100" x2="240" y2="135" class="lin" marker-end="url(#arrL2)"/>
+  <line x1="180" y1="160" x2="240" y2="145" class="lin" marker-end="url(#arrL2)"/>
+  <line x1="180" y1="220" x2="240" y2="235" class="lin" marker-end="url(#arrL2)"/>
+  <line x1="180" y1="280" x2="240" y2="245" class="lin" marker-end="url(#arrL2)"/>
+
+  <!-- focal -->
+  <rect x="450" y="170" width="160" height="56" rx="3" class="prod"/>
+  <text x="530" y="190" text-anchor="middle" class="lb">LOT-P-2026-0418-007</text>
+  <text x="530" y="206" text-anchor="middle" class="sm">Smart Sensor · 100 ea</text>
+  <text x="530" y="220" text-anchor="middle" class="sm">★ focal lot (recall trigger)</text>
+
+  <line x1="400" y1="140" x2="450" y2="180" class="lin" marker-end="url(#arrL2)"/>
+  <line x1="400" y1="240" x2="450" y2="215" class="lin" marker-end="url(#arrL2)"/>
+
+  <!-- Forward shipments -->
+  <text x="660" y="60" class="lb">Forward trace → (shipments)</text>
+  <rect x="660" y="100" width="180" height="40" rx="3" class="prod"/>
+  <text x="750" y="118" text-anchor="middle" class="sm">SHIP-2026-0419-001</text>
+  <text x="750" y="132" text-anchor="middle" class="sm">Customer A · 40 ea</text>
+
+  <rect x="660" y="160" width="180" height="40" rx="3" class="prod"/>
+  <text x="750" y="178" text-anchor="middle" class="sm">SHIP-2026-0419-002</text>
+  <text x="750" y="192" text-anchor="middle" class="sm">Customer B · 35 ea</text>
+
+  <rect x="660" y="220" width="180" height="40" rx="3" class="prod"/>
+  <text x="750" y="238" text-anchor="middle" class="sm">SHIP-2026-0420-001</text>
+  <text x="750" y="252" text-anchor="middle" class="sm">Customer C · 25 ea</text>
+
+  <line x1="610" y1="195" x2="660" y2="120" class="lin" marker-end="url(#arrL2)"/>
+  <line x1="610" y1="200" x2="660" y2="180" class="lin" marker-end="url(#arrL2)"/>
+  <line x1="610" y1="210" x2="660" y2="240" class="lin" marker-end="url(#arrL2)"/>
+
+  <!-- impact callout -->
+  <rect x="40" y="320" width="800" height="120" rx="4" class="scope"/>
+  <text x="50" y="340" class="lb">Recall impact analysis (computed in &lt; 200 ms via recursive CTE on inventory_transactions / work_results)</text>
+  <text x="50" y="360" class="sm">Affected raw lots : 4   |   Affected semi lots : 2   |   Affected product lots : 1   |   Affected shipments : 3 (3 customers · 100 ea total)</text>
+  <text x="50" y="378" class="sm">Estimated cost = 100 × ₩48,000 + recall logistics ₩2,400,000 ≈ ₩7,200,000   ·   ETA to notify all customers : 4 h (auto email + WS notify FN-046)</text>
+  <text x="50" y="396" class="sm">All upstream raw lots are quarantined automatically (status → QUARANTINE) ; downstream shipments flagged for return.</text>
+  <text x="50" y="414" class="sm">Result rendered as collapsible tree on the LOT trace UI ; depth slider lets QA expand to N levels for forensic analysis.</text>
+  <text x="50" y="432" class="sm">▸ Algorithm : depth-limited DFS over (parent_lot, child_lot) edges, depth ≤ 5 to bound query latency.</text>
+</svg>

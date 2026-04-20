@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 480" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <symbol id="ic-react" viewBox="-50 -50 100 100"><circle r="6" fill="#61DAFB"/><ellipse rx="42" ry="16" fill="none" stroke="#61DAFB" stroke-width="3"/><ellipse rx="42" ry="16" fill="none" stroke="#61DAFB" stroke-width="3" transform="rotate(60)"/><ellipse rx="42" ry="16" fill="none" stroke="#61DAFB" stroke-width="3" transform="rotate(120)"/></symbol>
+    <symbol id="ic-vite" viewBox="-50 -50 100 100"><polygon points="-32,-30 32,-30 0,40" fill="#646CFF"/><polygon points="-14,-12 18,-30 4,18 -8,30" fill="#FFCA28"/></symbol>
+    <symbol id="ic-tailwind" viewBox="-50 -50 100 100"><path d="M-44,-6 Q-22,-32 0,-12 Q22,8 44,-12 Q22,16 0,-4 Q-22,-26 -44,-6 Z" fill="#38BDF8"/><path d="M-44,18 Q-22,-8 0,12 Q22,32 44,12 Q22,40 0,20 Q-22,-2 -44,18 Z" fill="#38BDF8" opacity="0.8"/></symbol>
+    <symbol id="ic-fastapi" viewBox="-50 -50 100 100"><circle r="42" fill="#009688"/><polygon points="-12,-30 18,-6 -2,-2 12,30 -18,6 2,2" fill="#fff"/></symbol>
+    <symbol id="ic-python" viewBox="-50 -50 100 100"><path d="M0,-40 Q-30,-40 -30,-15 V-5 H10 V0 H-30 Q-40,0 -40,10 V25 Q-40,40 -15,40 H5 V25 Q5,15 15,15 H35 Q40,15 40,5 V-15 Q40,-40 0,-40 Z" fill="#3776AB"/><path d="M0,40 Q30,40 30,15 V5 H-10 V0 H30 Q40,0 40,-10 V-25 Q40,-40 15,-40 H-5 V-25 Q-5,-15 -15,-15 H-35 Q-40,-15 -40,-5 V15 Q-40,40 0,40 Z" fill="#FFD43B" opacity="0.95"/></symbol>
+    <symbol id="ic-postgres" viewBox="-50 -50 100 100"><ellipse cx="0" cy="0" rx="40" ry="38" fill="#336791"/><circle cx="-10" cy="-8" r="5" fill="#fff"/><circle cx="-10" cy="-8" r="2" fill="#111"/><path d="M-30,15 Q-15,30 0,28 Q15,30 30,15" fill="none" stroke="#fff" stroke-width="2.5"/></symbol>
+    <symbol id="ic-k8s" viewBox="-50 -50 100 100"><polygon points="0,-44 38,-22 38,22 0,44 -38,22 -38,-22" fill="#326CE5" stroke="#fff" stroke-width="3"/><circle cx="0" cy="0" r="14" fill="none" stroke="#fff" stroke-width="2.5"/><g stroke="#fff" stroke-width="2.5"><line x1="0" y1="-14" x2="0" y2="-32"/><line x1="14" y1="0" x2="32" y2="0"/><line x1="0" y1="14" x2="0" y2="32"/><line x1="-14" y1="0" x2="-32" y2="0"/></g></symbol>
+    <symbol id="ic-cilium" viewBox="-50 -50 100 100"><ellipse cx="0" cy="5" rx="34" ry="28" fill="#F8C517"/><rect x="-30" y="-12" width="60" height="8" fill="#111"/><rect x="-30" y="6"  width="60" height="8" fill="#111"/><rect x="-30" y="22" width="60" height="8" fill="#111"/><circle cx="0" cy="-25" r="4" fill="#111"/></symbol>
+    <symbol id="ic-jenkins" viewBox="-50 -50 100 100"><ellipse cx="0" cy="-12" rx="22" ry="26" fill="#F0DDB1"/><path d="M-22,-18 Q-22,-44 0,-44 Q22,-44 22,-18 Q22,-30 0,-32 Q-22,-30 -22,-18 Z" fill="#111"/><circle cx="-9"  cy="-12" r="2.5" fill="#111"/><circle cx="9"   cy="-12" r="2.5" fill="#111"/><path d="M-22,18 Q0,28 22,18 L24,42 L-24,42 Z" fill="#D33833"/></symbol>
+    <symbol id="ic-docker" viewBox="-50 -50 100 100"><g fill="#2496ED"><rect x="-26" y="-2"  width="12" height="12"/><rect x="-12" y="-2"  width="12" height="12"/><rect x="2"   y="-2"  width="12" height="12"/><rect x="-12" y="-16" width="12" height="12"/><rect x="2"   y="-16" width="12" height="12"/><rect x="-12" y="-30" width="12" height="12"/><path d="M-44,12 Q-30,28 0,28 Q30,28 38,8 L42,12 Q40,30 22,38 L-30,38 Q-46,30 -46,16 Z"/></g></symbol>
+    <symbol id="ic-prometheus" viewBox="-50 -50 100 100"><path d="M0,-44 Q15,-20 22,-8 Q30,8 22,24 Q12,40 -12,40 Q-30,28 -28,8 Q-26,-12 -10,-22 Q0,-12 -4,0 Q-2,-22 0,-44 Z" fill="#E6522C"/><rect x="-22" y="14" width="44" height="6" fill="#111"/><circle cx="0" cy="6" r="6" fill="#fff"/></symbol>
+    <symbol id="ic-grafana" viewBox="-50 -50 100 100"><circle r="38" fill="#F46800"/><path d="M-22,4 H22 L18,22 H-18 Z" fill="#fff"/><rect x="-3" y="-22" width="6" height="22" fill="#fff"/><circle cx="0" cy="-26" r="6" fill="#fff"/></symbol>
+    <symbol id="ic-prophet" viewBox="-50 -50 100 100"><rect x="-40" y="-40" width="80" height="80" rx="8" fill="#1877F2"/><polyline points="-30,28 -10,8 5,18 28,-22" fill="none" stroke="#fff" stroke-width="4"/></symbol>
+    <symbol id="ic-xgboost" viewBox="-50 -50 100 100"><rect x="-40" y="-40" width="80" height="80" rx="6" fill="#0a4f3a"/><text x="0" y="6" text-anchor="middle" font-size="22" font-weight="800" fill="#9ee493">XGB</text></symbol>
+    <symbol id="ic-sklearn" viewBox="-50 -50 100 100"><circle r="40" fill="#3499CD"/><text x="0" y="-2" text-anchor="middle" font-size="13" font-weight="700" fill="#F7931E">scikit</text><text x="0" y="14" text-anchor="middle" font-size="13" font-weight="700" fill="#F7931E">learn</text></symbol>
+    <symbol id="ic-ortools" viewBox="-50 -50 100 100"><circle r="40" fill="#fff" stroke="#4285F4" stroke-width="6"/><text x="0" y="6" text-anchor="middle" font-size="20" font-weight="800" fill="#4285F4">OR</text></symbol>
+    <symbol id="ic-shap" viewBox="-50 -50 100 100"><rect x="-40" y="-40" width="80" height="80" rx="6" fill="#7d2da3"/><text x="0" y="8" text-anchor="middle" font-size="22" font-weight="800" fill="#fff">SHAP</text></symbol>
+  </defs>
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .grp{font-size:12px;font-weight:700;fill:#1f3a93}
+    .lb{font-size:11px;fill:#111;text-anchor:middle}
+    .sm{font-size:9px;fill:#666;text-anchor:middle}
+    .gbox{fill:#fafafa;stroke:#aaa;stroke-dasharray:5,3}
+  </style>
+
+  <text x="460" y="22" text-anchor="middle" class="ttl">Fig. 0  Tech Stack Overview — open-source &amp; CNCF projects used by DEXWEAVER MES</text>
+
+  <!-- Frontend group -->
+  <rect x="20" y="50" width="280" height="180" rx="6" class="gbox"/>
+  <text x="34" y="70" class="grp">Frontend</text>
+  <use href="#ic-react"    x="40"  y="90" width="56" height="56"/>
+  <use href="#ic-vite"     x="120" y="90" width="56" height="56"/>
+  <use href="#ic-tailwind" x="200" y="90" width="56" height="56"/>
+  <text x="68"  y="160" class="lb">React 19</text><text x="68"  y="174" class="sm">UI library</text>
+  <text x="148" y="160" class="lb">Vite 5</text>  <text x="148" y="174" class="sm">build tool</text>
+  <text x="228" y="160" class="lb">Tailwind 4</text><text x="228" y="174" class="sm">utility CSS</text>
+
+  <!-- Backend group -->
+  <rect x="320" y="50" width="280" height="180" rx="6" class="gbox"/>
+  <text x="334" y="70" class="grp">Backend / Database</text>
+  <use href="#ic-fastapi"  x="340" y="90" width="56" height="56"/>
+  <use href="#ic-python"   x="420" y="90" width="56" height="56"/>
+  <use href="#ic-postgres" x="500" y="90" width="56" height="56"/>
+  <text x="368" y="160" class="lb">FastAPI</text><text x="368" y="174" class="sm">async REST</text>
+  <text x="448" y="160" class="lb">Python 3.9</text><text x="448" y="174" class="sm">runtime</text>
+  <text x="528" y="160" class="lb">PostgreSQL 15</text><text x="528" y="174" class="sm">RDBMS · ACID</text>
+
+  <!-- Infra group -->
+  <rect x="620" y="50" width="280" height="180" rx="6" class="gbox"/>
+  <text x="634" y="70" class="grp">Infra · CNCF</text>
+  <use href="#ic-k8s"     x="640" y="90" width="56" height="56"/>
+  <use href="#ic-cilium"  x="720" y="90" width="56" height="56"/>
+  <use href="#ic-docker"  x="800" y="90" width="56" height="56"/>
+  <use href="#ic-jenkins" x="640" y="160" width="56" height="56"/>
+  <use href="#ic-prometheus" x="720" y="160" width="56" height="56"/>
+  <use href="#ic-grafana" x="800" y="160" width="56" height="56"/>
+  <text x="668" y="148" class="sm">Kubernetes</text>
+  <text x="748" y="148" class="sm">Cilium eBPF</text>
+  <text x="828" y="148" class="sm">Docker</text>
+  <text x="668" y="222" class="sm">Jenkins</text>
+  <text x="748" y="222" class="sm">Prometheus</text>
+  <text x="828" y="222" class="sm">Grafana</text>
+
+  <!-- AI group -->
+  <rect x="20" y="250" width="880" height="200" rx="6" class="gbox"/>
+  <text x="34" y="270" class="grp">AI / ML  Stack</text>
+  <use href="#ic-prophet" x="40"  y="290" width="60" height="60"/>
+  <use href="#ic-xgboost" x="200" y="290" width="60" height="60"/>
+  <use href="#ic-sklearn" x="360" y="290" width="60" height="60"/>
+  <use href="#ic-ortools" x="520" y="290" width="60" height="60"/>
+  <use href="#ic-shap"    x="680" y="290" width="60" height="60"/>
+
+  <text x="70"  y="365" class="lb">Prophet</text>
+  <text x="70"  y="380" class="sm">FN-018 Demand forecast</text>
+  <text x="70"  y="394" class="sm">trend + season + holiday</text>
+
+  <text x="230" y="365" class="lb">XGBoost</text>
+  <text x="230" y="380" class="sm">FN-028 Defect predict</text>
+  <text x="230" y="394" class="sm">gradient boosting trees</text>
+
+  <text x="390" y="365" class="lb">scikit-learn</text>
+  <text x="390" y="380" class="sm">FN-034 Failure predict</text>
+  <text x="390" y="394" class="sm">IsolationForest anomaly</text>
+
+  <text x="550" y="365" class="lb">OR-Tools</text>
+  <text x="550" y="380" class="sm">FN-019 Schedule optim.</text>
+  <text x="550" y="394" class="sm">CP-SAT solver</text>
+
+  <text x="710" y="365" class="lb">SHAP</text>
+  <text x="710" y="380" class="sm">FN-028 Explain predict</text>
+  <text x="710" y="394" class="sm">Shapley values</text>
+
+  <text x="800" y="430" class="sm" text-anchor="end">All AI modules ship a fallback path (moving-avg / rule-based) when libraries are not installed — graceful degradation.</text>
+</svg>

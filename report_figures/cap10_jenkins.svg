@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <symbol id="ic-jenkins" viewBox="-50 -50 100 100">
+      <ellipse cx="0" cy="-12" rx="22" ry="26" fill="#F0DDB1"/>
+      <path d="M-22,-18 Q-22,-44 0,-44 Q22,-44 22,-18 Q22,-30 0,-32 Q-22,-30 -22,-18 Z" fill="#111"/>
+      <circle cx="-9"  cy="-12" r="2.5" fill="#111"/>
+      <circle cx="9"   cy="-12" r="2.5" fill="#111"/>
+      <path d="M-22,18 Q0,28 22,18 L24,42 L-24,42 Z" fill="#D33833"/>
+      <rect x="-3" y="20" width="6" height="22" fill="#fff"/>
+    </symbol>
+  </defs>
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#666}
+    .frame{fill:#F0F0F0;stroke:#222;stroke-width:1.2}
+    .card{fill:#fff;stroke:#bbb}
+    .h{fill:#335061;stroke:#1a2a33}
+    .ok{fill:#3a8d3c}
+    .warn{fill:#c9a132}
+    .bad{fill:#c0392b}
+    .menu{fill:#fff;font-size:11px}
+  </style>
+
+  <text x="550" y="22" text-anchor="middle" class="ttl">Capture 10.  Jenkins Build History  —  mes-cd Pipeline (90 s end-to-end)</text>
+  <rect x="20" y="40" width="1060" height="640" class="frame"/>
+
+  <!-- header -->
+  <rect x="20" y="40" width="1060" height="44" class="h"/>
+  <use href="#ic-jenkins" x="32" y="46" width="32" height="32"/>
+  <text x="74" y="68" fill="#fff" font-size="13" font-weight="700">Jenkins · DEXWEAVER MES · pipelines</text>
+
+  <!-- side -->
+  <rect x="20" y="84" width="200" height="596" fill="#fff" stroke="#bbb"/>
+  <text x="35" y="108" class="menu" fill="#222">📁 mes-ci</text>
+  <text x="35" y="128" class="menu" fill="#1f3a93" font-weight="700">📁 mes-cd</text>
+  <text x="35" y="148" class="menu" fill="#222">📁 mes-nightly</text>
+  <text x="35" y="168" class="menu" fill="#222">📁 mes-security-scan</text>
+  <text x="35" y="200" class="sm">▸ Build queue : 0</text>
+  <text x="35" y="218" class="sm">▸ Executors  : 4 / 4 idle</text>
+  <text x="35" y="236" class="sm">▸ Plugins    : 87</text>
+
+  <!-- Pipeline header -->
+  <rect x="240" y="100" width="820" height="60" class="card"/>
+  <text x="252" y="124" class="lb" font-size="14" font-weight="700">Pipeline:  mes-cd  /  branch:  main</text>
+  <text x="252" y="146" class="sm">Latest:  #247  ·  Triggered by Git push 64d0c04 (ywlee)  ·  Started 13:42:11  ·  Duration 1m 28s  ·  ✓ SUCCESS</text>
+
+  <!-- Stage view header -->
+  <rect x="240" y="180" width="820" height="32" class="h"/>
+  <text x="252" y="200" fill="#fff" class="lb">Build  ·  Lint  ·  Test  ·  Security  ·  Package  ·  Deploy  ·  Verify</text>
+
+  <!-- table -->
+  <g font-size="11" fill="#222">
+    <rect x="240" y="212" width="820" height="32" fill="#fafafa"/>
+    <text x="252" y="232">#</text>
+    <text x="290" y="232">Status</text>
+    <text x="370" y="232">Lint</text>
+    <text x="450" y="232">Test</text>
+    <text x="530" y="232">Security</text>
+    <text x="630" y="232">Package</text>
+    <text x="730" y="232">Deploy</text>
+    <text x="830" y="232">Verify</text>
+    <text x="940" y="232">Total</text>
+
+    <rect x="240" y="244" width="820" height="40" fill="#fff"/>
+    <text x="252" y="268">247</text>
+    <rect x="290" y="252" width="60" height="22" rx="11" class="ok"/><text x="320" y="268" text-anchor="middle" fill="#fff" font-weight="700">✓</text>
+    <text x="370" y="268">8s ✓</text><text x="450" y="268">22s ✓</text><text x="530" y="268">14s ✓</text><text x="630" y="268">11s ✓</text><text x="730" y="268">18s ✓</text><text x="830" y="268">15s ✓</text><text x="940" y="268">1m 28s</text>
+
+    <rect x="240" y="284" width="820" height="40" fill="#fafafa"/>
+    <text x="252" y="308">246</text>
+    <rect x="290" y="292" width="60" height="22" rx="11" class="ok"/><text x="320" y="308" text-anchor="middle" fill="#fff" font-weight="700">✓</text>
+    <text x="370" y="308">7s ✓</text><text x="450" y="308">19s ✓</text><text x="530" y="308">14s ✓</text><text x="630" y="308">10s ✓</text><text x="730" y="308">17s ✓</text><text x="830" y="308">14s ✓</text><text x="940" y="308">1m 21s</text>
+
+    <rect x="240" y="324" width="820" height="40" fill="#fff"/>
+    <text x="252" y="348">245</text>
+    <rect x="290" y="332" width="60" height="22" rx="11" class="bad"/><text x="320" y="348" text-anchor="middle" fill="#fff" font-weight="700">✗</text>
+    <text x="370" y="348">7s ✓</text><text x="450" y="348">28s ✗</text><text x="530" y="348">— skip</text><text x="630" y="348">— skip</text><text x="730" y="348">— skip</text><text x="830" y="348">— skip</text><text x="940" y="348">35s</text>
+
+    <rect x="240" y="364" width="820" height="40" fill="#fafafa"/>
+    <text x="252" y="388">244</text>
+    <rect x="290" y="372" width="60" height="22" rx="11" class="warn"/><text x="320" y="388" text-anchor="middle" fill="#fff" font-weight="700">!</text>
+    <text x="370" y="388">8s ✓</text><text x="450" y="388">21s ✓</text><text x="530" y="388">15s !</text><text x="630" y="388">11s ✓</text><text x="730" y="388">18s ✓</text><text x="830" y="388">15s ✓</text><text x="940" y="388">1m 28s</text>
+
+    <rect x="240" y="404" width="820" height="40" fill="#fff"/>
+    <text x="252" y="428">243</text>
+    <rect x="290" y="412" width="60" height="22" rx="11" class="ok"/><text x="320" y="428" text-anchor="middle" fill="#fff" font-weight="700">✓</text>
+    <text x="370" y="428">7s ✓</text><text x="450" y="428">20s ✓</text><text x="530" y="428">14s ✓</text><text x="630" y="428">11s ✓</text><text x="730" y="428">17s ✓</text><text x="830" y="428">14s ✓</text><text x="940" y="428">1m 23s</text>
+  </g>
+
+  <!-- console output -->
+  <rect x="240" y="460" width="820" height="200" fill="#1a1a1a"/>
+  <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="11" fill="#9ee493">
+    <text x="252" y="482">[Pipeline] stage (Deploy)</text>
+    <text x="252" y="498">[Pipeline] sh : kubectl apply -k ./infra -n mes-system</text>
+    <text x="252" y="514" fill="#eaeaea">configmap/mes-frontend-config configured</text>
+    <text x="252" y="530" fill="#eaeaea">deployment.apps/mes-frontend configured</text>
+    <text x="252" y="546" fill="#eaeaea">deployment.apps/mes-api configured</text>
+    <text x="252" y="562" fill="#eaeaea">[Pipeline] sh : kubectl rollout status deploy/mes-api -n mes-system</text>
+    <text x="252" y="578" fill="#9ee493">deployment "mes-api" successfully rolled out  (3/3 pods ready)</text>
+    <text x="252" y="594" fill="#eaeaea">[Pipeline] stage (Verify)</text>
+    <text x="252" y="610" fill="#eaeaea">[Pipeline] sh : ./scripts/smoke-test.sh https://mes.dexweaver.local</text>
+    <text x="252" y="626" fill="#9ee493">▶ /api/health  → 200 OK   ✓</text>
+    <text x="252" y="642" fill="#9ee493">▶ Login + JWT  → 200 OK   ✓ (248 ms)   pipeline GREEN.</text>
+  </g>
+</svg>

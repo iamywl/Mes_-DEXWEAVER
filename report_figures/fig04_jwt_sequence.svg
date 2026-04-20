@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 540" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#222"/>
+    </marker>
+    <marker id="arr3o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="none" stroke="#222"/>
+    </marker>
+  </defs>
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .actor{fill:#eef2f8;stroke:#1f3a93;stroke-width:1.2}
+    .actor-t{font-size:11px;font-weight:700;fill:#111;text-anchor:middle}
+    .lb{font-size:10px;fill:#111}
+    .nt{font-size:10px;fill:#111;font-style:italic}
+    .life{stroke:#888;stroke-dasharray:3,3}
+    .act{fill:#fff;stroke:#222}
+    .arr{stroke:#222;stroke-width:1.2;fill:none}
+    .ret{stroke:#222;stroke-width:1.2;fill:none;stroke-dasharray:5,3}
+    .note{fill:#fff8d8;stroke:#b58800}
+  </style>
+
+  <text x="440" y="22" text-anchor="middle" class="ttl">Fig. 4  Authentication Sequence — JWT (PyJWT) + bcrypt (cost factor 12)</text>
+
+  <!-- actors -->
+  <rect x="40" y="50" width="120" height="32" class="actor"/>
+  <text x="100" y="71" class="actor-t">Operator (UI)</text>
+  <rect x="220" y="50" width="120" height="32" class="actor"/>
+  <text x="280" y="71" class="actor-t">React Client</text>
+  <rect x="400" y="50" width="120" height="32" class="actor"/>
+  <text x="460" y="71" class="actor-t">FastAPI / mes_auth</text>
+  <rect x="580" y="50" width="120" height="32" class="actor"/>
+  <text x="640" y="71" class="actor-t">PostgreSQL : users</text>
+  <rect x="740" y="50" width="120" height="32" class="actor"/>
+  <text x="800" y="71" class="actor-t">JWT Verifier</text>
+
+  <!-- lifelines -->
+  <line x1="100" y1="82" x2="100" y2="510" class="life"/>
+  <line x1="280" y1="82" x2="280" y2="510" class="life"/>
+  <line x1="460" y1="82" x2="460" y2="510" class="life"/>
+  <line x1="640" y1="82" x2="640" y2="510" class="life"/>
+  <line x1="800" y1="82" x2="800" y2="510" class="life"/>
+
+  <!-- 1 enter id/pw -->
+  <line x1="100" y1="110" x2="280" y2="110" class="arr" marker-end="url(#arr3)"/>
+  <text x="190" y="104" class="lb" text-anchor="middle">① enter user_id, password</text>
+
+  <!-- 2 POST /api/auth/login -->
+  <line x1="280" y1="140" x2="460" y2="140" class="arr" marker-end="url(#arr3)"/>
+  <text x="370" y="134" class="lb" text-anchor="middle">② POST /api/auth/login   {user_id, password}</text>
+
+  <!-- activation bar on FastAPI -->
+  <rect x="455" y="140" width="10" height="240" class="act"/>
+
+  <!-- 3 SELECT user -->
+  <line x1="465" y1="170" x2="640" y2="170" class="arr" marker-end="url(#arr3)"/>
+  <text x="552" y="164" class="lb" text-anchor="middle">③ SELECT password_hash, role  WHERE user_id = ?</text>
+
+  <line x1="640" y1="200" x2="465" y2="200" class="ret" marker-end="url(#arr3o)"/>
+  <text x="552" y="194" class="lb" text-anchor="middle">row { hash, role, is_active }</text>
+
+  <!-- 4 bcrypt verify -->
+  <rect x="380" y="220" width="160" height="34" class="note"/>
+  <text x="460" y="240" class="lb" text-anchor="middle">④ bcrypt.checkpw(pw, hash)</text>
+
+  <!-- 5 issue JWT -->
+  <line x1="465" y1="270" x2="800" y2="270" class="arr" marker-end="url(#arr3)"/>
+  <text x="632" y="264" class="lb" text-anchor="middle">⑤ jwt.encode({sub, role, exp=24h}, SECRET, HS256)</text>
+  <line x1="800" y1="298" x2="465" y2="298" class="ret" marker-end="url(#arr3o)"/>
+  <text x="632" y="292" class="lb" text-anchor="middle">access_token</text>
+
+  <!-- 6 200 OK token -->
+  <line x1="455" y1="330" x2="280" y2="330" class="ret" marker-end="url(#arr3o)"/>
+  <text x="370" y="324" class="lb" text-anchor="middle">⑥ 200 OK   {token, user}</text>
+
+  <line x1="280" y1="358" x2="100" y2="358" class="ret" marker-end="url(#arr3o)"/>
+  <text x="190" y="352" class="lb" text-anchor="middle">⑦ store in localStorage  → render dashboard</text>
+
+  <!-- subsequent secured request -->
+  <line x1="280" y1="408" x2="460" y2="408" class="arr" marker-end="url(#arr3)"/>
+  <text x="370" y="402" class="lb" text-anchor="middle">⑧ GET /api/work-orders   Authorization: Bearer &lt;token&gt;</text>
+
+  <line x1="465" y1="438" x2="800" y2="438" class="arr" marker-end="url(#arr3)"/>
+  <text x="632" y="432" class="lb" text-anchor="middle">⑨ jwt.decode(token, SECRET) → claims</text>
+  <line x1="800" y1="466" x2="465" y2="466" class="ret" marker-end="url(#arr3o)"/>
+  <text x="632" y="460" class="lb" text-anchor="middle">{user_id, role, exp}</text>
+
+  <line x1="455" y1="494" x2="280" y2="494" class="ret" marker-end="url(#arr3o)"/>
+  <text x="370" y="488" class="lb" text-anchor="middle">⑩ 200 OK  payload (RBAC checked via Depends)</text>
+
+  <text x="40" y="528" class="nt">Notes : password never leaves TLS channel · bcrypt cost = 12 (~250 ms) prevents brute-force · token TTL 24 h ; refresh strategy planned for v6.0</text>
+</svg>

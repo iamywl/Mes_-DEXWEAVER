@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 420" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#444}
+    .total{fill:#dfe7f5;stroke:#1f3a93;stroke-width:1}
+    .avail{fill:#cfe3cf;stroke:#1e7c39;stroke-width:1}
+    .perf{fill:#fde2c8;stroke:#c05a00;stroke-width:1}
+    .qual{fill:#f3d9d9;stroke:#c0392b;stroke-width:1}
+  </style>
+
+  <text x="440" y="22" text-anchor="middle" class="ttl">Fig. 10  OEE Calculation (FN-044) — Six Big Losses Decomposition</text>
+
+  <!-- Bar 1: planned -->
+  <rect x="40" y="60" width="800" height="40" class="total"/>
+  <text x="440" y="86" text-anchor="middle" class="lb">Planned Production Time  =  480 min  (1 shift)</text>
+
+  <!-- Bar 2: availability losses -->
+  <rect x="40" y="120" width="650" height="40" class="avail"/>
+  <text x="365" y="146" text-anchor="middle" class="lb">Operating Time  =  450 min   →   Availability A = 450/480 = 93.8 %</text>
+  <rect x="690" y="120" width="80" height="40" fill="#888"/>
+  <text x="730" y="138" text-anchor="middle" class="sm" fill="#fff">Breakdown</text>
+  <text x="730" y="152" text-anchor="middle" class="sm" fill="#fff">15 min</text>
+  <rect x="770" y="120" width="70" height="40" fill="#aaa"/>
+  <text x="805" y="138" text-anchor="middle" class="sm" fill="#fff">Setup</text>
+  <text x="805" y="152" text-anchor="middle" class="sm" fill="#fff">15 min</text>
+
+  <!-- Bar 3: performance losses -->
+  <rect x="40" y="180" width="540" height="40" class="perf"/>
+  <text x="310" y="206" text-anchor="middle" class="lb">Net Operating Time = 420 min  →  Performance P = 420 / 450 = 93.3 %</text>
+  <rect x="580" y="180" width="55" height="40" fill="#888"/>
+  <text x="607" y="198" text-anchor="middle" class="sm" fill="#fff">Speed</text>
+  <text x="607" y="212" text-anchor="middle" class="sm" fill="#fff">loss 20</text>
+  <rect x="635" y="180" width="55" height="40" fill="#aaa"/>
+  <text x="662" y="198" text-anchor="middle" class="sm" fill="#fff">Minor</text>
+  <text x="662" y="212" text-anchor="middle" class="sm" fill="#fff">stop 10</text>
+
+  <!-- Bar 4: quality losses -->
+  <rect x="40" y="240" width="490" height="40" class="qual"/>
+  <text x="285" y="266" text-anchor="middle" class="lb">Fully Productive Time = 408 min  →  Quality Q = 408 / 420 = 97.1 %</text>
+  <rect x="530" y="240" width="55" height="40" fill="#888"/>
+  <text x="557" y="258" text-anchor="middle" class="sm" fill="#fff">Defect</text>
+  <text x="557" y="272" text-anchor="middle" class="sm" fill="#fff">loss 10</text>
+  <rect x="585" y="240" width="55" height="40" fill="#aaa"/>
+  <text x="612" y="258" text-anchor="middle" class="sm" fill="#fff">Startup</text>
+  <text x="612" y="272" text-anchor="middle" class="sm" fill="#fff">loss 2</text>
+
+  <!-- Final OEE box -->
+  <rect x="200" y="310" width="480" height="60" rx="4" fill="#fff8d8" stroke="#b58800" stroke-width="1.4"/>
+  <text x="440" y="332" text-anchor="middle" class="lb">OEE  =  A × P × Q  =  0.938 × 0.933 × 0.971  =  0.849   (84.9 %)</text>
+  <text x="440" y="352" text-anchor="middle" class="sm">World-class benchmark = 85 %  →  this line is near-world-class</text>
+  <text x="440" y="368" text-anchor="middle" class="sm">Top loss : Breakdown 15 min  →  CMMS preventive job auto-drafted (FN-049, Phase 2)</text>
+
+  <text x="40" y="402" class="sm">▸ All metrics computed by /api/equipment/oee/{equip_code}  using equip_status_log + work_results + inspections.</text>
+</svg>

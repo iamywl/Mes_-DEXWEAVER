@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .ttl{font-size:13px;font-weight:700;fill:#111}
+    .lb{font-size:11px;fill:#111}
+    .sm{font-size:10px;fill:#666}
+    .menu{fill:#fff;font-size:11px}
+    .frame{fill:#fff;stroke:#222;stroke-width:1.2}
+    .card{fill:#fff;stroke:#bbb}
+    .h{fill:#eef2f8;stroke:#bbb}
+    .ucl{stroke:#c0392b;stroke-width:1.2;stroke-dasharray:6,3}
+    .cl{stroke:#1f3a93;stroke-width:1.2;stroke-dasharray:3,3}
+    .pt{fill:#111}
+    .ptv{fill:#c0392b}
+    .line{stroke:#111;stroke-width:1.4;fill:none}
+  </style>
+
+  <text x="550" y="20" text-anchor="middle" class="ttl">Capture 4.  품질 / SPC  —  GET /api/quality/spc/{item_code} (FN-038) · X̄-R chart · WE rule violation</text>
+  <rect x="20" y="40" width="1060" height="640" class="frame"/>
+  <rect x="20" y="40" width="1060" height="40" fill="#1f3a93"/>
+  <text x="40" y="65" fill="#fff" font-size="13" font-weight="700">DEXWEAVER MES  ›  ✅ 품질 / SPC</text>
+  <rect x="20" y="80" width="200" height="600" fill="#243155"/>
+  <text x="35" y="105" class="menu">📊 대시보드</text>
+  <text x="35" y="128" class="menu">📦 품목 관리</text>
+  <text x="35" y="151" class="menu">🧬 BOM</text>
+  <text x="35" y="174" class="menu">🔄 공정 / 라우팅</text>
+  <text x="35" y="197" class="menu">🏭 설비 관리</text>
+  <text x="35" y="220" class="menu">📅 생산 계획</text>
+  <text x="35" y="243" class="menu">📝 작업 지시</text>
+  <text x="35" y="266" class="menu" fill="#fff" font-weight="700">✅ 품질 / SPC</text>
+  <text x="35" y="289" class="menu">📈 OEE</text>
+  <text x="35" y="312" class="menu">📦 재고</text>
+  <text x="35" y="335" class="menu">🔍 LOT 추적</text>
+  <text x="35" y="358" class="menu">🧠 AI 인사이트</text>
+
+  <!-- toolbar -->
+  <rect x="240" y="100" width="820" height="40" class="card"/>
+  <text x="252" y="125" class="sm">품목 ▾  PROD-A1     기간 ▾ 2026-04-13 ~ 2026-04-20     차트유형 ▾ X̄-R     subgroup size ▾ 5</text>
+  <rect x="970" y="106" width="80" height="28" rx="3" fill="#1f3a93"/>
+  <text x="1010" y="124" text-anchor="middle" fill="#fff" font-weight="700" font-size="11">조회</text>
+
+  <!-- summary -->
+  <rect x="240" y="155" width="200" height="80" class="card"/>
+  <text x="250" y="175" class="sm">평균 X̄</text>
+  <text x="250" y="200" font-size="22" font-weight="700" fill="#1f3a93">10.005</text>
+  <text x="250" y="222" class="sm">target 10.000 (mm)</text>
+
+  <rect x="450" y="155" width="200" height="80" class="card"/>
+  <text x="460" y="175" class="sm">Cpk (FN-040)</text>
+  <text x="460" y="200" font-size="22" font-weight="700" fill="#1e7c39">1.86</text>
+  <text x="460" y="222" class="sm">grade A (≥ 1.67)</text>
+
+  <rect x="660" y="155" width="200" height="80" class="card"/>
+  <text x="670" y="175" class="sm">규칙 위반</text>
+  <text x="670" y="200" font-size="22" font-weight="700" fill="#c0392b">1</text>
+  <text x="670" y="222" class="sm">WE-1 : 1 pt &gt; 3σ</text>
+
+  <rect x="870" y="155" width="190" height="80" class="card"/>
+  <text x="880" y="175" class="sm">CAPA 자동발급</text>
+  <text x="880" y="200" font-size="13" font-weight="700" fill="#c0392b">CAPA-20260420-005</text>
+  <text x="880" y="222" class="sm">담당 : 품질팀 (open)</text>
+
+  <!-- X-bar chart -->
+  <rect x="240" y="250" width="820" height="200" class="card"/>
+  <rect x="240" y="250" width="820" height="24" class="h"/>
+  <text x="252" y="267" class="lb">X̄ chart  (UCL 10.15  ·  CL 10.00  ·  LCL 9.85)</text>
+
+  <line x1="270" y1="290" x2="1040" y2="290" class="ucl"/>
+  <line x1="270" y1="350" x2="1040" y2="350" class="cl"/>
+  <line x1="270" y1="410" x2="1040" y2="410" class="ucl"/>
+
+  <polyline points="290,360 330,348 370,344 410,358 450,346 490,350 530,340 570,346 610,358 650,338 690,330 730,320 770,290 810,344 850,352 890,348 930,344 970,350 1010,358" class="line"/>
+  <g>
+    <circle cx="290" cy="360" r="3.4" class="pt"/>
+    <circle cx="330" cy="348" r="3.4" class="pt"/>
+    <circle cx="370" cy="344" r="3.4" class="pt"/>
+    <circle cx="410" cy="358" r="3.4" class="pt"/>
+    <circle cx="450" cy="346" r="3.4" class="pt"/>
+    <circle cx="490" cy="350" r="3.4" class="pt"/>
+    <circle cx="530" cy="340" r="3.4" class="pt"/>
+    <circle cx="570" cy="346" r="3.4" class="pt"/>
+    <circle cx="610" cy="358" r="3.4" class="pt"/>
+    <circle cx="650" cy="338" r="3.4" class="pt"/>
+    <circle cx="690" cy="330" r="3.4" class="pt"/>
+    <circle cx="730" cy="320" r="3.4" class="pt"/>
+    <circle cx="770" cy="290" r="5"   class="ptv"/>
+    <text x="770" y="282" text-anchor="middle" font-size="10" fill="#c0392b">WE-1 위반 (#13)</text>
+    <circle cx="810" cy="344" r="3.4" class="pt"/>
+    <circle cx="850" cy="352" r="3.4" class="pt"/>
+    <circle cx="890" cy="348" r="3.4" class="pt"/>
+    <circle cx="930" cy="344" r="3.4" class="pt"/>
+    <circle cx="970" cy="350" r="3.4" class="pt"/>
+    <circle cx="1010" cy="358" r="3.4" class="pt"/>
+  </g>
+
+  <!-- R chart -->
+  <rect x="240" y="465" width="820" height="120" class="card"/>
+  <rect x="240" y="465" width="820" height="24" class="h"/>
+  <text x="252" y="482" class="lb">R chart (UCL 0.32  ·  R̄ 0.16  ·  LCL 0.0)</text>
+  <line x1="270" y1="500" x2="1040" y2="500" class="ucl"/>
+  <line x1="270" y1="540" x2="1040" y2="540" class="cl"/>
+  <polyline points="290,548 330,540 370,538 410,544 450,536 490,532 530,530 570,536 610,540 650,530 690,524 730,520 770,514 810,536 850,540 890,538 930,536 970,540 1010,544" class="line"/>
+
+  <text x="252" y="615" class="sm">▸ WE-1 위반 발생시  ① WebSocket 알림(FN-046)  ② CAPA 자동 등록(FN-041)  ③ 해당 LOT 자동 격리(QUARANTINE)</text>
+  <text x="252" y="633" class="sm">▸ Cp = (USL − LSL) / 6σ_within = 1.90,   Cpk = min(Cpu, Cpl) = 1.86,   Shapiro-Wilk p = 0.45 (정규성 만족)</text>
+  <text x="252" y="651" class="sm">▸ 처리 로직 : 측정값 → 서브그룹 분할 → A2/D3/D4 계수 적용 → UCL/LCL 자동 산출 → WE/Nelson rule 평가</text>
+</svg>
