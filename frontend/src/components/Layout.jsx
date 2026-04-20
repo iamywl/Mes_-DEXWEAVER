@@ -2,7 +2,7 @@
  * Layout — Sidebar navigation + main content area.
  */
 import React, { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Toast } from '../hooks/useToast';
 
@@ -102,7 +102,7 @@ const navLinkClass = ({isActive}) =>
       : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
   }`;
 
-const Layout = () => {
+const Layout = ({children}) => {  // children may be <Suspense><Outlet/></Suspense>
   const {user, logout} = useAuth();
   const [sideOpen, setSideOpen] = useState(false);
   const [collapsed, setCollapsed] = useState({});
@@ -169,7 +169,7 @@ const Layout = () => {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto p-6">
-        <Outlet />
+        {children}
       </main>
 
       {/* Global toast */}

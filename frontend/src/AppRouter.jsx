@@ -3,7 +3,7 @@
  * NFR-001: Frontend modularization — replaces monolithic App.jsx.
  */
 import React, { Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import { LoadingSpinner } from './components/ui';
@@ -18,14 +18,36 @@ import {
   Batch, ECM, ComplexRouting, Multisite, Network, Infra, Login,
 } from './pages';
 
-const ProtectedRoutes = () => {
+const ProtectedShell = () => {
   const {authReady} = useAuth();
-  if (!authReady) return <Navigate to="/login" replace />;
-
+  if (authReady === null) return <LoadingSpinner />;
+  if (authReady === false) return <Navigate to="/login" replace />;
   return (
     <Layout>
       <Suspense fallback={<LoadingSpinner />}>
-        <Routes>
+        <Outlet />
+      </Suspense>
+    </Layout>
+  );
+};
+
+const LoginPage = () => {
+  const {authReady} = useAuth();
+  if (authReady === null) return <LoadingSpinner />;
+  if (authReady === true) return <Navigate to="/" replace />;
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <Login />
+    </Suspense>
+  );
+};
+
+const AppRouter = () => (
+  <AuthProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<ProtectedShell />}>
           <Route index element={<Dashboard />} />
           <Route path="items" element={<Items />} />
           <Route path="bom" element={<BOM />} />
@@ -73,33 +95,10 @@ const ProtectedRoutes = () => {
           <Route path="network" element={<Network />} />
           <Route path="infra" element={<Infra />} />
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </Layout>
-  );
-};
-
-const AppRouter = () => (
-  <AuthProvider>
-    <BrowserRouter>
-      <Suspense fallback={<LoadingSpinner />}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/*" element={<ProtectedRoutes />} />
-        </Routes>
-      </Suspense>
+        </Route>
+      </Routes>
     </BrowserRouter>
   </AuthProvider>
 );
-
-const LoginPage = () => {
-  const {authReady} = useAuth();
-  if (authReady) return <Navigate to="/" replace />;
-  return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <Login />
-    </Suspense>
-  );
-};
 
 export default AppRouter;

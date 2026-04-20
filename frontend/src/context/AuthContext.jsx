@@ -13,7 +13,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({children}) => {
-  const [authReady, setAuthReady] = useState(false);
+  const [authReady, setAuthReady] = useState(null);  // null = not yet checked
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
