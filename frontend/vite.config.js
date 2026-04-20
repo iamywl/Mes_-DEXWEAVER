@@ -8,9 +8,11 @@ export default defineConfig({
     assetsDir: '',
   },
   server: {
+    host: '0.0.0.0',
+    allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:30461',
+        target: 'http://mes-api:8000',
         changeOrigin: true,
       },
     },
